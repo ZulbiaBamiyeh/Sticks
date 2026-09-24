@@ -39,10 +39,23 @@ on their own.
 
 ### Running it
 
-`index.html` is the whole game: no build step, no dependencies. Open it in a
-browser, or serve the folder (`npx serve .`) and open it on your phone.
+`index.html` is the whole game, with no build step and no dependencies. The one
+extra file is the fight music in `Music/`. Open `index.html` in a browser, or
+serve the folder (`npx serve .`) and open it on your phone. Serving it gives
+smoother music fades and the muffled sound under a KO's slow motion. Opened
+straight from disk, the music still plays, just without those effects.
 
 Fights are deterministic from a seed, so **Replay** runs the same fight again.
+
+### Music
+
+Fights play *Spirit Call* from the Wildfrost soundtrack, the same file the
+Chess repo uses. It fades in when a fight starts and keeps going through
+replays and rematches. It fades out on the build and rival screens. The speaker
+button in the header mutes it, and that choice is remembered. To change the
+track, drop a file in `Music/` and point `MUSIC.fight` in `index.html` at it.
+The soundtrack isn't ours, so swap it for something licensed before shipping
+the game publicly.
 
 ### Testing the AI and balance
 

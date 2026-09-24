@@ -48,7 +48,7 @@
   }
   .top {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: 12px;
     padding-block: 10px 8px;
@@ -64,6 +64,12 @@
     color: var(--ink-2);
     text-align: right;
   }
+  .top-r { display: flex; align-items: center; gap: 6px; margin-right: -6px; }
+  .snd { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; }
+  .snd:active { background: var(--line); }
+  .snd svg { width: 18px; height: 18px; fill: none; stroke: var(--ink-2); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .snd .spk { fill: var(--ink-2); }
+  .snd[aria-pressed="true"] .off, .snd[aria-pressed="false"] .on { display: none; }
   #stage {
     position: relative;
     flex: 0 1000 auto;   /* the arena gives up height first; the panel only scrolls once it is down to its minimum */
@@ -273,7 +279,12 @@
 <div id="app">
   <header class="top">
     <div class="mark"><span class="h">HOME</span> <span class="t">TURF</span></div>
-    <div class="phase" id="phase">Scouting</div>
+    <div class="top-r">
+      <div class="phase" id="phase">Scouting</div>
+      <button class="snd" id="sndBtn" aria-pressed="true" aria-label="Music">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path class="spk" d="M3 7.5 H6 L10.5 4 V16 L6 12.5 H3 Z"/><path class="on" d="M13 7.2 Q14.6 10 13 12.8 M15.4 5.2 Q18.4 10 15.4 14.8"/><path class="off" d="M13.2 7.5 L18 12.5 M18 7.5 L13.2 12.5"/></svg>
+      </button>
+    </div>
   </header>
 
   <div id="stage">
@@ -2330,6 +2341,78 @@ function render() {
   }
 }
 
+// ---------------------------------------------------------------- music
+// Fights play a soundtrack file. It fades in when a fight starts, keeps going through replays and
+// rematches, goes muffled under a KO's slow motion, and fades out on the build and rival screens.
+const MUSIC = { fight: 'Music/Wildfrost OST - Spirit Call.mp3', volume: 0.55 };
+const MUSIC_KEY = 'homeTurf.music';
+let headless = false;   // headless test fights stay silent
+const music = {
+  on: (() => { try { return localStorage.getItem(MUSIC_KEY) !== 'off'; } catch { return true; } })(),
+  el: null, ctx: null, gain: null, filter: null, want: false, muffled: false, stopT: 0,
+  init() {
+    if (this.el) return;
+    const el = this.el = new Audio(encodeURI(MUSIC.fight));
+    el.loop = true; el.preload = 'auto';
+    // Web Audio gives smooth fades (iOS ignores element volume) and the KO filter sweep. Pages opened
+    // straight from disk can't route a file through it, so they fall back to the plain element.
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || location.protocol === 'file:') return;
+    try {
+      const ctx = new Ctx(), src = ctx.createMediaElementSource(el);
+      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = 20000;
+      this.gain = ctx.createGain(); this.gain.gain.value = 0;
+      src.connect(this.filter).connect(this.gain).connect(ctx.destination);
+      this.ctx = ctx;
+    } catch { this.ctx = null; }
+  },
+  fade(to, secs) {
+    if (this.ctx) { const g = this.gain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + secs); }
+    else this.el.volume = to;
+  },
+  play() {
+    this.want = true;
+    if (!this.on) return;
+    this.init(); clearTimeout(this.stopT);
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    const p = this.el.play();
+    if (p) p.catch(() => {});
+    this.fade(MUSIC.volume, 0.8);
+  },
+  // Fade out and pause. keepWant leaves the fight asking for music, for when it's only muted.
+  stop(secs = 0.9, keepWant = false) {
+    if (!keepWant) this.want = false;
+    if (!this.el) return;
+    this.fade(0, secs);
+    clearTimeout(this.stopT);
+    this.stopT = setTimeout(() => { if (!this.want || !this.on) this.el.pause(); }, secs * 1000 + 60);
+  },
+  // Called every frame: dull the music while a KO plays out in slow motion.
+  tick() {
+    if (!this.filter) return;
+    const m = mode === 'fight' && world.ko && world.slowT > 0;
+    if (m === this.muffled) return;
+    this.muffled = m;
+    const f = this.filter.frequency, t = this.ctx.currentTime;
+    f.cancelScheduledValues(t); f.setValueAtTime(f.value, t);
+    f.setTargetAtTime(m ? 650 : 20000, t, m ? 0.05 : 0.4);
+  },
+  toggle() {
+    this.on = !this.on;
+    try { localStorage.setItem(MUSIC_KEY, this.on ? 'on' : 'off'); } catch { /* not remembered */ }
+    $('#sndBtn').setAttribute('aria-pressed', String(this.on));
+    if (this.on && mode === 'fight') this.play();
+    else if (!this.on) this.stop(0.25, true);
+  },
+};
+$('#sndBtn').setAttribute('aria-pressed', String(music.on));
+$('#sndBtn').addEventListener('click', () => music.toggle());
+document.addEventListener('visibilitychange', () => {
+  if (!music.el) return;
+  if (document.hidden) music.el.pause();
+  else if (music.want && music.on) music.play();
+});
+
 // ---------------------------------------------------------------- UI
 const ui = {
   phase: $('#phase'), hud: $('#hud'), clock: $('#clock'), wB: $('#wB'), wR: $('#wR'), nR: $('#nR'),
@@ -2520,6 +2603,7 @@ function showPanel(which) {
 }
 function enterRival() {
   mode = 'rival';
+  music.stop();
   const bd = builds[1], r = RIVALS[rivalIx], rec = loadRecord()[bd.name];
   A = makeArena([null, bd]);
   demoWorld();
@@ -2543,6 +2627,7 @@ function enterRival() {
 }
 function enterBuild() {
   mode = 'build';
+  music.stop();
   A = makeArena([builds[0], null]);
   demoWorld();
   U = [demoUnit(0, builds[0])];
@@ -2576,6 +2661,7 @@ function startFight(seed, replay = false) {
   ui.phase.textContent = `vs ${rivalName()}`;
   ui.seed.textContent = `Seed ${seed}`;
   renderTicker(); updateHud();
+  if (!headless) music.play();
 }
 const newSeed = () => 1 + Math.floor(Math.random() * 99999);
 
@@ -2690,6 +2776,7 @@ function frame(now) {
     }
   }
   render();
+  music.tick();
   requestAnimationFrame(frame);
 }
 
@@ -2698,7 +2785,7 @@ window.__homeTurf = {
   fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
     const saved = [builds[0], builds[1]];
     builds[0] = blue; builds[1] = red;
-    startFight(seed);
+    headless = true; startFight(seed); headless = false;
     let f = 0;
     while (f++ < maxFrames && !(world.over && world.overT > 5)) {
       if (world.hs > 0) { world.hs--; continue; }
