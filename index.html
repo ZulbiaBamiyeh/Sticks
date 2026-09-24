@@ -357,6 +357,7 @@
   .tchip { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; padding: 3px 6px; border-radius: 4px; background: var(--line); }
   .t-normal .tchip { background: var(--blue); color: #fff; }
   .t-elite .tchip { background: var(--red); color: #fff; }
+  .hc-fam em { font-style: normal; color: #fff; background: #1b8a3a; border-radius: 4px; padding: 1px 5px; margin-left: 3px; }
   .hc-fam { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
   .odds { display: flex; gap: 10px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .drops { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -384,6 +385,7 @@
   .iflav { margin: 0; font-size: 12px; font-style: italic; color: var(--ink-2); }
   .icmp { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
   .icmp .up { color: #1b8a3a; } .icmp .dn { color: var(--red); }
+  .icmp .set-up { color: #fff; background: #1b8a3a; border-radius: 4px; padding: 1px 6px; }
   .iact { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .iact button { min-height: 40px; flex: 1; }
   .iact .swap { text-transform: none; letter-spacing: 0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -434,6 +436,13 @@
   .over b { font: 900 34px/1 var(--display); letter-spacing: 0.02em; }
   .over.crown b { color: #c7960a; }
   .over p { margin: 0; color: var(--ink-2); }
+  .ostats { display: flex; justify-content: center; gap: 18px; margin-top: 6px; }
+  .ostats span { display: grid; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+  .ostats b { font: 900 22px/1 var(--display); color: var(--ink); letter-spacing: 0; }
+  .owear { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .owear i { display: grid; place-items: center; width: 40px; height: 40px; border: 2px solid var(--rc); border-radius: 6px; background: #f3f4f0; }
+  .owear i svg { width: 30px; height: 30px; }
+  .over p.small { font-size: 12px; }
   .hist { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
   .hist i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
   .hist i.w { background: var(--ink); }
@@ -5289,7 +5298,8 @@ class Run {
       this.lootFor(offer, 0);
     } else this.loot = null;
     this.gold += out.gold;
-    this.history.push({ round: this.round, duel: this.isDuel, label: this.isDuel ? this.ghost.name : HUNTS[offer.hunt].name, result: won ? 'W' : 'L' });
+    this.history.push({ round: this.round, duel: this.isDuel, card: offer ? offer.card : 'duel', label: this.isDuel ? this.ghost.name : HUNTS[offer.hunt].name, result: won ? 'W' : 'L' });
+    this.earned = (this.earned || 0) + out.gold;
     if (this.crown || this.lives <= 0 || (this.round >= RUNCFG.days * RUNCFG.perDay && !this.loot)) this.over = true;
     return out;
   }
@@ -7282,6 +7292,17 @@ function itemCmpNums(inst) {
   for (const k of STAT_ORDER) if (st[k]) o[k] = st[k];
   return o;
 }
+// How wearing `inst` in slot `to` moves its family's set along: the bonus it completes, or the count.
+const famCount = (equip, f) => Object.values(equip).filter((i) => i && ITEM[i.item].family === f).length;
+function setProgress(inst, to) {
+  const f = ITEM[inst.item].family;
+  if (!f || !FAMILY[f].set4) return [];
+  const cur = run.equip[to], before = famCount(run.equip, f), after = before + 1 - (cur && ITEM[cur.item].family === f ? 1 : 0);
+  if (after <= before) return [];
+  if (after === 2) return [`<span class="set-up">Completes ${FAMILY[f].name} 2-piece: ${Object.entries(FAMILY[f].set2.stats).map(([k, v]) => statLine(k, v)).join(', ')}</span>`];
+  if (after === 4) return [`<span class="set-up">Completes ${FAMILY[f].name} 4-piece: ${FAMILY[f].set4.desc}</span>`];
+  return [`<span class="set-up">${FAMILY[f].name} ${after}/4</span>`];
+}
 // the slot a piece would go into: a trinket fills an empty trinket slot first
 function targetSlot(inst) {
   const k = ITEM[inst.item].slot;
@@ -7290,7 +7311,7 @@ function targetSlot(inst) {
 // what swapping `inst` in would change, against what's worn in that slot now
 function compareLine(inst, to = targetSlot(inst)) {
   const cur = run.equip[to], ni = ITEM[inst.item];
-  if (!cur) return `<span class="up">Fills your empty ${slotName(to).toLowerCase()} slot</span>`;
+  if (!cur) return [`<span class="up">Fills your empty ${slotName(to).toLowerCase()} slot</span>`, ...setProgress(inst, to)].join(' ');
   const a = itemCmpNums(cur), b = itemCmpNums(inst), out = [], ci = ITEM[cur.item];
   if (ni.weapon && ci.weapon !== ni.weapon) out.push(`<span>${WEAP[ci.weapon].name} → ${WEAP[ni.weapon].name}</span>`);
   if (ni.acro !== undefined && acroOf(cur) !== acroOf(inst)) out.push(`<span class="${acroOf(inst) > acroOf(cur) ? 'up' : 'dn'}">Acro ${acroOf(cur)} → ${acroOf(inst)}</span>`);
@@ -7301,6 +7322,7 @@ function compareLine(inst, to = targetSlot(inst)) {
     out.push(`<span class="${d > 0 ? 'up' : 'dn'}">${d > 0 ? '▲' : '▼'} ${txt}</span>`);
   }
   if (ci.id !== ni.id && (ci.keystone || ci.relic || ci.trig)) out.push(`<span class="dn">Loses ${ci.name}'s effect</span>`);
+  out.push(...setProgress(inst, to));
   return out.length ? out.join(' ') : '<span>Same as yours</span>';
 }
 function itemCard(inst, actions = '', compare = false) {
@@ -7336,7 +7358,7 @@ function renderRun() {
       const odds = rarityOdds(o.card, run.day).map(Math.round);
       const drops = run.drops(o).map((id) => { const it = ITEM[id]; return `<i class="${it.keystone ? 'key' : it.relic ? 'relic' : ''}" title="${it.name}${it.keystone ? ' (keystone)' : it.relic ? ' (relic)' : ''}">${itemIcon({ item: id })}</i>`; }).join('');
       return `<button class="hcard t-${o.card}" data-offer="${i}" title="${FAMILY[o.family].name} set · ${setText(o.family)}">
-        <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam">${FAMILY[o.family].name}</span></span>
+        <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam">${FAMILY[o.family].name}${famCount(run.equip, o.family) ? ` <em>${famCount(run.equip, o.family)}/4</em>` : ''}</span></span>
         <span class="odds">${['common', 'rare', 'epic'].map((r, j) => (odds[j] ? `<span style="color:${RAR_COL[r]}">${RARITY[r].name} ${odds[j]}%</span>` : '')).join('')}</span>
         <span class="drops">${drops}</span>
       </button>`;
@@ -7412,9 +7434,16 @@ function renderRun() {
     actions = `<button class="ghost" data-go="gear">Gear</button><button class="go" data-go="duel">Fight ${g.name}</button>`;
   } else if (runScreen === 'over') {
     const hist = run.history.map((h) => `<i class="${h.result === 'W' ? 'w' : 'l'} ${h.duel ? 'duel' : ''}" title="${h.label}"></i>`).join('');
+    const hunts = run.history.filter((h) => !h.duel), won = hunts.filter((h) => h.result === 'W'), elites = won.filter((h) => h.card === 'elite').length;
+    const worn = SLOTS_RUN.map((k) => run.equip[k]).filter(Boolean);
+    const sets = Object.entries(runBuild(run.equip).sets).filter(([, n]) => n >= 2).map(([f, n]) => `<span class="set ${n >= 4 ? 'full' : 'on'}">${FAMILY[f].name} ${n}/4</span>`).join('');
     body = `<div class="over ${run.crown ? 'crown' : ''}"><b>${run.crown ? 'The Crown' : 'Run over'}</b>
       <p>${run.crown ? `Five duels won by day ${run.day}.` : `${run.wins} duel${run.wins === 1 ? '' : 's'} won, out on day ${run.day}.`}</p>
-      <div class="hist">${hist}</div></div>`;
+      <div class="hist">${hist}</div>
+      <div class="ostats"><span><b>${won.length}/${hunts.length}</b>hunts won</span><span><b>${elites}</b>elites felled</span><span><b>${run.earned || run.gold}</b>gold earned</span></div>
+      <div class="owear">${worn.map((i) => `<i style="--rc:${ITEM[i.item].keystone ? KEY_COL : ITEM[i.item].relic ? RELIC_COL : RAR_COL[i.rarity]}" title="${instName(i)}">${itemIcon(i)}</i>`).join('')}</div>
+      ${sets ? `<div class="sets" style="justify-content:center">${sets}</div>` : ''}
+      <p class="small">This build was saved as a ghost. Other runs will meet it in their duels.</p></div>`;
     actions = `<button class="ghost" data-go="leave">Rivals</button><button class="go" data-go="new">New run</button>`;
   }
   el.innerHTML = runHeader() + body + `<div class="actions">${actions}</div>`;

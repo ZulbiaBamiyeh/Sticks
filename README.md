@@ -54,10 +54,19 @@ Then two stick figures fight it out on their own.
     Chest, the Echo Shrine, the Fortune Well, and an Old Sensei who trains
     your shoes' acrobatics. Each character is drawn beside your fighter.
     Two of the same item at the same rarity merge into one a rarity up.
-  - 194 items: 55 weapons, 56 head, core and feet pieces, 43 trinkets, 12
-    skill items, 10 keystones and 18 relics, in 18 families, one per
-    creature. There are 18 creatures at three tiers. `tools/runbot.mjs`
-    plays whole runs headless.
+  - **The shop** opens each new day, as in ZereshkStory. It stocks five
+    wares, each with a reason: pieces for sets you've started, a twin of
+    something you own to merge, a keystone, and pieces from today's
+    creatures. You can reroll it for 2 gold.
+  - Hunt cards show how many pieces of that family you wear. Item cards say
+    when a piece completes a 2- or 4-piece bonus. The end of a run shows your
+    final build, hunts won, Elites felled and gold earned.
+  - 257 items: 78 weapons, 81 head, core and feet pieces, 54 trinkets, 13
+    skill items, 10 keystones and 21 relics, in 29 families, one per
+    creature. There are 29 creatures at three tiers, as many families as
+    ZereshkStory has. `tools/runbot.mjs` plays whole runs headless, shop
+    included. A careful bot that always takes Normal hunts wins the Crown
+    in about half its runs.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
     reach, and it knocks arrows and stars out of the air.
@@ -136,11 +145,20 @@ Then two stick figures fight it out on their own.
     swoop in. Shooters beware.
   - **Crab:** its big claw guards its face, and hits from the front clank
     off. Hit it from above, from behind, or while it snaps.
+  - **Mantis:** reads your swings. Now and then it parries one on its blades
+    and answers at once with a double scythe.
+  - **Wraith:** fades out, slips round behind you unseen and untouchable,
+    reappears to reap, and heals on every hit it lands.
+  - **Toad:** keeps its distance, swells its throat and shoots its tongue out
+    to reel you in, then bites.
   - **Variants** appear from day 3 in a run: the same bodies with a status on
     their attacks and that status's colour on their eyes and markings. They
     are the Toxic Slime (poison), Frost Bats (chill), Storm Serpent (shock),
     Blood Spiders (bleed), Ember Jellyfish (burn), Molten Brute (burn),
-    Ember Hounds (burn), Plague Crows (poison) and Frost Crab (chill).
+    Ember Hounds (burn), Plague Crows (poison), Frost Crab (chill), Blood
+    Mantis (bleed), Frost Wraith (chill), Poison Toad (poison), Vampire Bats
+    (bleed), Thunder Jellyfish (shock), Ice Slime (chill), Venom Spiders
+    (poison) and Fire Serpent (burn).
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll

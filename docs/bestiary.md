@@ -5,9 +5,9 @@ different. ZereshkStory gets there with this much content:
 
 | | ZereshkStory | Home Turf today |
 | --- | --- | --- |
-| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 18 creatures (9 bodies, 9 variants) × 3 tiers = 54 |
+| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 29 creatures (12 bodies, 17 variants) in 29 families, × 3 tiers = 87 |
 | Biomes | 10 | 1 hunting ground |
-| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 194: 55 weapons, 56 armour, 43 trinkets, 12 skill items, 10 keystones, 18 relics |
+| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 257: 78 weapons, 81 armour, 54 trinkets, 13 skill items, 10 keystones, 21 relics |
 | Statuses | 14 | 5 |
 
 ## Creatures: bodies × variants × tiers
@@ -74,7 +74,9 @@ Since then:
 - ZereshkStory's random events and merging are built.
 - Every item has its own drawing, and worn gear shows on the fighter.
 
+Also built since: the Mantis, Wraith and Toad with variants; second variants
+for five bodies; and ZereshkStory's shop.
+
 Next, in order:
-1. **More bodies:** the Mantis, the Wraith and the Toad, each with a variant
-   and a family.
-2. **The shop,** as in ZereshkStory: set pieces, a twin to merge, a keystone.
+1. **A final-day boss** for the last duel slot, or a boss hunt per biome.
+2. **Biomes:** arenas themed to their creatures, like ZereshkStory's ten.
