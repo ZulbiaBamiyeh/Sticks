@@ -395,6 +395,19 @@
   .sets .set.full { background: #1b8a3a; border-color: #1b8a3a; color: #fff; }
   .sets .key, .sets .relic { font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px; color: #fff; background: #b5651d; }
   .sets .relic { background: #c9961a; }
+  .ware { border: 2px solid var(--line); border-radius: 8px; background: #f3f4f0; }
+  .ware summary, .ware.sold { display: flex; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; list-style: none; }
+  .ware summary::-webkit-details-marker { display: none; }
+  .ware .iic svg { width: 30px; height: 30px; }
+  .ware .wn { display: grid; flex: 1; min-width: 0; }
+  .ware .wn b { font: 900 16px/1.1 var(--display); letter-spacing: 0.02em; }
+  .ware .wn small { font-size: 11px; font-weight: 700; color: var(--ink-2); }
+  .ware .why { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; }
+  .ware .price { font: 900 18px/1 var(--display); min-width: 38px; text-align: right; }
+  .ware .price.poor { color: var(--red); }
+  .ware[open] { border-color: var(--ink); }
+  .ware .icard { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
+  .ware.sold { opacity: 0.45; }
   .evhead { display: grid; gap: 4px; }
   .evhead b { font: 900 24px/1.05 var(--display); letter-spacing: 0.02em; }
   .evhead p { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-2); }
@@ -4220,7 +4233,7 @@ const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
 const isDuelRound = (round) => slotOf(round) === RUNCFG.perDay;
 const dayPower = (day) => 1 + 0.28 * (day - 1);   // gear grows this much a day
 // Creatures grow faster than gear does, because gear multiplies: damage, crit, haste, HP and Def all stack.
-const mobPower = (day) => dayPower(day) * (1 + 0.35 * (day - 1));
+const mobPower = (day) => dayPower(day) * (1 + 0.42 * (day - 1));
 // a seeded random stream for any (seed, …tags)
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function runRng(...tags) {
@@ -4853,7 +4866,7 @@ function makeGhost(seed, round) {
   for (const s of slots) {
     const pool = [...fams.flatMap((f) => FAMILY_ITEMS[f]), ...extra].filter((id) => ITEM[id].slot === slotKind(s) && !Object.values(equip).some((x) => x.item === id));
     if (!pool.length) continue;
-    equip[s] = rollInstance(r.pick(pool), rollRarity(card, day, r), Math.max(1, day - 1 - (r() < 0.5)), r);   // a real build's gear dropped over earlier days
+    equip[s] = rollInstance(r.pick(pool), rollRarity(card, day, r), Math.max(1, day - (r() < 0.6)), r);   // a real build's gear dropped over the last day or two
   }
   if (!equip.weapon) equip.weapon = rollInstance('rusty_sword', 'common', day, r);
   const l = Math.floor(r() * Math.min(3, day));
@@ -4958,6 +4971,7 @@ class Run {
   next() {
     if (this.over) return;
     this.round++;
+    if (slotOf(this.round) === 1) { this.shopRolls = 0; this.rollShop(); }   // a new day opens on the shop
     if (slotOf(this.round) === 1) this.rerolls = RUNCFG.rerolls;
     this.loot = null; this.rollRound();
   }
@@ -5207,6 +5221,48 @@ function chooseEvent(run, key, uid) {
   ev.result = { text, gained: gained ? gained.uid : null };
   return ev.result;
 }
+
+// ---------------------------------------------------------------- the shop
+// As in ZereshkStory: each new day opens on a shop. Five wares, each with a reason to want it: pieces for
+// sets you've started, a twin of something you own (to merge), a keystone, and a taste of tomorrow.
+const SHOP_PRICE = { common: 5, rare: 10, epic: 16 }, KEYSTONE_MARKUP = 6, SHOP_REROLL = 2;
+Object.assign(Run.prototype, {
+  rollShop() {
+    const r = runRng(this.seed, this.round, 'shop', this.shopRolls || 0), owned = this.owned(), have = new Set(owned.map((i) => i.item));
+    const rar = () => rollRarity('normal', this.day, r), wares = [];
+    const add = (id, why, rarity = rar()) => {
+      if (!id || wares.some((w) => w.inst.item === id && why !== 'Twin')) return;
+      const inst = rollInstance(id, rarity, this.day, r);
+      wares.push({ inst, price: SHOP_PRICE[inst.rarity] + (ITEM[id].keystone ? KEYSTONE_MARKUP : 0), sold: false, why });
+    };
+    const n = {};
+    for (const i of owned) { const f = ITEM[i.item].family; if (f && !ITEM[i.item].keystone) n[f] = (n[f] || 0) + 1; }
+    const fams = Object.keys(n).sort((a, b) => n[b] - n[a]);
+    for (const id of r.shuffle(fams.flatMap((f) => FAMILY_ITEMS[f]).filter((id) => !have.has(id))).slice(0, 2)) add(id, 'Set');
+    const twinable = owned.filter((i) => i.rarity !== 'epic' && !ITEM[i.item].relic && ITEM[i.item].family);
+    if (twinable.length) { const t = r.pick(twinable); add(t.item, 'Twin', t.rarity); }
+    add(r.pick(Object.keys(ITEM).filter((id) => ITEM[id].keystone && !have.has(id))), 'Keystone');
+    const pool = DAY_POOLS[Math.min(DAY_POOLS.length, this.day) - 1], ids = Object.values(pool).flat().map((h) => HUNT_FAMILY[h.split(':')[0]]).flatMap((f) => FAMILY_ITEMS[f]);
+    for (let k = 0; wares.length < 5 && k < 20; k++) add(r.pick(ids), 'Today');
+    this.shop = wares;
+  },
+  buy(i, to) {
+    const w = this.shop && this.shop[i];
+    if (!w || w.sold || this.gold < w.price) return false;
+    const k = ITEM[w.inst.item].slot, slot = k !== 'trinket' ? k : to && to.startsWith('trinket') ? to : !this.equip.trinket1 ? 'trinket1' : !this.equip.trinket2 ? 'trinket2' : null;
+    if (to === 'bag') { if (this.bagFull()) return false; this.bag.push(w.inst); }
+    else if (slot && (!this.equip[slot] || to)) this.wear(w.inst, slot);
+    else if (!this.bagFull()) this.bag.push(w.inst);
+    else return false;
+    this.gold -= w.price; w.sold = true;
+    return true;
+  },
+  rerollShop() {
+    if (!this.shop || this.gold < SHOP_REROLL) return false;
+    this.gold -= SHOP_REROLL; this.shopRolls = (this.shopRolls || 0) + 1; this.rollShop(); return true;
+  },
+  leaveShop() { this.shop = null; },
+});
 
 // ---------------------------------------------------------------- canvas & camera
 const $ = (s) => document.querySelector(s);
@@ -6949,6 +7005,17 @@ function renderRun() {
       <div class="row-h"><span class="lbl">Bag</span><span class="lbl">${run.bag.length} / ${RUNCFG.bag}</span></div>
       <div class="bag">${bag}</div>${sel}`;
     actions = `<button class="go wide" data-go="back">Back</button>`;
+  } else if (runScreen === 'shop') {
+    body = `<div class="row-h"><span class="lbl">The shop · day ${run.day}</span><span class="lbl">Gold ${run.gold}</span></div>` + run.shop.map((w, i) => {
+      const it = ITEM[w.inst.item], afford = run.gold >= w.price;
+      if (w.sold) return `<div class="ware sold"><span class="iic">${itemIcon(w.inst)}</span><b>${it.name}</b><span class="why">Sold</span></div>`;
+      const trinketFull = it.slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2;
+      const btns = trinketFull ? ['trinket1', 'trinket2'].map((t) => `<button class="go sm swap" data-buy="${i}" data-to="${t}" ${afford ? '' : 'disabled'}>⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('')
+        : `<button class="go sm" data-buy="${i}" data-to="wear" ${afford ? '' : 'disabled'}>Buy · wear</button>`;
+      return `<details class="ware"${i === runSel?.open ? ' open' : ''}><summary><span class="iic">${itemIcon(w.inst)}</span><span class="wn"><b style="color:${w.inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[w.inst.rarity]}">${it.name}</b><small>${RARITY[w.inst.rarity].name} ${(it.keystone ? 'keystone' : slotName(it.slot)).toLowerCase()}</small></span><span class="why">${w.why}</span><span class="price ${afford ? '' : 'poor'}">${w.price}g</span></summary>
+        ${itemCard(w.inst, `${btns}<button class="ghost sm" data-buy="${i}" data-to="bag" ${afford && !run.bagFull() ? '' : 'disabled'}>Buy · bag</button>`, true)}</details>`;
+    }).join('');
+    actions = `<button class="ghost" data-go="shopreroll" ${run.gold >= SHOP_REROLL ? '' : 'disabled'}>Reroll · ${SHOP_REROLL}g</button><button class="ghost" data-go="gear">Gear</button><button class="go wide" data-go="shopleave">Onward</button>`;
   } else if (runScreen === 'event') {
     const ev = run.event, meta = EVENTS[ev.id], res = ev.result, opts = eventOptions(run);
     body = `<div class="evhead"><span class="lbl">Event</span><b>${meta.name}</b><p>${res ? res.text : meta.line}</p></div>`;
@@ -7006,11 +7073,11 @@ function showRun(screen) {
   $('#doll').hidden = screen !== 'gear' && screen !== 'loot';
   if (screen === 'event') U[0].face = 1;
   if (!$('#doll').hidden) renderDoll();
-  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over', event: 'Event' }[screen];
+  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over', event: 'Event', shop: 'Shop' }[screen];
   renderRun();
   if (run.over) Run.clear(); else run.save();
 }
-const runHome = () => (run.over ? 'over' : run.loot ? 'loot' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
+const runHome = () => (run.over ? 'over' : run.loot ? 'loot' : run.shop ? 'shop' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
 function startRun(r) {
   if (!freeBuild) freeBuild = builds[0];
   run = r;
@@ -7051,6 +7118,11 @@ ui.runPanel.addEventListener('click', (ev) => {
     if (!run.over) run.next(); else Run.clear();
     showRun(run.over ? 'over' : runHome()); return;
   }
+  if (t.dataset.buy !== undefined) {
+    if (run.buy(+t.dataset.buy, t.dataset.to)) { toast(`Bought ${ITEM[run.shop[+t.dataset.buy].inst.item].name}.`); run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderRun(); }
+    else toast(run.bagFull() ? 'Your bag is full.' : 'Not enough gold.');
+    return;
+  }
   if (t.dataset.evopt) {
     const o = eventOptions(run).find((x) => x.key === t.dataset.evopt);
     if (o.key === 'leave') { run.endEvent(); showRun(runHome()); return; }
@@ -7076,6 +7148,8 @@ ui.runPanel.addEventListener('click', (ev) => {
   else if (go === 'new') { Run.clear(); startRun(new Run()); }
   else if (go === 'duel') runFight(null);
   else if (go === 'reroll') { run.rerollLoot(); renderRun(); }
+  else if (go === 'shopreroll') { run.rerollShop(); run.save(); renderRun(); }
+  else if (go === 'shopleave') { run.leaveShop(); showRun(runHome()); }
   else if (go === 'skip') { run.loot = null; if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
 });
 $('#runNext').addEventListener('click', runContinue);
@@ -7109,7 +7183,7 @@ window.__homeTurf = {
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
   cam(o) { camOverride = o; cam.init = false; },
-  run: { itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
+  run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);

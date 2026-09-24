@@ -16,7 +16,7 @@ const out = await p.evaluate(([N, strat]) => {
     const tough = (100 + st.hp) * (1 + st.def / 26) / (1 - Math.min(0.4, st.evasion)) * (1 + st.regen * 0.03) * (1 + st.resist * 0.2) * (1 + st.thorns * 0.02);
     return off * tough * (1 + b.acro * 0.03) * (b.skill ? 1.08 : 1) * (1 + 0.08 * Object.keys(st.flags).length);
   };
-  const res = { crowns: 0, duelWins: [], endDay: [], huntWin: { easy: [0, 0], normal: [0, 0], elite: [0, 0] }, duel: [0, 0] };
+  const res = { crowns: 0, duelWins: [], endDay: [], huntWin: { easy: [0, 0], normal: [0, 0], elite: [0, 0] }, duel: [0, 0], bought: 0 };
   for (let k = 0; k < N; k++) {
     const run = new R.Run(1000 + k);
     let guard = 0;
@@ -45,6 +45,18 @@ const out = await p.evaluate(([N, strat]) => {
         }
       }
       run.next();
+      // the shop: buy the one ware that raises the score most, if any is affordable; walk past events
+      if (run.shop) {
+        let best = -1, to = 'wear', bs = score(run.build(R.TEMPLATES[0]));
+        run.shop.forEach((w, i) => {
+          if (w.price > run.gold) return;
+          const k = R.ITEM[w.inst.item].slot;
+          for (const t of k === 'trinket' ? ['trinket1', 'trinket2'] : [k]) { const s = score(R.runBuild({ ...run.equip, [t]: w.inst })); if (s > bs * 1.03) { bs = s; best = i; to = k === 'trinket' ? t : 'wear'; } }
+        });
+        if (best >= 0 && run.buy(best, to)) res.bought++;
+        run.leaveShop();
+      }
+      if (run.event) run.endEvent();
     }
     if (run.crown) res.crowns++;
     res.duelWins.push(run.wins); res.endDay.push(run.day);
@@ -53,6 +65,7 @@ const out = await p.evaluate(([N, strat]) => {
 }, [+N, strat]);
 const pct = ([a, b]) => (b ? `${Math.round(100 * a / b)}% of ${b}` : '-');
 console.log(`crowns ${out.crowns}/${N}  duel wins ${out.duelWins.join(',')}  ended on day ${out.endDay.join(',')}`);
+console.log(`bought ${out.bought} from the shop`);
 console.log('hunts', Object.fromEntries(Object.entries(out.huntWin).map(([k, v]) => [k, pct(v)])), 'duels', pct(out.duel));
 console.log(errs.slice(0, 3).join('\n') || 'no errors');
 await browser.close();
