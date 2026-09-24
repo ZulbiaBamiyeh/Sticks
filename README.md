@@ -221,6 +221,14 @@ Then two stick figures fight it out on their own.
   your spawn, if it makes a pit someone can't climb out of, or if it would
   trap your own fighter.
 
+### Nothing scrolls
+
+Every screen fits the window, on a 320-wide phone as much as on a tablet.
+Lists are compact rows, and a piece's full card and its choices open in a
+sheet over the top. The arena gives up height first; below that, short
+screens drop flavour text and thin the type. `node tools/fit.mjs` walks
+every screen at six sizes and fails if anything overflows.
+
 ### Running it
 
 `index.html` is the whole game, with no build step and no dependencies. The one

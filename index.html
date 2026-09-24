@@ -38,6 +38,7 @@
     user-select: none;
   }
   #app {
+    position: relative;
     height: 100%;
     max-width: 560px;
     margin: 0 auto;
@@ -174,10 +175,9 @@
   .why-body.focus .dleg li:not(.hl) { opacity: .4; }
   .dnone { font-size: 14px; color: var(--ink-2); padding: 8px 0; text-align: center; }
   /* On short screens the panel scrolls and its buttons stay pinned to the bottom. */
-  .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding-block: 12px 14px; }
+  .panel { flex: 1 1 auto; min-height: min-content; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding-block: 12px 14px; }
   .panel > * { flex-shrink: 0; }
   .panel .actions { margin-top: auto; position: sticky; bottom: 0; padding-top: 8px; background: linear-gradient(rgba(230, 233, 227, 0), var(--paper) 8px); }
-  @media (max-height: 700px) { #loadHint { display: none; } }
   .row-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
   .budget { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -318,9 +318,18 @@
   .nav-b:active { background: var(--line); }
   .rec.won { color: var(--blue); }
   .rv-head { display: flex; flex-direction: column; gap: 2px; }
-  .rv-name { margin: 0; font: 900 52px/0.86 var(--display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--red); }
+  .rv-name { margin: 0; font: 900 40px/0.9 var(--display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--red); }
   .rv-tag { margin: 0; font-size: 15px; font-weight: 600; }
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cards.four { grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .cards.four .card { padding: 6px 7px; gap: 1px; }
+  .cards.four .lbl { font-size: 9px; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cards.four .card b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cards.four .card small { font-size: 10px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cards.four .sk-ic svg, .cards.four .tr-ic svg { width: 14px; height: 14px; }
+  .hpick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .hpick button { border: 1.5px solid var(--line); border-radius: 6px; background: #f3f4f0; padding: 5px 3px; font-size: 11px; font-weight: 700; line-height: 1.15; min-height: 38px; }
+  .hpick button.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
   .card { background: var(--panel); border: 1.5px solid var(--line); border-radius: 6px; padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .card .lbl { font-size: 10px; }
   .card-t { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -397,19 +406,30 @@
   .sets .set.full { background: #1b8a3a; border-color: #1b8a3a; color: #fff; }
   .sets .key, .sets .relic { font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px; color: #fff; background: #b5651d; }
   .sets .relic { background: #c9961a; }
-  .ware { border: 2px solid var(--line); border-radius: 8px; background: #f3f4f0; }
-  .ware summary, .ware.sold { display: flex; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; list-style: none; }
-  .ware summary::-webkit-details-marker { display: none; }
-  .ware .iic svg { width: 30px; height: 30px; }
-  .ware .wn { display: grid; flex: 1; min-width: 0; }
-  .ware .wn b { font: 900 16px/1.1 var(--display); letter-spacing: 0.02em; }
-  .ware .wn small { font-size: 11px; font-weight: 700; color: var(--ink-2); }
-  .ware .why { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 5px; }
-  .ware .price { font: 900 18px/1 var(--display); min-width: 38px; text-align: right; }
-  .ware .price.poor { color: var(--red); }
-  .ware[open] { border-color: var(--ink); }
-  .ware .icard { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 8px 8px; }
-  .ware.sold { opacity: 0.45; }
+  /* Every screen fits without scrolling: lists are compact rows, and the details open in a sheet. */
+  .irow { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: 2px solid var(--rc, var(--line)); border-radius: 8px; background: #f3f4f0; padding: 6px 8px; min-height: 54px; }
+  .irow.key { border-color: #b5651d; }
+  .irow.relic { border-color: #c9961a; background: #fbf6e6; }
+  .irow.sold { opacity: 0.4; }
+  .irow > .iic svg { width: 30px; height: 30px; display: block; }
+  .irow .wn { display: grid; gap: 1px; flex: 1; min-width: 0; }
+  .irow .wn b { font: 900 16px/1.1 var(--display); letter-spacing: 0.02em; color: var(--nc, var(--ink)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .irow .wn small { font-size: 11px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .irow .wn .dt { display: flex; flex-wrap: wrap; gap: 2px 8px; font-size: 11px; font-weight: 800; }
+  .irow .wn .dt .up { color: #1b8a3a; } .irow .wn .dt .dn { color: var(--red); }
+  .irow .wn .dt .set-up { color: #fff; background: #1b8a3a; border-radius: 3px; padding: 0 4px; }
+  .irow .why { font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+  .irow .price { font: 900 17px/1 var(--display); min-width: 34px; text-align: right; }
+  .irow .price.poor { color: var(--red); }
+  .irow .go.sm, .irow .ghost.sm { flex: 0 0 auto; min-height: 40px; }
+  #sheet { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end; }
+  #sheet[hidden] { display: none; }
+  .sh-back { position: absolute; inset: 0; background: rgba(22, 25, 29, 0.45); }
+  .sh-card { position: relative; background: var(--paper); border: 2px solid var(--ink); border-radius: 12px 12px 0 0; padding: 12px 14px 14px; display: grid; gap: 9px; max-height: 92%; overflow: hidden; }
+  .sh-card .icard { border-width: 2px; }
+  .sh-card .actions { margin-top: 2px; }
+  .sh-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .sh-head b { font: 900 20px/1 var(--display); letter-spacing: 0.02em; }
   .evhead { display: grid; gap: 4px; }
   .evhead b { font: 900 24px/1.05 var(--display); letter-spacing: 0.02em; }
   .evhead p { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-2); }
@@ -471,6 +491,76 @@
   @media (prefers-reduced-motion: reduce) {
     .panel.enter > *, .rv-name.slam, .skm.fired .skn { animation: none; }
   }
+  /* Short screens: the arena gives up height, text thins out, and nothing ever scrolls. */
+  @media (max-height: 760px) {
+    #loadHint { display: none; }
+    #stage { min-height: 150px; }
+    .panel { gap: 8px; padding-block: 8px 10px; }
+    .rv-name { font-size: 32px; }
+    .runbar { padding: 7px 10px; }
+    .runbar b { font-size: 16px; }
+    .go { padding: 9px 12px; font-size: 19px; }
+    .ghost { padding: 8px; font-size: 12px; }
+    .scout p { font-size: 13px; }
+    .icard .iflav, .hint { display: none; }
+    .gstats div { padding: 4px 7px; }
+    .gstats b { font-size: 17px; }
+    .irow { min-height: 48px; padding: 5px 7px; }
+    .evopt { min-height: 46px; padding: 7px 10px; }
+    .evopt b { font-size: 15px; }
+  }
+  @media (max-height: 660px) {
+    #stage { min-height: 118px; }
+    .rv-head, .scout { display: none; }
+    .ostats b { font-size: 18px; }
+    .owear i { width: 32px; height: 32px; }
+    .owear i svg { width: 24px; height: 24px; }
+    .over b { font-size: 26px; }
+    .over p { font-size: 13px; }
+    .over p.small, .sets { display: none; }
+    .runst div:nth-child(n + 7) { display: none; }
+    .drops { display: none; }
+    .irow { min-height: 44px; }
+    .irow > .iic svg { width: 26px; height: 26px; }
+    .go { font-size: 17px; padding: 8px 10px; }
+    .hcard { padding: 6px 10px; gap: 4px; }
+    .hc-top b { font-size: 17px; }
+  }
+  @media (max-height: 580px) {
+    #stage { min-height: 96px; }
+    .runbar small, .odds, .xstats { display: none; }
+    .bslot { border-radius: 5px; }
+    .bslot small { display: none; }
+    .bslot svg { width: 22px; height: 22px; }
+    .irow .wn .dt { display: none; }
+    .top { padding-block: 6px 4px; }
+    .mark { font-size: 22px; }
+    .panel { gap: 6px; padding-block: 6px 8px; }
+    .sh-card { padding: 10px 12px 12px; gap: 7px; }
+  }
+  @media (max-height: 760px) and (min-width: 380px) {
+    .actions, .actions.four { grid-template-columns: 1fr 1fr 1fr; }
+    .actions .go.wide, .actions .ghost.wide { grid-column: 1 / -1; }
+    .actions.two { grid-template-columns: 1fr 2fr; }
+  }
+  @media (max-height: 660px) {
+    .irow .wn .dt { max-height: 14px; overflow: hidden; }
+    .actions .go.wide, .actions .ghost.wide { grid-column: auto; }
+  }
+  @media (max-width: 379px) {
+    .ladder .lbl, .rec { font-size: 11px; white-space: nowrap; }
+    .bring { font-size: 13px; }
+    .bring .lbl { white-space: nowrap; }
+    .cards.four .sk-ic, .cards.four .tr-ic { display: none; }
+    .cards.four .card b { font-size: 13px; }
+    .cards.four .card small { font-size: 9px; }
+    /* long button labels wrap instead of being cut off */
+    .go { white-space: normal; font-size: 16px; line-height: 1.05; letter-spacing: 0.03em; padding: 8px 6px; }
+    .ghost { font-size: 11px; padding: 8px 4px; }
+    /* every action bar on one row, however many buttons it has */
+    .actions, .actions.four, .actions.two { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+    .actions .go.wide, .actions .ghost.wide { grid-column: auto; }
+  }
 </style>
 </head>
 <body>
@@ -485,6 +575,7 @@
     </div>
   </header>
 
+  <div id="sheet" hidden><div class="sh-back"></div><div class="sh-card" id="sheetBody"></div></div>
   <div id="stage">
     <canvas id="cv" aria-label="Arena"></canvas>
     <div id="doll" hidden>
@@ -528,29 +619,18 @@
       <h2 class="rv-name" id="rvName">Tack</h2>
       <p class="rv-tag" id="rvTag">Guards the porch.</p>
     </div>
-    <div class="cards">
-      <div class="card">
-        <span class="lbl">Weapon</span>
-        <div class="card-t"><b id="rvW">Sword</b><small id="rvWs">7f · combo</small></div>
-        <p id="rvWd"></p>
-      </div>
-      <div class="card">
-        <span class="lbl">Skill</span>
-        <div class="card-t"><span class="sk-ic" id="rvSi"></span><b id="rvS">Parry</b><small id="rvSs">5.5s</small></div>
-        <p id="rvSd"></p>
-      </div>
+    <div class="cards four">
+      <div class="card"><span class="lbl">Weapon</span><div class="card-t"><b id="rvW">Sword</b></div><small id="rvWs">7f · combo</small></div>
+      <div class="card"><span class="lbl">Skill</span><div class="card-t"><span class="sk-ic" id="rvSi"></span><b id="rvS">Parry</b></div><small id="rvSs">5.5s</small></div>
+      <div class="card"><span class="lbl">Trinket</span><div class="card-t"><span class="tr-ic inl" id="rvTri"></span><b id="rvTr">None</b></div><small id="rvTrs"></small></div>
+      <div class="card"><span class="lbl">Acrobatics</span><div class="card-t"><b id="rvAcroN">0</b></div><small id="rvAcro"></small></div>
     </div>
-    <div class="scout">
-      <span class="lbl">Scouting report</span>
-      <p id="rvTip"></p>
-    </div>
-    <div class="bring"><span class="lbl">Acrobatics</span><span id="rvAcro"></span></div>
-    <div class="bring"><span class="lbl">Trinket</span><span id="rvTr"></span></div>
+    <div class="scout"><span class="lbl">Scouting report</span><p id="rvTip"></p></div>
     <div class="bring"><span class="lbl">You bring</span><b id="rvYou">Sword · Blink</b></div>
-    <div class="hunts" id="hunts"><span class="lbl">Or hunt</span></div>
-    <div class="actions">
+    <div class="actions four">
       <button class="ghost" id="rvEdit">Edit build</button>
-      <button class="go" id="rvFight">Fight</button>
+      <button class="ghost" id="rvHunt">Hunt a creature</button>
+      <button class="go wide" id="rvFight">Fight</button>
     </div>
   </section>
 
@@ -6765,7 +6845,7 @@ function setBuildTab(t) {
   refreshBuildUI();
 }
 function pickSlot(k) {
-  if (run) { if (runScreen !== 'gear') { runBack = runScreen; showRun('gear'); } runSel = { slot: k }; renderDoll(); renderRun(); return; }
+  if (run) { if (runScreen !== 'gear') { runBack = runScreen; showRun('gear'); } runSel = { slot: k }; renderDoll(); renderRun(); gearSheet(); return; }
   const s = SLOTS[k];
   if (s.locked) { toast(s.locked); return; }
   gearSlot = k;
@@ -7049,12 +7129,13 @@ function enterRival() {
   const nm = $('#rvName');
   nm.textContent = bd.name; nm.classList.remove('slam'); void nm.offsetWidth; nm.classList.add('slam');
   $('#rvTag').textContent = r.tag;
-  $('#rvW').textContent = WEAP[bd.weapon].name; $('#rvWs').textContent = WEAP[bd.weapon].stat; $('#rvWd').textContent = WEAP[bd.weapon].desc;
-  $('#rvSi').innerHTML = SKILL_ICON[bd.skill]; $('#rvS').textContent = SKILL[bd.skill].name; $('#rvSs').textContent = SKILL[bd.skill].stat; $('#rvSd').textContent = SKILL[bd.skill].desc;
+  $('#rvW').textContent = WEAP[bd.weapon].name; $('#rvWs').textContent = WEAP[bd.weapon].stat;
+  $('#rvSi').innerHTML = SKILL_ICON[bd.skill]; $('#rvS').textContent = SKILL[bd.skill].name; $('#rvSs').textContent = SKILL[bd.skill].stat;
   $('#rvTip').textContent = r.tip;
-  const pips = [1, 2, 3, 4].map((i) => `<i class="${i <= (bd.acro || 0) ? 'on' : ''}"></i>`).join('');
-  $('#rvAcro').innerHTML = `<span class="acro-pips" aria-hidden="true">${pips}</span>Level ${bd.acro || 0}: ${acroMoves(bd.acro || 0)}`;
-  $('#rvTr').innerHTML = bd.trinket ? `<span class="tr-ic inl">${stSvg(TRINKET[bd.trinket].status)}</span>${TRINKET[bd.trinket].name}: ${TRINKET[bd.trinket].desc}` : 'None';
+  $('#rvAcroN').textContent = `${bd.acro || 0} / 4`; $('#rvAcro').textContent = acroMoves(bd.acro || 0);
+  $('#rvTri').innerHTML = bd.trinket ? stSvg(TRINKET[bd.trinket].status) : '';
+  $('#rvTr').textContent = bd.trinket ? TRINKET[bd.trinket].name.split(' ')[0] : 'None';
+  $('#rvTrs').textContent = bd.trinket ? STATUS[TRINKET[bd.trinket].status].name + ' on hit' : 'nothing extra';
   $('#rvYou').textContent = loadout(builds[0]);
   $('#rvFight').textContent = `Fight ${bd.name}`;
 }
@@ -7201,13 +7282,19 @@ $('#fightBtn').addEventListener('click', () => { huntKind = null; startFight(new
 $('#scoutBtn').addEventListener('click', enterRival);
 $('#rvEdit').addEventListener('click', enterBuild);
 $('#rvFight').addEventListener('click', () => { huntKind = null; startFight(newSeed()); });
-$('#hunts').insertAdjacentHTML('beforeend', `<div class="seg tiers" role="radiogroup" aria-label="Hunt difficulty">${TIERS.map((t) => `<button data-tier="${t}" role="radio" aria-checked="${t === huntTier}" class="${t === huntTier ? 'on' : ''}">${TIER[t].label}</button>`).join('')}</div>`);
-$('#hunts').insertAdjacentHTML('beforeend', HUNT_KEYS.map((k) => `<button class="ghost" data-hunt="${k}" title="${HUNTS[k].tip}">${HUNTS[k].name}</button>`).join(''));
-for (const b of document.querySelectorAll('[data-tier]')) b.addEventListener('click', () => {
-  huntTier = b.dataset.tier;
-  for (const x of document.querySelectorAll('[data-tier]')) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }
+// The hunt picker: every creature at a chosen difficulty, over the top of the rival page.
+function huntSheet() {
+  openSheet(`<div class="sh-head"><b>Hunt a creature</b><span class="lbl">${HUNT_KEYS.length} of them</span></div>
+    <div class="seg tiers" role="radiogroup" aria-label="Hunt difficulty">${TIERS.map((t) => `<button data-tier="${t}" role="radio" aria-checked="${t === huntTier}" class="${t === huntTier ? 'on' : ''}">${TIER[t].label}</button>`).join('')}</div>
+    <div class="hpick">${HUNT_KEYS.map((k) => `<button data-hunt="${k}" title="${HUNTS[k].tip}">${huntTier === 'elite' && HUNTS[k].eliteName ? HUNTS[k].eliteName : HUNTS[k].name}</button>`).join('')}</div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
+$('#rvHunt').addEventListener('click', huntSheet);
+$('#sheet').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  if (b.dataset.tier) { huntTier = b.dataset.tier; huntSheet(); return; }
+  if (b.dataset.hunt) { closeSheet(); huntKind = b.dataset.hunt; startFight(newSeed()); }
 });
-for (const b of document.querySelectorAll('[data-hunt]')) b.addEventListener('click', () => { huntKind = b.dataset.hunt; startFight(newSeed()); });
 $('#rvPrev').addEventListener('click', () => { setRival(rivalIx - 1); enterRival(); });
 $('#rvNext').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
 $('#editBtn').addEventListener('click', enterBuild);
@@ -7325,6 +7412,28 @@ function compareLine(inst, to = targetSlot(inst)) {
   out.push(...setProgress(inst, to));
   return out.length ? out.join(' ') : '<span>Same as yours</span>';
 }
+// A compact row: icon, name, and either a compare line, a price or a tag. Tapping it opens the sheet.
+function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs = '', cls = '' } = {}) {
+  const it = ITEM[inst.item], kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const rim = it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
+  const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${FAMILY[it.family].name}` : ''}`;
+  return `<button class="irow ${it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
+    <span class="iic">${itemIcon(inst)}</span>
+    <span class="wn"><b>${it.name}</b>${compare ? `<small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small><span class="dt">${sub}</span>` : `<small>${sub}</small>`}</span>
+    ${tag ? `<span class="why">${tag}</span>` : ''}${price}${act}</button>`;
+}
+// The sheet: details and choices over the top, so no screen ever has to scroll.
+function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; }
+function closeSheet() { $('#sheet').hidden = true; sheetFor = null; }
+let sheetFor = null;
+let sheetNote = '';
+function itemSheet(inst, actions, title = '', note = '') {
+  sheetNote = note;
+  sheetFor = inst.uid;
+  openSheet(`${title ? `<div class="sh-head"><b>${title}</b>${sheetNote ? `<span class="lbl">${sheetNote}</span>` : ''}</div>` : ''}
+    ${itemCard(inst, '', !!run)}
+    <div class="actions four">${actions}<button class="ghost" data-sheet="close">Close</button></div>`);
+}
 function itemCard(inst, actions = '', compare = false) {
   const it = ITEM[inst.item], fam = it.family ? FAMILY[it.family] : null;
   const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
@@ -7366,7 +7475,8 @@ function renderRun() {
     actions = `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Rivals</button>`;
   } else if (runScreen === 'loot') {
     body = `<div class="row-h"><span class="lbl">Pick one</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>` +
-      run.loot.items.map((inst, i) => itemCard(inst, `${wearBtns(inst, `data-loot="${i}" data-act`)}<button class="ghost sm" data-loot="${i}" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, true)).join('');
+      run.loot.items.map((inst, i) => itemRow(inst, { compare: true, attrs: `data-lootrow="${i}"` })).join('') +
+      `<p class="hint">Tap a drop to see it in full.</p>`;
     actions = `<button class="ghost" data-go="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>Reroll (${run.rerolls})</button><button class="ghost" data-go="skip">Skip</button>`;
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
@@ -7382,30 +7492,17 @@ function renderRun() {
       const inst = run.bag[i];
       return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}">${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
     }).join('');
-    let sel = '';
-    if (runSel && runSel.uid) {
-      const inst = run.bag.find((x) => x.uid === runSel.uid);
-      if (inst) sel = itemCard(inst, `${wearBtns(inst, 'data-bagact="wear" data-to')}${mergeBtn(inst)}<button class="ghost sm" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`, true);
-    } else if (runSel && runSel.slot) {
-      const inst = run.equip[runSel.slot];
-      sel = inst ? itemCard(inst, `${mergeBtn(inst)}${runSel.slot !== 'weapon' ? `<button class="ghost sm" data-bagact="off" ${run.bagFull() ? 'disabled' : ''}>Take off</button>` : ''}`)
-        : `<p class="hint">Nothing in your ${slotName(runSel.slot).toLowerCase()} slot. Hunt for it: every creature drops its family's gear.</p>`;
-    }
     body = `<div class="gstats runst">${cells.map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
       ${extra ? `<div class="xstats">${extra}</div>` : ''}
       ${sets || rules ? `<div class="sets">${rules}${sets}</div>` : ''}
       <div class="row-h"><span class="lbl">Bag</span><span class="lbl">${run.bag.length} / ${RUNCFG.bag}</span></div>
-      <div class="bag">${bag}</div>${sel}`;
+      <div class="bag">${bag}</div>
+      <p class="hint">Tap a slot beside your fighter, or a piece in the bag.</p>`;
     actions = `<button class="go wide" data-go="back">Back</button>`;
   } else if (runScreen === 'shop') {
     body = `<div class="row-h"><span class="lbl">The shop · day ${run.day}</span><span class="lbl">Gold ${run.gold}</span></div>` + run.shop.map((w, i) => {
-      const it = ITEM[w.inst.item], afford = run.gold >= w.price;
-      if (w.sold) return `<div class="ware sold"><span class="iic">${itemIcon(w.inst)}</span><b>${it.name}</b><span class="why">Sold</span></div>`;
-      const trinketFull = it.slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2;
-      const btns = trinketFull ? ['trinket1', 'trinket2'].map((t) => `<button class="go sm swap" data-buy="${i}" data-to="${t}" ${afford ? '' : 'disabled'}>⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('')
-        : `<button class="go sm" data-buy="${i}" data-to="wear" ${afford ? '' : 'disabled'}>Buy · wear</button>`;
-      return `<details class="ware"${i === runSel?.open ? ' open' : ''}><summary><span class="iic">${itemIcon(w.inst)}</span><span class="wn"><b style="color:${w.inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[w.inst.rarity]}">${it.name}</b><small>${RARITY[w.inst.rarity].name} ${(it.keystone ? 'keystone' : slotName(it.slot)).toLowerCase()}</small></span><span class="why">${w.why}</span><span class="price ${afford ? '' : 'poor'}">${w.price}g</span></summary>
-        ${itemCard(w.inst, `${btns}<button class="ghost sm" data-buy="${i}" data-to="bag" ${afford && !run.bagFull() ? '' : 'disabled'}>Buy · bag</button>`, true)}</details>`;
+      if (w.sold) return itemRow(w.inst, { tag: 'Sold', cls: 'sold' });
+      return itemRow(w.inst, { tag: w.why, price: `<span class="price ${run.gold >= w.price ? '' : 'poor'}">${w.price}g</span>`, attrs: `data-ware="${i}"` });
     }).join('');
     actions = `<button class="ghost" data-go="shopreroll" ${run.gold >= SHOP_REROLL ? '' : 'disabled'}>Reroll · ${SHOP_REROLL}g</button><button class="ghost" data-go="gear">Gear</button><button class="go wide" data-go="shopleave">Onward</button>`;
   } else if (runScreen === 'event') {
@@ -7451,15 +7548,16 @@ function renderRun() {
 // Wear buttons: a trinket with both trinket slots full asks which one it replaces. `attr` ends in the
 // attribute that carries the choice.
 // two of the same item at the same rarity merge into one a rarity up
-const mergeBtn = (inst) => (run.twinOf(inst) ? `<button class="go sm" data-bagact="merge">Merge → ${RARITY[upR(inst.rarity)].name}</button>` : '');
+const mergeBtn = (inst) => (run.twinOf(inst) ? `<button class="go" data-bagact="merge">Merge → ${RARITY[upR(inst.rarity)].name}</button>` : '');
 function wearBtns(inst, attr) {
   if (ITEM[inst.item].slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2) {
-    return ['trinket1', 'trinket2'].map((t) => `<button class="go sm swap" ${attr}="${t}" aria-label="Wear, replacing ${ITEM[run.equip[t].item].name}">⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('');
+    return ['trinket1', 'trinket2'].map((t) => `<button class="go swap" ${attr}="${t}" aria-label="Wear, replacing ${ITEM[run.equip[t].item].name}">⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('');
   }
-  return `<button class="go sm" ${attr}="wear">Wear</button>`;
+  return `<button class="go" ${attr}="wear">Wear</button>`;
 }
 function applyRunBuild() { builds[0] = { ...run.build(freeBuild.pieces), name: 'You' }; }
 function showRun(screen) {
+  closeSheet();
   runScreen = screen; runSel = null; huntKind = null; huntPower = 1;
   applyRunBuild();
   mode = 'build'; buildTab = 'gear';
@@ -7509,16 +7607,32 @@ function runContinue() {
   if (run.over) { Run.clear(); showRun('over'); return; }
   showRun(runHome());
 }
-ui.runPanel.addEventListener('click', (ev) => {
+function runClick(ev) {
   const t = ev.target.closest('button'); if (!t || t.disabled) return;
+  if (t.dataset.sheet === 'close') { closeSheet(); return; }
   if (t.dataset.offer !== undefined) { runFight(run.offers[+t.dataset.offer]); return; }
+  // a drop, a ware or a piece of your own gear: the full card and its choices, over the top
+  if (t.dataset.lootrow !== undefined) {
+    const i = +t.dataset.lootrow, inst = run.loot.items[i];
+    itemSheet(inst, `${wearBtns(inst, `data-loot="${i}" data-act`)}<button class="ghost" data-loot="${i}" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, 'Your drop');
+    return;
+  }
+  if (t.dataset.ware !== undefined) {
+    const i = +t.dataset.ware, w = run.shop[i], it = ITEM[w.inst.item], afford = run.gold >= w.price;
+    const full = it.slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2;
+    const btns = full ? ['trinket1', 'trinket2'].map((k) => `<button class="go swap" data-buy="${i}" data-to="${k}" ${afford ? '' : 'disabled'}>⇄ ${ITEM[run.equip[k].item].name.split(' ').slice(-1)[0]}</button>`).join('')
+      : `<button class="go" data-buy="${i}" data-to="wear" ${afford ? '' : 'disabled'}>Buy · wear</button>`;
+    itemSheet(w.inst, `${btns}<button class="ghost" data-buy="${i}" data-to="bag" ${afford && !run.bagFull() ? '' : 'disabled'}>Buy · bag</button>`, `${w.price} gold`, `You have ${run.gold}`);
+    return;
+  }
   if (t.dataset.loot !== undefined) {
     if (!run.takeLoot(+t.dataset.loot, t.dataset.act)) { toast('Your bag is full.'); return; }
+    closeSheet();
     if (!run.over) run.next(); else Run.clear();
     showRun(run.over ? 'over' : runHome()); return;
   }
   if (t.dataset.buy !== undefined) {
-    if (run.buy(+t.dataset.buy, t.dataset.to)) { toast(`Bought ${ITEM[run.shop[+t.dataset.buy].inst.item].name}.`); run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderRun(); }
+    if (run.buy(+t.dataset.buy, t.dataset.to)) { closeSheet(); toast(`Bought ${ITEM[run.shop[+t.dataset.buy].inst.item].name}.`); run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderDoll(); renderRun(); }
     else toast(run.bagFull() ? 'Your bag is full.' : 'Not enough gold.');
     return;
   }
@@ -7531,13 +7645,14 @@ ui.runPanel.addEventListener('click', (ev) => {
   if (t.dataset.evitem) { chooseEvent(run, runSel.pick, t.dataset.evitem); runSel = null; run.save(); applyRunBuild(); renderRun(); return; }
   if (t.dataset.ev === 'back') { runSel = null; renderRun(); return; }
   if (t.dataset.ev === 'done') { run.endEvent(); showRun(runHome()); return; }
-  if (t.dataset.bag) { runSel = { uid: t.dataset.bag }; renderRun(); return; }
+  if (t.dataset.bag) { runSel = { uid: t.dataset.bag }; gearSheet(); return; }
   if (t.dataset.bagact) {
     const a = t.dataset.bagact;
     if (a === 'wear') { run.wear(run.bag.find((x) => x.uid === runSel.uid), t.dataset.to); runSel = null; }
     else if (a === 'sell') { toast(`Sold for ${run.sell(runSel.uid)} gold.`); runSel = null; }
     else if (a === 'off') { run.unwear(runSel.slot); runSel = null; }
     else if (a === 'merge') { const m = run.merge(runSel.uid || run.equip[runSel.slot].uid); if (m) toast(`Merged into ${aName(m)}.`); runSel = null; }
+    closeSheet();
     run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderDoll(); renderRun(); return;
   }
   const go = t.dataset.go;
@@ -7550,7 +7665,23 @@ ui.runPanel.addEventListener('click', (ev) => {
   else if (go === 'shopreroll') { run.rerollShop(); run.save(); renderRun(); }
   else if (go === 'shopleave') { run.leaveShop(); showRun(runHome()); }
   else if (go === 'skip') { run.loot = null; if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
-});
+}
+// What you have on, or a piece in the bag: shown over the top so the gear screen stays put.
+function gearSheet() {
+  const inst = runSel.uid ? run.bag.find((x) => x.uid === runSel.uid) : run.equip[runSel.slot];
+  if (!inst) {
+    openSheet(`<div class="sh-head"><b>${slotName(runSel.slot)}</b><span class="lbl">Empty</span></div>
+      <p class="hint">Nothing here yet. Every creature drops its family's gear, and the shop stocks it.</p>
+      <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+    return;
+  }
+  const acts = runSel.uid
+    ? `${wearBtns(inst, 'data-bagact="wear" data-to')}${mergeBtn(inst)}<button class="ghost" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`
+    : `${mergeBtn(inst)}${runSel.slot !== 'weapon' ? `<button class="ghost" data-bagact="off" ${run.bagFull() ? 'disabled' : ''}>Take off</button>` : ''}`;
+  itemSheet(inst, acts, runSel.uid ? 'In your bag' : slotName(runSel.slot));
+}
+ui.runPanel.addEventListener('click', runClick);
+$('#sheet').addEventListener('click', (ev) => { if (ev.target.closest('.sh-back')) { closeSheet(); return; } runClick(ev); });
 $('#runNext').addEventListener('click', runContinue);
 $('#runStart').addEventListener('click', () => { const saved = Run.load(); startRun(saved && !saved.over ? saved : new Run()); });
 function refreshRunBar() {
@@ -7582,6 +7713,7 @@ window.__homeTurf = {
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
   cam(o) { camOverride = o; cam.init = false; },
+  get runState() { return run; }, showRun,
   run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
