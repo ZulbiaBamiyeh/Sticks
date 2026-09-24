@@ -48,7 +48,16 @@ figures fight it out on their own.
   blade fighter catches a swing, the fight goes into a short choreographed
   exchange of strikes and blocks, with sparks on every contact. Most exchanges
   lock blades halfway through, crossed and pushing. The camera moves in, and an
-  exchange that starts mid-air drifts slowly down to the floor. It ends one of three ways, decided by
+  exchange that starts mid-air drifts slowly down to the floor. Each weapon has
+  its own mix of strikes, including spinning cuts, feints and shoves. The
+  defender blocks, ducks, hops or leans away, so no two exchanges look alike.
+- **No trading hits:** a fighter who lands a hit keeps the initiative, and combos
+  only continue when the next hit will connect. A fighter just shaken off a hit
+  swings back, backs off, or puts its guard up. A swing into a guard becomes an
+  exchange or a clean block.
+- **Variety:** basic attacks have alternate swings, and idle fighters sometimes
+  twirl their weapon. These looks come from a separate random stream, so they
+  never change who wins, and a replay looks exactly the same. It ends one of three ways, decided by
   the fight's seed:
   - a fighter breaks it with a ready skill (Blink behind, a Parry riposte, a
     Dark Sight vanish or a Hook that trips);

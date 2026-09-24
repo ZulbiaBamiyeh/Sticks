@@ -427,11 +427,11 @@ const SQ_START = 20, SQ_SPEED = 0.42, SQ_MAX = 7.5, TIME_CAP = 75;
 const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16, EV_WJ = 32, EV_DJ = 64, EV_WR = 128, EV_MANTLE = 256;
 // range > 0 marks a ranged weapon and is the distance its fighter likes to keep; stop is where melee fighters plant their feet.
 const WEAP = {
-  sword: { name: 'Sword', speed: 7.5, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
+  sword: { name: 'Sword', speed: 7.2, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
   daggers: { name: 'Daggers', speed: 7.8, atk: 'stab1', stop: 0.55, stat: '4f · flurry', desc: 'Fastest hands and feet in the game, with the shortest reach.' },
-  spear: { name: 'Spear', speed: 6.3, atk: 'thrust', stop: 2.25, stat: '9f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
+  spear: { name: 'Spear', speed: 6.7, atk: 'thrust', stop: 2.25, stat: '9f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
-  bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '18f · lob', desc: 'Lobs arrows over walls from far away.' },
+  bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
 };
 const WEAPONS = Object.keys(WEAP);
@@ -445,7 +445,7 @@ const SKILL = {
 const SKILLS = Object.keys(SKILL);
 // Projectiles. v is launch speed and g is gravity, both in tiles per second.
 const SHOT = {
-  arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 10, kb: [4.5, -2.5], stun: 12, hs: 3 } },
+  arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
   star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
@@ -475,6 +475,8 @@ let mode = 'build';
 let speedMul = 1;
 let fightSeed = 1;
 const rng = () => world.rng();
+// A second random stream for looks only (which swing, which dodge), so variety never changes who wins.
+const vr = () => world.vrng();
 
 function mulberry(a) {
   return () => {
@@ -741,19 +743,19 @@ function validate(build) {
 // Frame data: w = windup, a = active, r = recovery. Boxes are [x0, y0, x1, y1] from the feet, facing right.
 // fast = the next hit of the combo can start sooner; next = always follows on, hit or miss.
 const ATK = {
-  slash1: { w: 7, a: 5, r: 13, dmg: 10, kb: [4.5, -3], stun: 16, hs: 4, box: [0.1, -1.5, 1.35, -0.15], lunge: 3.5, melee: 1, trail: 1, chain: 'slash2' },
-  slash2: { w: 6, a: 5, r: 13, dmg: 10, kb: [5, -6], stun: 16, hs: 4, box: [0.05, -1.75, 1.3, -0.3], lunge: 3, melee: 1, trail: 1, chain: 'slash3' },
-  slash3: { w: 11, a: 7, r: 20, dmg: 15, kb: [6.5, -15], stun: 36, hs: 8, box: [0, -2, 1.35, -0.1], lunge: 6, hop: -9, melee: 1, trail: 1, tumble: 1, big: 1 },
+  slash1: { w: 7, a: 5, r: 14, dmg: 8, kb: [4, -3], stun: 18, hs: 4, box: [0.1, -1.5, 1.35, -0.15], lunge: 3.5, melee: 1, trail: 1, chain: 'slash2' },
+  slash2: { w: 6, a: 5, r: 14, dmg: 8, kb: [4.5, -6], stun: 18, hs: 4, box: [0.05, -1.75, 1.3, -0.3], lunge: 3, melee: 1, trail: 1, chain: 'slash3' },
+  slash3: { w: 11, a: 7, r: 20, dmg: 13, kb: [6.5, -15], stun: 36, hs: 8, box: [0, -2, 1.35, -0.1], lunge: 6, hop: -9, melee: 1, trail: 1, tumble: 1, big: 1 },
   aslash: { w: 4, a: 12, r: 8, dmg: 8, kb: [7, -7], stun: 20, hs: 5, box: [-0.85, -1.8, 1.25, 0.25], melee: 1, trail: 1, air: 1 },
-  stab1: { w: 4, a: 3, r: 10, dmg: 6, kb: [3.5, -2], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3.5, melee: 1, trail: 1, chain: 'stab2', fast: 1 },
-  stab2: { w: 3, a: 3, r: 10, dmg: 6, kb: [3.5, -2.5], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3, melee: 1, trail: 1, chain: 'stab3', fast: 1, back: 1 },
+  stab1: { w: 4, a: 3, r: 10, dmg: 6, kb: [3, -2], stun: 18, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3.5, melee: 1, trail: 1, chain: 'stab2', fast: 1 },
+  stab2: { w: 3, a: 3, r: 10, dmg: 6, kb: [3, -2.5], stun: 18, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3, melee: 1, trail: 1, chain: 'stab3', fast: 1, back: 1 },
   stab3: { w: 6, a: 5, r: 17, dmg: 9, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
-  thrust: { w: 9, a: 4, r: 16, dmg: 11, kb: [8.5, -3.5], stun: 20, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
+  thrust: { w: 9, a: 4, r: 16, dmg: 11, kb: [8.5, -3.5], stun: 25, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
   rise: { w: 8, a: 5, r: 15, dmg: 10, kb: [3, -12], stun: 26, hs: 6, box: [-0.25, -3.3, 1.0, -1.0], melee: 1, trail: 1, tumble: 1 },
   hammer: { w: 17, a: 6, r: 22, dmg: 23, kb: [12, -9], stun: 44, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1,
     shock: { r: 2.1, dmg: 6, kb: [7, -7], stun: 22, hs: 6, tumble: 1 } },
   kick: { w: 5, a: 4, r: 12, dmg: 5, kb: [9, -4], stun: 18, hs: 4, box: [0.1, -1.15, 1.0, -0.35] },
-  shoot: { w: 18, a: 1, r: 10, shot: 'arrow', cd: 5 },
+  shoot: { w: 16, a: 1, r: 10, shot: 'arrow', cd: 5 },
   throw: { w: 10, a: 1, r: 4, shot: 'star', next: 'throw2' },
   throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 16 },
   // air moves: shots fired mid-jump, and plunges that dive onto whoever is below
@@ -834,6 +836,19 @@ const ATK_POSE = {
     r: { fx: 0.4, fy: 0.26, wa: 0.9, lean: 0.42, hipH: 0.56 },
   },
 };
+// Alternate swings for the same attacks (same reach and timing, different shape), picked at random.
+const ATK_POSE_ALT = {
+  slash1: { w: { fx: 0.0, fy: -0.5, wa: -2.0, lean: -0.12, hipH: 0.72, bx: 0.1, by: -0.3 }, a: { fx: 0.42, fy: 0.12, wa: 0.7, lean: 0.4, hipH: 0.6, bx: 0.2, by: 0.25 }, r: { fx: 0.35, fy: 0.32, wa: 1.2, lean: 0.35, hipH: 0.62 } },
+  slash2: { w: { fx: -0.15, fy: 0.05, wa: 2.9, lean: 0.1, hipH: 0.64, bx: 0.25, by: 0.1 }, a: { fx: 0.46, fy: -0.05, wa: -0.1, lean: 0.3, hipH: 0.62, bx: -0.3, by: 0.2 }, r: { fx: 0.3, fy: 0.05, wa: -0.6, lean: 0.2 } },
+  stab1: { w: { fx: 0.05, fy: 0.4, wa: 0.3, lean: 0.35, hipH: 0.52 }, a: { fx: 0.55, fy: 0.3, wa: 0.15, lean: 0.55, hipH: 0.5 }, r: { fx: 0.4, fy: 0.3, wa: 0.1, lean: 0.45 } },
+  stab2: { w: { bx: -0.15, by: -0.3, wb: -1.2, fx: 0.1, fy: 0.3, lean: 0.2 }, a: { bx: 0.5, by: -0.15, wb: -0.2, fx: -0.05, fy: 0.3, lean: 0.4 }, r: { bx: 0.35, by: 0.1, lean: 0.3 } },
+  thrust: { w: { fx: -0.1, fy: 0.05, wa: -0.25, lean: -0.1, hipH: 0.7 }, a: { fx: 0.58, fy: 0.02, wa: -0.2, lean: 0.35, hipH: 0.64, ffx: 0.5, bfx: -0.4 }, r: { fx: 0.42, fy: 0.12, wa: -0.2, lean: 0.25 } },
+  hammer: { w: { fx: -0.3, fy: 0.1, wa: 3.0, lean: -0.1, hipH: 0.64 }, a: { fx: 0.4, fy: 0.15, wa: 0.2, lean: 0.45, hipH: 0.58 }, r: { fx: 0.35, fy: 0.2, wa: 0.5, lean: 0.4 } },
+  kick: { w: { lean: -0.2, ffx: -0.05, ffy: 0.3 }, a: { lean: -0.5, ffx: 0.7, ffy: -0.15, bx: -0.3, by: -0.2 }, r: { lean: -0.15 } },
+  throw: { w: { fx: -0.1, fy: -0.5, lean: -0.15, hipH: 0.66 }, a: { fx: 0.5, fy: 0.15, lean: 0.4, hipH: 0.6 }, r: { fx: 0.4, fy: 0.25, lean: 0.3 } },
+  dash: { w: { fx: -0.25, fy: -0.2, wa: -2.6, lean: 0.55, hipH: 0.5, ffx: 0.4, bfx: -0.46 }, a: { fx: 0.5, fy: 0.2, wa: 0.6, lean: 0.6, hipH: 0.5, ffx: 0.56, bfx: -0.56 }, r: { fx: 0.4, fy: 0.3, wa: 1.0, lean: 0.45 } },
+};
+
 // Skill poses. Hook throws with the back hand so the weapon stays up.
 const SK_POSE = {
   parry: { fx: 0.3, fy: 0.02, wa: -1.5, wb: -1.25, bx: 0.24, by: 0.06, ai: -0.5, lean: -0.1, hipH: 0.6, head: -0.1 },
@@ -855,7 +870,7 @@ function makeUnit(side, weapon, skill, acro = 0) {
     b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed, acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
-    hitDone: false, hitLanded: false, stunT: 0, juggle: 0, tumble: false, bounced: false, spin: 0,
+    hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
     rot: 0, rotV: 0, rotDriven: false, backflip: false, downT: 0, iT: 0, spikeCd: 0,
     react: 0, cd: 0, flash: 0, dodged: -1, padLaunched: false, aimSol: null,
     // skills: skCd counts down to ready; hidden counts down Dark Sight; fade is how see-through the figure is drawn.
@@ -886,6 +901,7 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 function startAtk(u, name) {
   u.state = 'atk'; u.atkName = name; u.atkDef = ATK[name]; u.af = 0; u.phase = 'w';
   u.hitDone = false; u.hitLanded = false; u.atkId = ++world.atkSeq; u.ai.macro = null;
+  u.poseVar = ATK_POSE_ALT[name] && vr() < 0.5 ? 1 : 0;
   if (u.hidden) {
     // Striking out of Dark Sight: the rival never saw it coming, so it can't dodge and the hit crits.
     reveal(u); u.ambush = true;
@@ -955,6 +971,8 @@ function think(u) {
   if (tryEvade(u, e)) return;
   if (tryAttack(u, e)) return;
   if (tryDeflect(u, e)) return;
+  if (u.recover) { u.recover = false; if (recoverChoice(u, e)) return; }
+  if (u.guardT > 0 && guardStand(u, e)) return;
   if (e.ghost && searchLook(u, e)) return;
   if (isRanged(u) ? rangedEngage(u, e) : meleeEngage(u, e)) return;
   stuckCheck(u);
@@ -971,7 +989,7 @@ function comboLogic(u, e) {
   if (u.phase === 'r' && u.hitLanded && d.chain && u.af >= d.w + d.a + (d.fast ? 1 : 3) && e.state !== 'dead' && !lying(e)) {
     const f = Math.sign(e.b.x - u.b.x) || u.face;
     const nx = ATK[d.chain];   // the next hit lunges, so it reaches a little further than its box
-    if (inBox(u.b.x, u.b.y, f, nx.box, e.b.x, e.b.y, 0.4 + (nx.lunge || 0) * nx.w / 60)) { u.face = f; startAtk(u, d.chain); }
+    if (inBox(u.b.x, u.b.y, f, nx.box, e.b.x + e.b.vx * nx.w / 60, e.b.y, 0.2 + (nx.lunge || 0) * nx.w / 120)) { u.face = f; startAtk(u, d.chain); }
   }
 }
 
@@ -1116,6 +1134,28 @@ function tryAttack(u, e) {
     u.face = f; u.react = 10; u.ai.path.length = 0; return true;
   }
   return false;
+}
+
+// Just shaken off a hit from a blade: swing back, back off, or put the guard up and wait for the next swing.
+function recoverChoice(u, e) {
+  if (isRanged(u) || isRanged(e) || e.ghost || Math.abs(e.b.x - u.b.x) > 2.4 || Math.abs(e.b.y - u.b.y) > 0.8) return false;
+  const r = rng(), away = -(Math.sign(e.b.x - u.b.x) || u.face);
+  if (r < 0.4) { u.guardT = 45; u.face = -away; return true; }
+  if (r < 0.62) {
+    if (u.acro >= 1 && u.rollCd <= 0 && rollSafe(u, away)) return startRoll(u, away);
+    const m = { dir: away, hold: 12, delay: 0 }, res = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
+    if (res && !knownHit(u, res) && !inZone(res.x)) { u.face = -away; startMacro(u, m, true); u.ai.path.length = 0; u.backflip = true; return true; }
+  }
+  return false;
+}
+// On guard: hold ground facing the rival, edging back a little if it crowds in.
+function guardStand(u, e) {
+  u.guardT--;
+  if (e.state === 'dead' || isRanged(e) || Math.abs(e.b.x - u.b.x) > 3) { u.guardT = 0; return false; }
+  const dx = e.b.x - u.b.x;
+  u.face = Math.sign(dx) || u.face;
+  u.in.dir = Math.abs(dx) < 0.9 && walkLine(u.b.x, u.b.x - u.face * 0.8, Math.floor(u.b.y - 1e-3), u) ? -u.face : 0;
+  return true;
 }
 
 function tryDeflect(u) {
@@ -1708,7 +1748,31 @@ const DUEL_BLOCK = {
   low: { fx: 0.32, fy: 0.26, wa: 1.05, wb: 1.1, bx: 0.2, by: 0.3, lean: -0.08 },
   thrust: { fx: 0.3, fy: 0.04, wa: -1.45, wb: -1.4, bx: 0.22, by: 0.05, lean: -0.22 },
 };
-const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98 };
+const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98, spin: 1.1, feint: 0.6, shove: 0.9 };
+// Each weapon has its own mix of strikes in an exchange.
+const DUEL_MIX = {
+  sword: ['high', 'low', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
+  daggers: ['thrust', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
+  spear: ['thrust', 'thrust', 'thrust', 'high', 'low', 'shove'],
+  hammer: ['high', 'low', 'high', 'spin', 'shove'],
+};
+// How the defender answers each strike: a block rings off the blade, a dodge just whistles past.
+const DUEL_ANSWER = {
+  high: ['block', 'block', 'duck'], low: ['block', 'block', 'hop'], thrust: ['block', 'lean'],
+  spin: ['block', 'duck'], feint: ['block', 'hop'], shove: ['stagger'],
+};
+const DUEL_DODGE = {
+  duck: { hipH: 0.4, lean: 0.55, head: 0.35, fx: 0.2, fy: 0.3, wa: 0.6, wb: 0.8, bx: 0.1, by: 0.3 },
+  hop: { hipH: 0.66, lean: -0.1, fx: 0.25, fy: -0.1, wa: -1.2, wb: -1.2, ffx: 0.2, ffy: 0.35, bfx: -0.1, bfy: 0.45 },
+  lean: { hipH: 0.64, lean: -0.5, head: -0.3, fx: 0.15, fy: 0.1, wa: -1.0, wb: -1.0, bx: -0.2, by: 0.1 },
+  stagger: { hipH: 0.62, lean: -0.35, head: -0.25, fx: 0.1, fy: -0.1, wa: -1.3, bx: -0.3, by: -0.1 },
+};
+const DUEL_EXTRA = {
+  spin: { w: { fx: -0.3, fy: 0.1, wa: 2.8, lean: 0.3 }, a: { fx: 0.5, fy: -0.05, wa: 0.0, lean: 0.35 } },
+  feint: { w: { fx: -0.1, fy: -0.4, wa: -2.3, lean: -0.08 }, a: { fx: 0.46, fy: 0.24, wa: 0.45, lean: 0.4 } },
+  shove: { w: { lean: -0.1, ffx: -0.05, ffy: 0.4, fx: 0.2, fy: 0.1, wa: -1.2 }, a: { lean: -0.3, ffx: 0.75, ffy: 0.15, fx: 0.15, fy: 0.05, wa: -1.3 } },
+};
+const jitter = (o, k) => { const r = {}; for (const key in o) r[key] = o[key] + (key === 'wa' || key === 'wb' ? (vr() - 0.5) * 0.5 : (vr() - 0.5) * 0.1) * k; return r; };
 const isBlade = (u) => !isRanged(u);
 function canDuel(a, b) {
   return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) &&
@@ -1717,7 +1781,13 @@ function canDuel(a, b) {
 function startDuel(a, b) {
   const n = 4 + Math.floor(rng() * 4), types = Object.keys(DUEL_STRIKE), beats = [];
   let s = rng() < 0.5 ? a : b;
-  for (let i = 0; i < n; i++) { beats.push({ s, type: types[Math.floor(rng() * 3)], len: Math.max(9, 15 - i) }); s = s === a ? b : a; }
+  for (let i = 0; i < n; i++) {
+    const mix = DUEL_MIX[s.w] || types, type = mix[Math.floor(vr() * mix.length)];
+    const answer = DUEL_ANSWER[type][Math.floor(vr() * DUEL_ANSWER[type].length)];
+    beats.push({ s, type, answer, len: Math.max(9, 15 - i) + (type === 'spin' || type === 'feint' ? 3 : 0) });
+    // sometimes the same fighter presses two strikes in a row
+    if (vr() > 0.25) s = s === a ? b : a;
+  }
   // most exchanges lock blades halfway through: crossed, pushing, sparks grinding
   if (rng() < 0.7) beats.splice(Math.floor(n / 2), 0, { s: beats[Math.floor(n / 2)].s, type: 'bind', len: 30 });
   // how it ends
@@ -1772,15 +1842,28 @@ function stepDuel() {
     if (f >= beat.len) { D.f = 0; if (++D.i >= D.beats.length) finishDuel(); }
     return;
   }
-  const st = DUEL_STRIKE[beat.type];
-  s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitF ? 0.35 : 0.7 }, f < hitF ? st.w : st.a);
-  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: 0.5 }, DUEL_BLOCK[beat.type]);
-  s.duelSwing = f >= hitF - 1 && f <= hitF + 2;
+  const type = beat.type, st = DUEL_STRIKE[type] || DUEL_EXTRA[type], hitAt = hitF + (type === 'spin' || type === 'feint' ? 3 : 0);
+  if (f === 1) { beat.sj = jitter(st.a, 1); beat.dj = jitter(beat.answer === 'block' ? DUEL_BLOCK[DUEL_STRIKE[type] ? type : type === 'spin' ? 'high' : type === 'feint' ? 'low' : 'thrust'] : DUEL_DODGE[beat.answer], 1); }
+  // a feint shows high, then cuts low
+  const windPose = type === 'feint' && f > 3 ? DUEL_STRIKE.low.w : st.w;
+  s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitAt ? 0.35 : 0.7 }, f < hitAt ? windPose : beat.sj);
+  const dodging = beat.answer !== 'block' && f >= hitAt - 3;
+  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: dodging ? 0.6 : 0.5 }, beat.answer === 'block' || dodging ? beat.dj : DUEL_BLOCK.high);
+  s.spinT = type === 'spin' && f >= hitAt - 4 && f <= hitAt + 2 ? (f - (hitAt - 4)) / 6 : 0;
+  s.duelSwing = f >= hitAt - 1 && f <= hitAt + 2;
   d.duelSwing = false;
-  if (f === hitF) {
-    const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[beat.type];
-    sparks(cx, cy, -s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, beat.type === 'high' ? -0.9 : beat.type === 'low' ? 0.9 : 0, 0.9, 'spark');
-    world.hs = Math.max(world.hs, 2); sfxShake(2);
+  if (beat.answer === 'hop' && f === hitAt - 3 && d.b.gr) { d.b.vy = -9; d.b.gr = false; }
+  if (f === hitAt) {
+    const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[type];
+    if (beat.answer === 'block') {
+      sparks(cx, cy, -s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, type === 'high' ? -0.9 : type === 'low' ? 0.9 : 0, 0.9, 'spark');
+      world.hs = Math.max(world.hs, 2); sfxShake(2);
+    } else if (beat.answer === 'stagger') {
+      D.mid += s.face * 0.35; dust(d.b.x, d.b.y, 3, 0.4); sfxShake(2); world.hs = Math.max(world.hs, 2);
+    } else {
+      // a clean miss: the blade whistles past
+      streak(cx, cy, s.face > 0 ? 0 : Math.PI, 1.3, TEAM[s.side]); streak(cx, cy + 0.12, s.face > 0 ? 0 : Math.PI, 0.9, 'spark');
+    }
   }
   if (D.fin.kind === 'skill' && D.i === D.fin.at && f === 3) { breakDuel(D.fin.u); return; }
   if (f >= beat.len) {
@@ -1936,8 +2019,19 @@ function applyHit(att, def, d, dirX, crit) {
   }
   // A blade fighter squared up to a swing can catch it and turn it into an exchange.
   const guarding = (def.state === 'free' && def.react <= 0) || (def.state === 'atk' && def.phase === 'w' && def.atkDef.melee);
-  if (d.melee && !d.air && !crit && !att.ambush && guarding && def.b.gr && facingPoint(def, att.b.x) &&
-      !isRanged(def) && canDuel(att, def) && rng() < (def.w === att.w ? 0.55 : 0.4)) { att.hitDone = true; startDuel(def, att); return; }
+  const onGuard = def.guardT > 0 && def.state === 'free' && facingPoint(def, att.b.x) && !d.plunge && !d.slam;
+  if (d.melee && !crit && !att.ambush && (onGuard || (!d.air && guarding && def.b.gr && facingPoint(def, att.b.x))) && !isRanged(def)) {
+    if (canDuel(att, def) && (onGuard || rng() < (def.w === att.w ? 0.55 : 0.4))) { def.guardT = 0; att.hitDone = true; startDuel(def, att); return; }
+    if (onGuard) {
+      // a clean block: sparks off the blade, both fighters pushed apart, and the guard drops
+      att.hitDone = true; def.guardT = 0;
+      const bx = (att.b.x + def.b.x) / 2, by = def.b.y - 1.1;
+      sparks(bx, by, -dirX, 12); ring(bx, by, 0.7, 'spark');
+      def.b.vx = dirX * 4; att.b.vx = -dirX * 3; world.hs = Math.max(world.hs, 4); sfxShake(3);
+      if (!world.stats[def.side].blocks++) log(def.side ? `${rivalName()} blocked.` : 'Your fighter blocked.', def.side);
+      return;
+    }
+  }
   att.hitLanded = true;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
@@ -2032,6 +2126,8 @@ function act(u) {
   if (u.flash > 0) u.flash--;
   if (u.spikeCd > 0) u.spikeCd--;
   if (u.rollCd > 0) u.rollCd--;
+  if (u.twirlT > 0) u.twirlT--;
+  else if (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 && !world.over && vr() < 0.006) { const e = foe(u); if (!e || Math.abs(e.b.x - b.x) > 4) u.twirlT = 40; }
   if (u.landT > 0) u.landT--;
   if (u.flipT > 0) u.flipT--;
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
@@ -2051,7 +2147,7 @@ function act(u) {
     case 'stun':
       u.stunT--; fr = 0.5;
       if (u.tumble) u.rot += u.spin;
-      if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; }
+      if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; u.recover = true; }
       break;
     case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
     case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
@@ -2205,7 +2301,7 @@ function poseTarget(u) {
     }
     if (!b.gr && st === 'free') Object.assign(T, AIR[w]);
     if (st === 'atk') {
-      atkPose = ATK_POSE[u.atkName][u.phase] || {};
+      atkPose = ((u.poseVar ? ATK_POSE_ALT : ATK_POSE)[u.atkName] || ATK_POSE[u.atkName])[u.phase] || {};
       Object.assign(T, atkPose);
       if (u.phase === 'a') { T.ka = 0.62; T.kb = 0.4; T.d = 0.35; } else if (u.phase === 'w') T.ka = 0.32; else T.ka = 0.14;
       if (u.atkDef.shot === 'arrow') {
@@ -2235,6 +2331,15 @@ function poseTarget(u) {
       Object.assign(T, sp[ph]); T.ka = ph === 'a' ? 0.6 : 0.32;
     } else { Object.assign(T, sp); T.ka = 0.5; T.kb = 0.35; }
   }
+  // Waiting with nothing in reach: now and then twirl the weapon.
+  if (st === 'free' && b.gr && spd < 0.5 && u.twirlT > 0) {
+    const k = 1 - u.twirlT / 40;
+    if (w === 'bow') T.ai = 0.9 - Math.sin(k * Math.PI) * 1.6;
+    else { T.wa = STANCE[w].wa - k * 2 * Math.PI; T.wb = STANCE[w].wb + k * 2 * Math.PI; T.fx += 0.08; T.fy -= 0.1; }
+    T.ka = 0.5;
+  }
+  // On guard: blade up across the body, weight back.
+  if (st === 'free' && u.guardT > 0 && b.gr) Object.assign(T, DUEL_BLOCK.high, { hipH: 0.6, lean: -0.05 });
   // Sneaking in Dark Sight: lower and leaning in.
   if (u.hidden && (st === 'free' || st === 'skill') && b.gr) { T.hipH -= 0.07; T.lean += 0.14; T.head += 0.1; }
   if (st === 'down' || (st === 'stun' && u.tumble) || st === 'duel') return T;
@@ -2289,8 +2394,9 @@ function poseStep(u) {
     p[k] += v[k];
   }
   if (u.flipT > 0 && u.state === 'free') u.rot = u.flipDir * 2 * Math.PI * (1 - u.flipT / u.flipMax);
+  if (u.state === 'duel' && u.spinT > 0) u.rot = 2 * Math.PI * Math.min(1, u.spinT);
   if (u.state === 'roll') u.rot = 2 * Math.PI * Math.min(1, (u.rollMax - u.rollT) / (u.rollMax - 3));
-  const driven = (u.state === 'stun' && u.tumble) || u.backflip || u.state === 'roll' || (u.flipT > 0 && u.state === 'free') ||
+  const driven = (u.state === 'stun' && u.tumble) || u.backflip || u.state === 'roll' || (u.flipT > 0 && u.state === 'free') || (u.state === 'duel' && u.spinT > 0) ||
     (u.state === 'atk' && (u.atkName === 'aslash' || (u.atkName === 'stab3' && u.af >= u.atkDef.w)));
   if (driven) u.rotDriven = true;
   else {
@@ -2429,9 +2535,9 @@ function trailStep(u, S) {
 // ---------------------------------------------------------------- world
 function newWorld(seed) {
   return {
-    t: 0, rng: mulberry(seed), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
+    t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
