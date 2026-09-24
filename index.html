@@ -380,7 +380,8 @@
   .il-perk { color: #6a4fd1; font-weight: 800; }
   .il-rule { font-weight: 800; color: #8a4a12; }
   .icard.relic .il-rule { color: #8a6a0a; }
-  .il-trig { font-style: italic; }
+  .il-trig { font-weight: 700; color: #1c4fa8; }
+  .iflav { margin: 0; font-size: 12px; font-style: italic; color: var(--ink-2); }
   .icmp { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
   .icmp .up { color: #1b8a3a; } .icmp .dn { color: var(--red); }
   .iact { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
@@ -1146,6 +1147,7 @@ function startRoll(u, dir, len = 16) {
   if (u.acro < 1 || u.rollCd > 0 || !b.gr || u.state === 'dead') return false;
   u.state = 'roll'; u.rollT = u.rollMax = len; u.rollDir = dir; u.face = dir;
   b.vx = dir * Math.max(10.5, Math.abs(b.vx)); u.iT = Math.max(u.iT, len - 5); u.rollCd = 50;
+  fire(u, 'onRoll');
   u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false; u.flipT = 0;
   dust(b.x, b.y, 3, 0.4);
   if (!world.demo) world.stats[u.side].rolls++;
@@ -1797,6 +1799,7 @@ function startSkill(u, name, face) {
   u.skCd = SKILL[u.skill].cd * (u.skMul || 1);
   if (!world.demo) world.stats[u.side].skill++;
   if (u.hidden && name !== 'cast') reveal(u);
+  fire(u, 'onSkill');
   return true;
 }
 function endSkill(u, react) { u.state = 'free'; u.skName = null; u.react = react; }
@@ -1901,7 +1904,7 @@ function doBlink(u, x, y, lookX) {
   if (u.scarf) for (const p of u.scarf) { p.x += dx; p.y += dy; p.px += dx; p.py += dy; }
   u.trail.length = 0;
   b.x = x; b.y = y; b.vx = 0; b.vy = 0; b.gr = false; b.jumping = false;
-  u.iT = Math.max(u.iT, 6); u.skCd = SKILL.blink.cd * (u.skMul || 1); u.react = Math.min(u.react, 2);
+  u.iT = Math.max(u.iT, 6); u.skCd = SKILL.blink.cd * (u.skMul || 1); u.react = Math.min(u.react, 2); fire(u, 'onSkill');
   u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false;
   if (lookX !== undefined) u.face = Math.sign(lookX - x) || u.face;
   if (u.hidden) reveal(u);
@@ -1921,6 +1924,7 @@ function aiParry(u, e) {
 }
 function parrySuccess(u, att, x, y, what = 'shot') {
   endSkill(u, 0);
+  fire(u, 'onParry', att && !att.ghost ? att : null);
   u.cd = 0; u.skCd = Math.min(u.skCd, 240); u.iT = Math.max(u.iT, 8);
   if (att) {
     att.state = 'stun'; att.stunT = 44; att.tumble = false; att.skName = null;
@@ -2224,6 +2228,7 @@ function finishDuel() {
     world.hs = Math.max(world.hs, 9); sfxShake(6);
     return;
   }
+  fire(fin.u, 'onExchange', fin.u === a ? b : a);
   const w = fin.u, l = w === a ? b : a, fin2 = WEAP[w.w].atk === 'slash1' ? 'slash3' : WEAP[w.w].atk === 'stab1' ? 'stab3' : WEAP[w.w].atk;
   if (fin.kind === 'vault') {
     // flip over the top and come down behind
@@ -2252,7 +2257,7 @@ function breakDuel(u) {
     startSkill(u, 'cast');
   } else {
     // the hook wraps the other blade and yanks the fighter off its feet
-    u.skCd = SKILL.hook.cd * (u.skMul || 1); world.stats[u.side].skill++;
+    u.skCd = SKILL.hook.cd * (u.skMul || 1); world.stats[u.side].skill++; fire(u, 'onSkill');
     const dir = Math.sign(u.b.x - o.b.x) || 1;
     o.state = 'stun'; o.stunT = 32; o.tumble = true; o.bounced = false; o.spin = -0.22;
     o.b.vx = dir * 4; o.b.vy = -9; o.b.gr = false;
@@ -2369,6 +2374,7 @@ function fire(u, type, other) {
     if (type === 'nth' && u.hits % t.n !== 0) continue;
     if (type === 'hpBelow') { if (t.used || u.hp / u.hpMax >= t.pct) continue; t.used = true; }
     if (type === 'every' && world.t % Math.round(t.s * 60) !== 0) continue;
+    const f = (world.fired ||= [{}, {}])[u.side]; f[type] = (f[type] || 0) + 1;   // a tally for tests
     triggerEffect(u, t, other || foeOf(u));
   }
 }
@@ -2377,6 +2383,9 @@ function triggerEffect(u, t, target) {
   if (e.apply === 'frenzy') { u.frenzyT = Math.round(e.duration * 60); callout(u, 'FRENZY'); }
   else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
   if (e.shield) { u.shield += e.shield; ring(u.b.x, u.b.y - H / 2, 1, 'steel'); }
+  if (e.critNext) { u.critNext = true; }
+  if (e.hop && u.state !== 'dead') { u.b.vy = Math.min(u.b.vy - e.hop, -e.hop); u.b.gr = false; }
+  if (e.skillCd && u.skCd > 0) u.skCd = Math.max(0, u.skCd - e.skillCd * 60);
   if (e.cleanse) { Object.assign(u.st, { burn: 0, poison: 0, bleed: 0, chill: 0, shock: 0 }); ring(u.b.x, u.b.y - H / 2, 1.2, 'steel'); }
   if (e.heal) heal(u, e.heal);
   if (e.damage && target) hurt(target, e.damage, 'hit', u.side, null, [['hits', 1]]);
@@ -2451,6 +2460,9 @@ function applyHit(att, def, d, dirX, crit) {
   const ag = att.gs, dg = def.gs;
   const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
   if (!crit && critCh > 0 && d.dmg && rng() < critCh) crit = true;   // gear crit chance
+  if (!crit && att.critNext && d.dmg) { crit = true; att.critNext = false; }
+  // what the hit found the target doing, for the gear that cares: in the air, turned away, or stunned
+  const wasAir = !def.b.gr, behind = def.face === dirX, wasDown = def.state === 'stun' || def.state === 'down' || def.st.frozen > 0;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = (def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5) || (def.state === 'atk' && def.mob && !!MOB[def.mob].armor && MOB[def.mob].armor(def));   // a big slime can't be knocked out of its leap
   const s = def.st, shattered = s.frozen > 0;
@@ -2458,7 +2470,9 @@ function applyHit(att, def, d, dirX, crit) {
   if (!armor) {
     if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
     def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
-    def.b.vx = dirX * d.kb[0]; def.b.vy = d.kb[1]; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
+    // knockback: more from gear that hits hard, less on gear that stands firm
+    const kbm = (ag ? 1 + (ag.flags.kb || 0) : 1) * (dg && dg.flags.steady ? 1 - Math.min(0.8, dg.flags.steady) : 1);
+    def.b.vx = dirX * d.kb[0] * kbm; def.b.vy = d.kb[1] * kbm; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
     def.face = -dirX;
     if (d.tumble) { def.tumble = true; def.bounced = false; def.spin = -0.26; } else def.tumble = false;
     if (def.heavy) { def.b.vx *= 0.15; def.b.vy = 0; def.b.gr = true; def.stunT = Math.min(def.stunT, 8); def.tumble = false; }
@@ -2486,6 +2500,10 @@ function applyHit(att, def, d, dirX, crit) {
     if (f.vs) for (const [k, v] of Object.entries(f.vs)) if (def.st[k] > 0) mods *= 1 + v;
     if (f.execute && def.hp < def.hpMax * 0.3) mods *= 1 + f.execute;
     if (f.rage && att.hp < att.hpMax * 0.4) mods *= 1 + f.rage;
+    if (f.airDmg && !att.b.gr) mods *= 1 + f.airDmg;
+    if (f.vsAir && wasAir) mods *= 1 + f.vsAir;
+    if (f.backstab && behind) mods *= 1 + f.backstab;
+    if (f.vsStun && wasDown) mods *= 1 + f.vsStun;
   }
   const armour = dg ? 26 / (26 + Math.max(0, dg.def - (ag ? ag.pen : 0))) : 1;
   const zap = s.shock * STATUS.shock.per, dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter : 0)) * armour;
@@ -2505,6 +2523,8 @@ function applyHit(att, def, d, dirX, crit) {
   if (ag) {
     att.hits++;
     fire(att, 'onHit', def); if (crit) fire(att, 'onCrit', def); fire(att, 'nth', def);
+    if (d.air) fire(att, 'onAir', def);
+    if (d.tumble || d.slam || (d.kb && d.kb[1] < -8)) fire(att, 'onLaunch', def);
     if (crit && ag.flags.critSpread) for (const k of ['burn', 'poison', 'bleed', 'chill', 'shock']) if (def.st[k] > 0) applyStatus(att, def, k, 1, null, true);   // Star Splitter
   }
   if (dg) {
@@ -3317,6 +3337,7 @@ function groundBelow(x, y) {
 // A popped creature bursts into ink, and paper creatures into scraps.
 function mobDie(u) {
   const K = MOB[u.mob];
+  if (U[0] && U[0].state !== 'dead') fire(U[0], 'onKill', u);
   u.state = 'dead'; u.hook = null;
   const b = u.b, cy = b.y - u.bh / 2;
   for (let i = 0; i < 14; i++) {
@@ -3460,13 +3481,15 @@ function act(u) {
     dust(wx, b.y - 0.5, 4, 0.3); streak(wx, b.y - 0.8, b.wjSide > 0 ? Math.PI : 0, 0.7, TEAM[u.side]);
     u.face = -b.wjSide; u.flipT = u.flipMax = 16; u.flipDir = -1; u.backflip = false;
     if (!world.demo) world.stats[u.side].acro++;
+    fire(u, 'onAcro');
   }
   if (ev & EV_DJ) {
     ring(b.x, b.y + 0.05, 0.55, TEAM[u.side]); dust(b.x, b.y, 3, 0.3);
     u.flipT = u.flipMax = 20; u.flipDir = 1; u.backflip = false;
     if (!world.demo) world.stats[u.side].acro++;
+    fire(u, 'onAcro');
   }
-  if (ev & EV_WR) { dust(b.x + b.wrSide * W / 2, b.y, 3, 0.2); u.face = b.wrSide; if (!world.demo) world.stats[u.side].acro++; }
+  if (ev & EV_WR) { dust(b.x + b.wrSide * W / 2, b.y, 3, 0.2); u.face = b.wrSide; if (!world.demo) world.stats[u.side].acro++; fire(u, 'onAcro'); }
   if (ev & EV_MANTLE) { u.flipT = u.flipMax = 12; u.flipDir = 1; }
   if (b.wr > 0 && world.t % 5 === 0) dust(b.x + b.wrSide * W / 2, b.y - 0.2, 1, 0.1);
   if (u.state === 'free' && !b.gr) {
@@ -3477,6 +3500,7 @@ function act(u) {
     A.padAnim[b.pad] = 1; dust(b.x, b.y, 5, 0.6); ring(b.x, b.y - 0.1, 0.9, TEAM[u.side]);
     world.stats[u.side].pads++;
     u.ai.macro = null;
+    fire(u, 'onPad');
     if (u.state === 'free') u.padLaunched = true;
   } else if (ev & EV_LAND) {
     dust(b.x, b.y, vyBefore > 14 ? 5 : 2, 0.5);
@@ -4174,6 +4198,142 @@ Object.assign(ITEM, {
   phoenix_feather: iT('Phoenix Feather', 'ember', { relic: true, flags: { revive: 0.25 }, desc: 'The first time you would fall: rise at 25% HP, cleansed, and Burn the foe.' }),
   overclock_core: iT('Overclock Core', 'molten', { relic: true, stats: { haste: 0.3 }, flags: { selfCost: 0.02 }, desc: 'Each of your swings costs 2% of your max HP.' }),
 });
+// What makes a piece more than its numbers: effects tied to how this game fights (rolls, wall jumps, pads,
+// plunges, parries, blade exchanges, knockback), and a line of flavour for every item.
+const tg = (type, effect, desc, extra = {}) => ({ trig: [{ type, ...extra, effect }], desc });
+const fl = (flags, desc) => ({ flags, desc });
+const ITEM_EXTRA = {
+  gel_blade: tg('onHit', { heal: 1 }, 'Hits heal 1.'),
+  glob_maul: fl({ kb: 0.3 }, 'Knockback +30%.'),
+  gel_cap: tg('onPad', { heal: 6 }, 'Launching from a pad: heal 6.'),
+  gel_coat: tg('onHitTaken', { heal: 3 }, 'When hit, 25%: heal 3.', { chance: 0.25 }),
+  gel_boots: tg('onRoll', { heal: 3 }, 'Rolls: heal 3.'),
+  wobble_mirror: tg('onParry', { heal: 10 }, 'A parry heals 10.'),
+  fang_knives: fl({ airDmg: 0.25 }, '+25% damage from the air.'),
+  talon_sword: tg('onAir', { apply: 'bleed' }, 'Air attacks that land: Bleed.'),
+  wing_bow: fl({ vsAir: 0.3 }, '+30% damage to airborne foes.'),
+  bat_hood: fl({ backstab: 0.3 }, '+30% damage from behind.'),
+  wing_cloak: tg('onAcro', { apply: 'frenzy', duration: 1.5 }, 'Wall jumps, wall runs and air flips: Frenzy 1.5s.'),
+  wing_boots: tg('onAcro', { shield: 5 }, 'Wall jumps, wall runs and air flips: 5 Shield.'),
+  night_wing: tg('onSkill', { critNext: true }, 'After your skill, your next hit crits.'),
+  fang_spear: fl({ vs: { poison: 0.25 } }, '+25% damage vs Poisoned.'),
+  scale_helm: tg('onHitTaken', { apply: 'poison' }, 'When hit, 20%: Poison the attacker.', { chance: 0.2 }),
+  scale_mail: fl({ steady: 0.3 }, 'Knockback taken −30%.'),
+  coil_boots: tg('onRoll', { shield: 5 }, 'Rolls: 5 Shield.'),
+  shed_skin: tg('onSkill', { cleanse: true }, 'Your skill sheds your statuses.'),
+  silk_daggers: fl({ backstab: 0.3 }, '+30% damage from behind.'),
+  silk_spear: fl({ vsAir: 0.25 }, '+25% damage to airborne foes.'),
+  eye_circlet: tg('onAcro', { critNext: true }, 'After a wall jump, wall run or air flip, your next hit crits.'),
+  silk_vest: tg('onRoll', { critNext: true }, 'After a roll, your next hit crits.'),
+  web_boots: tg('onAir', { apply: 'chill' }, 'Air attacks that land: Chill.'),
+  silk_line: tg('onSkill', { apply: 'chill', stacks: 2 }, 'Your skill: 2 Chill on the foe.'),
+  jelly_spear: fl({ kb: 0.25 }, 'Knockback +25%.'),
+  bell_hat: tg('onParry', { apply: 'shock', stacks: 2 }, 'A parry: 2 Shock on the foe.'),
+  float_boots: tg('onPad', { shield: 10 }, 'Launching from a pad: 10 Shield.'),
+  tide_mirror: tg('onParry', { shield: 12 }, 'A parry: 12 Shield.'),
+  brute_maul: fl({ kb: 0.4 }, 'Knockback +40%.'),
+  iron_sword: tg('onExchange', { apply: 'stun', duration: 0.8 }, 'Winning a blade exchange: Stun 0.8s.'),
+  iron_spear: fl({ steady: 0.25 }, 'Knockback taken −25%.'),
+  brute_brow: fl({ steady: 0.3 }, 'Knockback taken −30%.'),
+  hide_plate: fl({ steady: 0.5 }, 'Knockback taken −50%.'),
+  heavy_boots: tg('onRoll', { shield: 8 }, 'Rolls: 8 Shield.'),
+  sludge_maul: tg('onLaunch', { apply: 'poison', stacks: 2 }, 'Launching a foe: 2 Poison.'),
+  slick_boots: tg('onRoll', { apply: 'poison' }, 'Rolls: 1 Poison on the foe.'),
+  toxic_mantle: tg('onKill', { heal: 8 }, 'Each kill heals 8.'),
+  frost_fangs: tg('onAir', { apply: 'chill' }, 'Air attacks that land: Chill.'),
+  icicle_bow: fl({ vsStun: 0.3 }, '+30% damage to stunned or frozen foes.'),
+  frost_cowl: fl({ vsStun: 0.2 }, '+20% damage to stunned or frozen foes.'),
+  rime_wings: tg('onAcro', { apply: 'chill' }, 'Wall jumps, wall runs and air flips: Chill the foe.'),
+  glide_boots: fl({ airDmg: 0.2 }, '+20% damage from the air.'),
+  frost_wing: tg('onSkill', { apply: 'chill', stacks: 2 }, 'Your skill: 2 Chill on the foe.'),
+  thunder_maul: tg('onLaunch', { apply: 'shock', stacks: 2 }, 'Launching a foe: 2 Shock.'),
+  storm_crest: tg('onSkill', { apply: 'frenzy', duration: 2 }, 'Your skill: Frenzy 2s.'),
+  coil_plate: fl({ steady: 0.3 }, 'Knockback taken −30%.'),
+  surge_boots: tg('onPad', { apply: 'frenzy', duration: 2 }, 'Launching from a pad: Frenzy 2s.'),
+  storm_shed: tg('onSkill', { apply: 'shock', stacks: 2 }, 'Your skill: 2 Shock on the foe.'),
+  blood_circlet: fl({ backstab: 0.25 }, '+25% damage from behind.'),
+  red_silk: tg('onKill', { heal: 12 }, 'Each kill heals 12.'),
+  stalker_boots: tg('onRoll', { critNext: true }, 'After a roll, your next hit crits.'),
+  blood_line: tg('onSkill', { apply: 'bleed' }, 'Your skill: Bleed the foe.'),
+  lantern_hat: tg('onKill', { apply: 'frenzy', duration: 2 }, 'Each kill: Frenzy 2s.'),
+  glow_robe: tg('hpBelow', { apply: 'frenzy', duration: 4 }, 'Below 50% HP, once: Frenzy 4s.', { pct: 0.5 }),
+  drift_boots: tg('onAcro', { apply: 'burn' }, 'Wall jumps, wall runs and air flips: Burn the foe.'),
+  ember_mirror: tg('onParry', { apply: 'burn' }, 'A parry: Burn the attacker.'),
+  molten_maul: tg('onLaunch', { apply: 'burn' }, 'Launching a foe: Burn.'),
+  slag_sword: tg('onExchange', { apply: 'burn' }, 'Winning a blade exchange: Burn.'),
+  slag_helm: fl({ steady: 0.3 }, 'Knockback taken −30%.'),
+  molten_plate: fl({ steady: 0.6 }, 'Knockback taken −60%.'),
+  cinder_treads: tg('onRoll', { apply: 'burn' }, 'Rolls: Burn the foe.'),
+};
+// A few trinkets that only make sense in this game.
+Object.assign(ITEM, {
+  spring_coil: iT('Spring Coil', 'gel', { trig: [{ type: 'onPad', effect: { critNext: true } }], desc: 'Launching from a pad: your next hit crits.' }),
+  kite_string: iT('Kite String', 'wing', { trig: [{ type: 'onAcro', effect: { hop: 3 } }], desc: 'Wall jumps and air flips carry you higher.' }),
+  duelist_ribbon: iT('Duelist\'s Ribbon', 'iron', { trig: [{ type: 'onExchange', effect: { heal: 10, shield: 10 } }], desc: 'Winning a blade exchange: heal 10 and 10 Shield.' }),
+  quick_sand: iT('Quicksand Glass', 'storm', { trig: [{ type: 'onHit', chance: 0.2, effect: { skillCd: 1 } }], desc: '20% on hit: your skill comes back 1s sooner.' }),
+  feather_weight: iT('Feather Weight', 'frost', { trig: [{ type: 'onRoll', effect: { apply: 'frenzy', duration: 1 } }], desc: 'Rolls: Frenzy 1s.' }),
+  ink_pot: iT('Ink Pot', 'ember', { trig: [{ type: 'onKill', effect: { heal: 5, apply: 'frenzy', duration: 1.5 } }], desc: 'Each kill: heal 5 and Frenzy 1.5s.' }),
+});
+for (const [id, x] of Object.entries(ITEM_EXTRA)) {
+  const it = ITEM[id];
+  if (x.trig) it.trig = [...(it.trig || []), ...x.trig];
+  if (x.flags) it.flags = { ...(it.flags || {}), ...x.flags };
+  it.desc = it.desc ? `${it.desc} ${x.desc}` : x.desc;
+}
+// A line of flavour for every item, as ZereshkStory has.
+const FLAVOR = {
+  rusty_sword: 'Every fighter starts somewhere.', worn_shoes: 'Soles thin enough to read the floor.', linen_shirt: 'Smells like home.',
+  gel_blade: 'Wobbles, but it cuts.', glob_maul: 'Hits like a very determined pudding.', jelly_stars: 'They bounce. You don\'t.',
+  gel_cap: 'It is still a little bit alive.', gel_coat: 'Absorbs blows, spills, and small coins.', gel_boots: 'Squeak on every landing.',
+  gel_heart: 'Beats slowly. Heals slowly. Never stops.', lucky_clover: 'Four leaves, drawn in one stroke.', wobble_mirror: 'Your reflection jiggles back.',
+  spring_coil: 'Boing, then bang.', royal_jelly: 'Fit for a Slime King. Sticky, though.',
+  fang_knives: 'Two teeth, sharpened by a grudge.', talon_sword: 'Curved like a dive.', wing_bow: 'String made of night air.',
+  bat_hood: 'Ears up. Everything sounds like a target.', wing_cloak: 'Folds like a bat. Flaps like one too.', wing_boots: 'The floor is optional.',
+  barbed_charm: 'Every edge points the wrong way.', sonar_bell: 'Rings just before the hit does.', night_wing: 'Blink, and you missed it.',
+  kite_string: 'Tie it to your ankle. Let go of the ground.', glass_heart: 'Beautiful. Brittle. Brutal.', dervish_slippers: 'Spin until the world gives up.',
+  fang_spear: 'The tip is always damp.', scale_stars: 'Shed scales, thrown with purpose.', viper_bow: 'The arrows hiss in flight.',
+  scale_helm: 'Overlapping plates, overlapping grudges.', scale_mail: 'Heavy, cool, and very still.', coil_boots: 'Wind up. Spring back.',
+  viper_fang: 'Still has a little venom in it. Mind your fingers.', molt_charm: 'Leave your troubles in the old skin.', shed_skin: 'You were never here.',
+  plague_mask: 'Breathe in. Count the ailments.', sunstone_idol: 'Warm to the touch, and getting warmer.',
+  silk_daggers: 'Thin as a thread, and as quiet.', silk_spear: 'Spun, not forged.', silk_bow: 'The string is a single strand of web.',
+  eye_circlet: 'Eight eyes. Only two of them are yours.', silk_vest: 'Weighs nothing. Stops a little.', web_boots: 'Stick to walls. And ceilings, on good days.',
+  web_spool: 'A web thrown before hello.', eightfold_eye: 'Sees the weak spot. Then the other seven.', silk_line: 'Reel them in.',
+  star_splitter: 'Cuts statuses in half, then doubles them.', heart_of_winter: 'It does not beat. It creaks.',
+  tide_stars: 'Tingle on the way out, hurt on the way in.', tide_bow: 'Loose it and hear the sea.', jelly_spear: 'The shaft glows faintly underwater.',
+  bell_hat: 'A jellyfish, retired.', tide_robe: 'Wraps you in a pocket of calm water.', float_boots: 'Every step a little buoyant.',
+  static_charm: 'Your hair stands up just holding it.', tide_pearl: 'A shield grows in it, one layer at a time.', tide_mirror: 'Bounces back more than light.',
+  pearl_bulwark: 'A pearl the size of a fist, and twice as stubborn.', echo_conch: 'Hold it to your ear. Hear everything twice.',
+  brute_maul: 'Technically a rock on a stick.', iron_sword: 'No curves, no nonsense.', iron_spear: 'Plant it, and nothing moves you.',
+  brute_brow: 'The forehead does most of the work.', hide_plate: 'Slow. Unbothered.', heavy_boots: 'Each step a small earthquake.',
+  last_stand_locket: 'Opens only when things look bad.', metronome: 'Tick. Tick. Thud.', thorn_ring: 'Shake hands at your own risk.',
+  duelist_ribbon: 'Tied on after the first win. Never taken off.', juggernaut_plate: 'The best offence is a very heavy defence.',
+  gilded_hourglass: 'Time stands still. So do you.',
+  toxic_cleaver: 'The blade is green, and not with envy.', ooze_stars: 'Throw them before they melt.', sludge_maul: 'Leaves a mark. Several, actually.',
+  ooze_helm: 'Breathable. Mostly.', toxic_mantle: 'Heals you. Hurts everyone else.', slick_boots: 'Never stand in one place too long.',
+  venom_vial: 'Four drops. Then four more.', spore_pod: 'Pops on its own, every few seconds.', mycelial_heart: 'It spreads. That\'s the point.',
+  plague_censer: 'Swing it. Smell it. Regret it.',
+  frost_fangs: 'Bite, then chill.', icicle_bow: 'Draws cold, lets fly colder.', rime_spear: 'Frost gathers on the point.',
+  frost_cowl: 'Your breath freezes on the brim.', rime_wings: 'They crackle when you flap.', glide_boots: 'Leave the ground and stay there a while.',
+  frost_bell: 'One ring and the air turns thin.', hailstone: 'Heavier than it looks, and colder.', frost_wing: 'Blink through the frost.',
+  feather_weight: 'You roll further when you weigh nothing.', frostbite_charm: 'The colder they are, the better you aim.', cursed_mirror: 'Whatever you give it, it gives back.',
+  storm_pike: 'Crackles when it\'s bored.', thunder_maul: 'Every swing a small storm.', arc_daggers: 'The spark jumps ahead of the blade.',
+  storm_crest: 'Hair-raising, literally.', coil_plate: 'Grounded. Very grounded.', surge_boots: 'Launch, then light up.',
+  static_coil: 'Touch me. I dare you.', hourglass: 'The sand runs fast when you do.', storm_shed: 'A shed skin that still sparks.',
+  quick_sand: 'The sand runs uphill for you.', tesla_coil: 'Charge it up. Let it all out.', bottled_storm: 'Keep the cork in. Or don\'t.',
+  blood_knives: 'They drink first, ask later.', hooked_spear: 'Goes in easy. Comes out rude.', blood_bow: 'The fletching is red, and wet.',
+  blood_circlet: 'Tightens when you\'re thirsty.', red_silk: 'Soft, warm, and it takes a little back.', stalker_boots: 'Roll in. Strike from nowhere.',
+  vampire_tooth: 'Wear it on a string. Don\'t wear it on a date.', whetstone: 'Every crit sharpens the next cut.', blood_line: 'Pull them close. Leave a mark.',
+  bloodletter: 'Their Bleed, your health.', bloodpact_chalice: 'Drink deep. Someone else pays.',
+  ember_stars: 'Hot to hold. Hotter to catch.', flare_bow: 'The arrows light themselves.', cinder_daggers: 'Smoke curls off the edges.',
+  lantern_hat: 'Lights the way, and the enemy.', glow_robe: 'Warm on the coldest nights.', drift_boots: 'Leave little scorch marks on the walls.',
+  ember_charm: 'Warm to the touch. Always.', stardust_vial: 'A pinch of a falling star.', ember_mirror: 'Returns fire. Literally.',
+  ink_pot: 'Every kill a new stroke.', phoenix_feather: 'Burns bright, then brighter.',
+  molten_maul: 'Still cooling after all these years.', slag_sword: 'Forged, then forgotten in the forge.', slag_spear: 'Drips when it\'s angry.',
+  slag_helm: 'Hot inside. You get used to it.', molten_plate: 'The ground melts where you stand.', cinder_treads: 'Roll through fire. Leave some behind.',
+  cinder_heart: 'Burns anyone who reaches for it.', magma_core: 'Touch it and learn.', briar_crown: 'Thorns turned inward, then outward.',
+  overclock_core: 'Faster. Faster. Faster. Ow.',
+};
+for (const [id, f] of Object.entries(FLAVOR)) if (ITEM[id]) ITEM[id].flavor = f;
 for (const [id, it] of Object.entries(ITEM)) { it.id = id; it.stats = it.stats || {}; }
 const FAMILY_ITEMS = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic)]));
 const KEYSTONE_OF = Object.fromEntries(Object.keys(ITEM).filter((id) => ITEM[id].keystone).map((id) => [ITEM[id].family, id]));
@@ -4207,6 +4367,17 @@ const PERKS = {
   vampiric: perk('+5% Lifesteal', [], { stats: { ls: 0.05 } }),
   piercing: perk('Pierce 3', [], { stats: { pen: 3 } }),
 };
+// Perks that play with the fight itself, alongside the ones above.
+Object.assign(PERKS, {
+  roll_shield: perk('Rolls: 8 Shield', [], { trig: [{ type: 'onRoll', effect: { shield: 8 } }] }),
+  acro_crit: perk('Wall jumps and air flips: next hit crits', [], { trig: [{ type: 'onAcro', effect: { critNext: true } }] }),
+  air_dmg: perk('+20% damage from the air', [], { flags: { airDmg: 0.2 } }),
+  backstab: perk('+25% damage from behind', [], { flags: { backstab: 0.25 } }),
+  heavy_hand: perk('Knockback +30%', [], { flags: { kb: 0.3 } }),
+  parry_heal: perk('A parry heals 10', [], { trig: [{ type: 'onParry', effect: { heal: 10 } }] }),
+  kill_frenzy: perk('Each kill: Frenzy 2s', [], { trig: [{ type: 'onKill', effect: { apply: 'frenzy', duration: 2 } }] }),
+  skill_crit: perk('After your skill, your next hit crits', [], { trig: [{ type: 'onSkill', effect: { critNext: true } }] }),
+});
 const PERK_ODDS = { common: [], rare: [0.4], epic: [1, 0.25] };
 // the statuses an item is about: its family's and whatever it applies
 function itemTags(it) {
@@ -6061,6 +6232,7 @@ function itemCard(inst, actions = '', compare = false) {
   return `<div class="icard ${it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
     <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}${fam ? ` · ${fam.name}` : ''}</small></div></div>
     <div class="ilines">${itemLines(inst).map(([k, t]) => `<p class="il-${k}">${t}</p>`).join('')}</div>
+    ${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}
     ${compare ? `<p class="icmp">${compareLine(inst)}</p>` : ''}
     ${actions ? `<div class="iact">${actions}</div>` : ''}
   </div>`;
@@ -6276,7 +6448,7 @@ window.__homeTurf = {
       simStep();
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
-    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
+    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, fired: world.fired || null, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
     builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; huntPower = savedPower; headless = false;
     return res;
   },
