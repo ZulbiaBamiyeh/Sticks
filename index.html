@@ -394,6 +394,16 @@
   .sets .set.full { background: #1b8a3a; border-color: #1b8a3a; color: #fff; }
   .sets .key, .sets .relic { font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px; color: #fff; background: #b5651d; }
   .sets .relic { background: #c9961a; }
+  .evhead { display: grid; gap: 4px; }
+  .evhead b { font: 900 24px/1.05 var(--display); letter-spacing: 0.02em; }
+  .evhead p { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-2); }
+  .evopts { display: grid; gap: 8px; }
+  .evopt { display: grid; gap: 2px; text-align: left; border: 2px solid var(--ink); border-radius: 8px; padding: 10px 12px; background: #f3f4f0; min-height: 52px; }
+  .evopt b { font: 900 17px/1.1 var(--display); letter-spacing: 0.02em; }
+  .evopt small { font-size: 12px; color: var(--ink-2); }
+  .evopt.leave { border-color: var(--line); }
+  .evopt:disabled { opacity: 0.45; }
+  .evpick { grid-template-columns: repeat(5, 1fr); }
   .xstats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
   .bag { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .bslot { aspect-ratio: 1; border: 2px solid var(--rc, var(--line)); border-radius: 6px; background: #f3f4f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; overflow: hidden; }
@@ -1071,11 +1081,11 @@ const SK_POSE = {
 // (HP a second), thorns (damage back when hit up close), pen (ignores that much def), plus run speed and skill
 // haste. wpn is the weapon's damage range. onHit: [{chance, apply, stacks}]; trig: trinket triggers; flags:
 // the rule changes keystones, relics and 4-piece sets bring. A fighter with no gear fights exactly as before.
-const NO_STATS = { hp: 0, atk: 0, def: 0, crit: 0, critDmg: 0, haste: 0, evasion: 0, resist: 0, ls: 0, regen: 0, thorns: 0, pen: 0, speed: 0, skillHaste: 0, statusMult: 1, onHit: [], trig: [], flags: {}, wpn: null };
+const NO_STATS = { hp: 0, atk: 0, def: 0, crit: 0, critDmg: 0, haste: 0, evasion: 0, resist: 0, ls: 0, regen: 0, thorns: 0, pen: 0, speed: 0, skillHaste: 0, hpMult: 1, statusMult: 1, onHit: [], trig: [], flags: {}, wpn: null };
 // how often a weapon's hits land, relative to a sword: fast weapons roll their status chances at less per hit
 const STATUS_W = { sword: 1, daggers: 0.6, spear: 1.1, hammer: 1.8, bow: 1.3, stars: 0.55 };
 function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
-  const gs = { ...NO_STATS, ...(stats || {}) }, hpMax = Math.round(100 + gs.hp);
+  const gs = { ...NO_STATS, ...(stats || {}) }, hpMax = Math.round((100 + gs.hp) * gs.hpMult);
   gs.trig = gs.trig.map((t) => ({ ...t }));   // each fighter keeps its own once-only trigger state
   const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
   const pose = { p: {}, v: {} };
@@ -4260,7 +4270,7 @@ function mergeFlags(into, flags) {
   }
 }
 // Equipment -> the build a fighter is made from
-function runBuild(equip, pieces = []) {
+function runBuild(equip, pieces = [], boons = null) {
   const stats = { ...NO_STATS, crit: BASE_CRIT, onHit: [], trig: [], flags: {} }, fams = {};
   const addStats = (o) => { for (const [k, v] of Object.entries(o || {})) stats[k] += v; };
   for (const inst of Object.values(equip)) {
@@ -4290,7 +4300,8 @@ function runBuild(equip, pieces = []) {
   const w = equip.weapon;
   if (w) { const [min, max] = instRange(w); stats.wpn = { min, max, base: WTYPE[ITEM[w.item].weapon].base }; }
   const get = (s, k) => (equip[s] ? ITEM[equip[s].item][k] : null);
-  return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: get('feet', 'acro') || 0, stats, pieces, sets: fams };
+  if (boons) { stats.hp += boons.hpFlat; stats.hpMult = boons.hpMult; stats.skillHaste += boons.skillHaste; }
+  return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: fams };
 }
 
 // Which creatures turn up each day, one list per card tier. Entries are hunt:tier.
@@ -4332,18 +4343,21 @@ class Run {
   constructor(seed = 1 + Math.floor(Math.random() * 1e9)) {
     this.seed = seed; this.round = 1; this.lives = RUNCFG.lives; this.wins = 0; this.duelLosses = 0; this.gold = 0;
     this.over = false; this.crown = false; this.history = []; this.bag = []; this.rerolls = RUNCFG.rerolls;
-    this.loot = null; this.offer = null;
+    this.loot = null; this.offer = null; this.event = null;
+    this.events = planEvents(seed); this.boons = { hpFlat: 0, hpMult: 1, skillHaste: 0 };
     const r = runRng(seed, 'start');
     this.equip = { weapon: rollInstance('rusty_sword', 'common', 1, r), feet: rollInstance('worn_shoes', 'common', 1, r), core: rollInstance('linen_shirt', 'common', 1, r) };
     this.rollRound();
   }
   get day() { return dayOf(this.round); }
   get isDuel() { return isDuelRound(this.round); }
-  build(pieces) { return runBuild(this.equip, pieces); }
+  build(pieces) { return runBuild(this.equip, pieces, this.boons); }
   // three hunts to choose from, one per tier, or tonight's duel rival
   rollRound() {
     const r = runRng(this.seed, this.round, 'offers');
     this.offers = null; this.ghost = null;
+    const ev = (this.events || []).find((e) => e.round === this.round);
+    this.event = ev && !this.isDuel ? { id: ev.id, result: null } : null;
     if (this.isDuel) {
       const mine = loadGhosts().filter((g) => g.round === this.round && g.seed !== this.seed);
       this.ghost = mine.length && r.chance(0.5) ? { ...r.pick(mine), mine: true } : makeGhost(this.seed, this.round);
@@ -4416,7 +4430,7 @@ class Run {
     this.bag.push(this.equip[slot]); delete this.equip[slot]; return true;
   }
   snapshot() {
-    return { id: `me-${this.seed}-${this.round}`, seed: this.seed, name: 'Your ghost', record: `${this.wins}-${this.duelLosses}`, round: this.round, equip: this.equip, t: 0, mine: true };
+    return { id: `me-${this.seed}-${this.round}`, seed: this.seed, name: 'Your ghost', record: `${this.wins}-${this.duelLosses}`, round: this.round, equip: this.equip, boons: this.boons, t: 0, mine: true };
   }
   next() {
     if (this.over) return;
@@ -4426,9 +4440,249 @@ class Run {
   }
   save() { try { localStorage.setItem(RUN_KEY, JSON.stringify(this)); } catch { /* storage may be unavailable */ } }
   static load() {
-    try { const d = JSON.parse(localStorage.getItem(RUN_KEY)); if (!d || !d.seed) return null; return Object.assign(Object.create(Run.prototype), d); } catch { return null; }
+    try {
+      const d = JSON.parse(localStorage.getItem(RUN_KEY));
+      if (!d || !d.seed) return null;
+      return Object.assign(Object.create(Run.prototype), { events: [], event: null, boons: { hpFlat: 0, hpMult: 1, skillHaste: 0 } }, d);
+    } catch { return null; }
   }
   static clear() { try { localStorage.removeItem(RUN_KEY); } catch { /* ignore */ } }
+}
+
+// ---------------------------------------------------------------- random events
+// As in ZereshkStory: a few times a run, a character waits at the start of a hunt round with an offer.
+// A gremlin's trade, a demon's bargain, a ghost that re-stitches your gear. Options that need one of
+// your items carry `pick`, a filter for which items qualify; the screen asks for one.
+const EVENTS = {
+  gremlin: { name: 'Gremlin Trader', line: '"Shiny thing! Gimme, gimme. I give you shinier. Probably."' },
+  demon: { name: 'The Crimson Bargain', line: '"Power, little ink-stroke. Only a small price. Sign in red."' },
+  tailor: { name: 'Ghostly Tailor', line: '"Such poor stitching. Let me make it match, dearie."' },
+  smith: { name: 'Dwarf Smith', line: '"Bring it to the anvil. I\'ll hammer the luck back into it."' },
+  mimic: { name: 'A Suspicious Chest', line: 'A chest sits alone on the page. It is breathing. Probably.' },
+  shrine: { name: 'Echo Shrine', line: 'Whatever you lay on the altar rings back twice.' },
+  well: { name: 'Fortune Well', line: 'Coins glitter far below. Something down there is counting.' },
+  sensei: { name: 'Old Sensei', line: '"Your feet are loud. Sit. Or stand on one leg. Either way, listen."' },
+};
+const EVENT_IDS = Object.keys(EVENTS), EVENTS_PER_RUN = 4, ROUNDS_RUN = RUNCFG.days * RUNCFG.perDay;
+// Four event rounds, one per stretch of the run, on hunts only (never the first round, never a duel).
+function planEvents(seed) {
+  const r = runRng(seed, 'events'), ids = r.shuffle(EVENT_IDS).slice(0, EVENTS_PER_RUN);
+  const cut = (k) => Math.round(2 + ((ROUNDS_RUN - 2) * k) / EVENTS_PER_RUN);
+  return ids.map((id, k) => {
+    const pool = [];
+    for (let round = cut(k); round < cut(k + 1); round++) if (!isDuelRound(round)) pool.push(round);
+    return { id, round: r.pick(pool) };
+  });
+}
+const upR = (rar) => RARITY[rar].next, downR = (rar) => (rar === 'epic' ? 'rare' : 'common');
+const instName = (inst) => `${RARITY[inst.rarity].name} ${ITEM[inst.item].name}`;
+const aName = (inst) => `${/^[AEIOU]/.test(instName(inst)) ? 'an' : 'a'} ${instName(inst)}`;
+const tradeable = (i) => !ITEM[i.item].relic && !ITEM[i.item].keystone && ITEM[i.item].family;
+const acroOf = (inst) => Math.min(4, (ITEM[inst.item].acro || 0) + (inst.acroUp || 0));
+// a random family piece for a slot kind
+function randomPiece(r, kind, rarity, day, filter = () => true) {
+  const pool = Object.keys(ITEM).filter((id) => { const it = ITEM[id]; return it.family && !it.relic && !it.keystone && it.slot === kind && filter(it); });
+  return rollInstance(r.pick(pool), rarity, day, r);
+}
+Object.assign(Run.prototype, {
+  owned() { return [...this.bag, ...Object.values(this.equip)].filter(Boolean); },
+  find(uid) { return this.owned().find((x) => x.uid === uid) || null; },
+  // the family you're building: most pieces owned
+  mainFamily(not = null) {
+    const n = {};
+    for (const i of this.owned()) { const f = ITEM[i.item].family; if (f && f !== not) n[f] = (n[f] || 0) + 1; }
+    return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || null;
+  },
+  // a new item: worn if its slot is free, else the bag, else sold
+  place(inst) {
+    const k = ITEM[inst.item].slot, s = k !== 'trinket' ? k : !this.equip.trinket1 ? 'trinket1' : 'trinket2';
+    if (!this.equip[s]) this.equip[s] = inst;
+    else if (!this.bagFull()) this.bag.push(inst);
+    else this.gold += SELL[inst.rarity];
+  },
+  // swap `old` for `inst` wherever `old` is
+  replace(old, inst) {
+    const s = Object.keys(this.equip).find((k) => this.equip[k] && this.equip[k].uid === old.uid);
+    if (s && slotKind(s) === ITEM[inst.item].slot) { this.equip[s] = inst; return; }
+    this.discard(old.uid); this.place(inst);
+  },
+  discard(uid) {
+    this.bag = this.bag.filter((x) => x.uid !== uid);
+    for (const s of Object.keys(this.equip)) if (this.equip[s] && this.equip[s].uid === uid) delete this.equip[s];
+  },
+  // Merging, as in ZereshkStory: two of the same item at the same rarity make one a rarity up.
+  twinOf(inst) {
+    if (!inst || inst.rarity === 'epic') return null;
+    return this.owned().find((x) => x.uid !== inst.uid && x.item === inst.item && x.rarity === inst.rarity) || null;
+  },
+  merge(uid) {
+    const a = this.find(uid), b = this.twinOf(a);
+    if (!b) return null;
+    const r = runRng(this.seed, 'merge', a.uid, b.uid), rarity = upR(a.rarity);
+    const fresh = rollInstance(a.item, rarity, Math.max(a.day, b.day), r);
+    fresh.affixes = [...new Set([...a.affixes, ...b.affixes, ...fresh.affixes])].slice(0, RARITY[rarity].affixes);
+    fresh.perks = [...new Set([...(a.perks || []), ...(b.perks || []), ...fresh.perks])].slice(0, 2);
+    if (!fresh.perks.length) fresh.perks = rollPerks(ITEM[a.item], 'epic', r).slice(0, 1);
+    fresh.acroUp = Math.max(a.acroUp || 0, b.acroUp || 0);
+    const s = Object.keys(this.equip).find((k) => this.equip[k] && (this.equip[k].uid === a.uid || this.equip[k].uid === b.uid));
+    this.discard(a.uid); this.discard(b.uid);
+    if (s) this.equip[s] = fresh; else this.bag.push(fresh);
+    return fresh;
+  },
+  endEvent() { this.event = null; },
+});
+function eventOptions(run) {
+  const ev = run.event;
+  if (!ev) return [];
+  const leave = { key: 'leave', label: 'Walk away', detail: '' };
+  switch (ev.id) {
+    case 'gremlin': return [
+      { key: 'trade', label: 'Trade an item', detail: 'For a random piece of the same kind. Could be rarer. Could be worse.', pick: tradeable },
+      { key: 'junk', label: 'Buy his junk · 5 gold', detail: 'A random piece, any rarity.', disabled: run.gold < 5 || run.bagFull() },
+      leave];
+    case 'demon': return [
+      { key: 'blood', label: 'Blood pact · lose a life', detail: 'An Epic keystone.', disabled: run.lives <= 1 },
+      { key: 'brand', label: 'Soul brand · −12% max HP', detail: 'A relic. The brand lasts the whole run.' },
+      leave];
+    case 'tailor': {
+      const fam = run.mainFamily();
+      return [
+        { key: 'stitch', label: 'Re-stitch an item', detail: fam ? `Into a ${FAMILY[fam].name} piece, keeping its rarity, affixes and perks.` : 'Into a piece of the family you wear most.',
+          pick: (i) => tradeable(i) && !!fam && ITEM[i.item].family !== fam, disabled: !fam },
+        { key: 'lining', label: 'Take the silk lining', detail: '+10 max HP for the rest of the run.' },
+        leave];
+    }
+    case 'smith': return [
+      { key: 'reforge', label: 'Reforge an item', detail: 'New affixes and perks, same rarity. Free.', pick: (i) => tradeable(i) && i.rarity !== 'common' },
+      { key: 'hone', label: 'Hone an item · 8 gold', detail: 'One rarity up.', pick: (i) => !ITEM[i.item].relic && i.rarity !== 'epic', disabled: run.gold < 8 },
+      leave];
+    case 'mimic': return [
+      { key: 'open', label: 'Open it', detail: 'Treasure that fits your build… if it\'s a chest.', disabled: run.bagFull() },
+      { key: 'kick', label: 'Kick it', detail: 'Whatever it is, some coins fall out.' },
+      leave];
+    case 'shrine': return [
+      { key: 'echo', label: 'Echo an item · −8% max HP', detail: 'A copy at the same rarity. Two of a kind merge into one a rarity up.', pick: tradeable, disabled: run.bagFull() },
+      { key: 'pray', label: 'Pray', detail: '+1 loot reroll.' },
+      leave];
+    case 'well': return [
+      { key: 'coin', label: 'Toss 5 gold', detail: 'Half the time, 15 comes back.', disabled: run.gold < 5 },
+      { key: 'drop', label: 'Drop an item in', detail: 'Something one rarity higher floats up. Same kind of piece.', pick: (i) => tradeable(i) && i.rarity !== 'epic' },
+      leave];
+    case 'sensei': return [
+      { key: 'train', label: 'Train your feet · 6 gold', detail: 'Your shoes gain a level of acrobatics, up to 4.', disabled: run.gold < 6 || !run.equip.feet || acroOf(run.equip.feet) >= 4 },
+      { key: 'meditate', label: 'Meditate', detail: '+15% skill haste for the rest of the run.' },
+      leave];
+    default: return [leave];
+  }
+}
+// Apply a choice: returns the outcome line and any item gained, and marks the event done.
+function chooseEvent(run, key, uid) {
+  const ev = run.event, opt = eventOptions(run).find((o) => o.key === key);
+  if (!ev || ev.result || !opt || opt.disabled) return null;
+  const inst = uid ? run.find(uid) : null;
+  if (opt.pick && (!inst || !opt.pick(inst))) return null;
+  const r = runRng(run.seed, run.round, 'event', ev.id, key), day = run.day, b = run.boons;
+  let text = '', gained = null;
+  switch (`${ev.id}:${key}`) {
+    case 'gremlin:trade': {
+      const x = r(), rarity = x < 0.5 ? upR(inst.rarity) : x < 0.85 ? inst.rarity : downR(inst.rarity);
+      gained = randomPiece(r, ITEM[inst.item].slot, rarity, Math.max(day, inst.day), (it) => it.id !== inst.item);
+      run.replace(inst, gained);
+      text = RARITY[rarity] !== RARITY[inst.rarity] && rarity === upR(inst.rarity) ? `The gremlin cackles and hands over ${aName(gained)}. A good trade!`
+        : rarity === inst.rarity ? `He sniffs your ${ITEM[inst.item].name} and swaps it for ${aName(gained)}.` : `He's gone before you look. A ${instName(gained)}. Hm.`;
+      break;
+    }
+    case 'gremlin:junk': {
+      run.gold -= 5;
+      const x = r(), rar = x < 0.55 ? 'common' : x < 0.9 ? 'rare' : 'epic';
+      gained = randomPiece(r, r.pick(['weapon', 'head', 'core', 'feet', 'trinket']), rar, day);
+      run.bag.push(gained);
+      text = `Out of a sack: ${aName(gained)}.`;
+      break;
+    }
+    case 'demon:blood': {
+      run.lives--;
+      const have = new Set(run.owned().map((i) => i.item)), pool = Object.keys(ITEM).filter((id) => ITEM[id].keystone && !have.has(id));
+      gained = rollInstance(r.pick(pool), 'epic', day, r); run.place(gained);
+      text = `A drop of your ink hisses on the page. The ${ITEM[gained.item].name} is yours.`;
+      break;
+    }
+    case 'demon:brand': {
+      b.hpMult = Math.round(b.hpMult * 0.88 * 100) / 100;
+      const have = new Set(run.owned().map((i) => i.item)), pool = Object.keys(ITEM).filter((id) => ITEM[id].relic && !have.has(id));
+      gained = rollInstance(r.pick(pool), r.chance(0.35) ? 'epic' : 'rare', day, r); run.place(gained);
+      text = `The brand burns cold. In your hand: the ${ITEM[gained.item].name}.`;
+      break;
+    }
+    case 'tailor:stitch': {
+      const fam = run.mainFamily(ITEM[inst.item].family), kind = ITEM[inst.item].slot;
+      const same = FAMILY_ITEMS[fam].filter((id) => ITEM[id].slot === kind);
+      const id = r.pick(same.length ? same : FAMILY_ITEMS[fam]);
+      gained = { ...rollInstance(id, inst.rarity, Math.max(day, inst.day), r), affixes: inst.affixes, perks: inst.perks };
+      run.replace(inst, gained);
+      text = `Snip, stitch, pull. Your ${ITEM[inst.item].name} is now a ${ITEM[id].name}.`;
+      break;
+    }
+    case 'tailor:lining': b.hpFlat += 10; text = 'Soft as moonlight. You feel sturdier. (+10 max HP)'; break;
+    case 'smith:reforge': {
+      const fresh = rollInstance(inst.item, inst.rarity, inst.day, r);
+      if (!fresh.perks.length) fresh.perks = rollPerks(ITEM[inst.item], 'epic', r).slice(0, 1);
+      Object.assign(inst, { affixes: fresh.affixes, perks: fresh.perks });
+      gained = inst;
+      text = `CLANG. CLANG. The ${ITEM[inst.item].name} cools with new edges.`;
+      break;
+    }
+    case 'smith:hone': {
+      run.gold -= 8;
+      const rarity = upR(inst.rarity), fresh = rollInstance(inst.item, rarity, Math.max(day, inst.day), r);
+      fresh.affixes = [...new Set([...inst.affixes, ...fresh.affixes])].slice(0, RARITY[rarity].affixes);
+      fresh.perks = [...new Set([...(inst.perks || []), ...fresh.perks])].slice(0, 2);
+      fresh.acroUp = inst.acroUp || 0;
+      run.replace(inst, fresh); gained = fresh;
+      text = `Honed to ${aName(fresh)}.`;
+      break;
+    }
+    case 'mimic:open':
+      if (r.chance(0.65)) {
+        const fam = run.mainFamily(), have = new Set(run.owned().map((i) => i.item));
+        const pool = Object.keys(FAMILY).flatMap((f) => FAMILY_ITEMS[f]).filter((id) => (!fam || ITEM[id].family === fam) && !have.has(id));
+        gained = rollInstance(r.pick(pool.length ? pool : FAMILY_ITEMS[fam || 'gel']), r.chance(0.4) ? 'epic' : 'rare', day, r);
+        run.bag.push(gained);
+        text = `Just a chest! Inside: ${aName(gained)}.`;
+      } else {
+        const lost = Math.ceil(run.gold / 2);
+        run.gold -= lost;
+        text = lost ? `TEETH. The mimic snaps up ${lost} gold and scuttles off.` : 'TEETH. It finds your purse empty, and scuttles off in disgust.';
+      }
+      break;
+    case 'mimic:kick': { const g = 3 + Math.floor(r() * 4); run.gold += g; text = `Clunk. ${g} coins roll out. Something inside grumbles.`; break; }
+    case 'shrine:echo':
+      b.hpMult = Math.round(b.hpMult * 0.92 * 100) / 100;
+      gained = { ...rollInstance(inst.item, inst.rarity, inst.day, r), affixes: inst.affixes, perks: inst.perks, acroUp: inst.acroUp || 0 };
+      run.bag.push(gained);
+      text = `The altar rings. Two ${ITEM[inst.item].name}s now, and you feel a little thinner. Merge them from your bag.`;
+      break;
+    case 'shrine:pray': run.rerolls += 1; text = 'A calm settles. (+1 loot reroll)'; break;
+    case 'well:coin':
+      run.gold -= 5;
+      if (r.chance(0.5)) { run.gold += 15; text = 'Plink… and a splash of 15 gold comes back up!'; } else text = 'Plink. Nothing. Something below giggles.';
+      break;
+    case 'well:drop':
+      gained = randomPiece(r, ITEM[inst.item].slot, upR(inst.rarity), Math.max(day, inst.day), (it) => it.id !== inst.item);
+      run.replace(inst, gained);
+      text = `The water glows. Up floats ${aName(gained)}.`;
+      break;
+    case 'sensei:train': {
+      run.gold -= 6;
+      const f = run.equip.feet; f.acroUp = (f.acroUp || 0) + 1; gained = f;
+      text = `Hours on one leg. Your ${ITEM[f.item].name} now know acrobatics ${acroOf(f)}: ${ACRO_MOVES[acroOf(f)].toLowerCase()}.`;
+      break;
+    }
+    case 'sensei:meditate': b.skillHaste += 0.15; text = 'Breathe in. Breathe out. Your skills come back sooner. (+15% skill haste)'; break;
+    default: text = 'You leave it be.';
+  }
+  ev.result = { text, gained: gained ? gained.uid : null };
+  return ev.result;
 }
 
 // ---------------------------------------------------------------- canvas & camera
@@ -4447,9 +4701,11 @@ resize();
 
 function camTarget() {
   if (mode === 'build' && buildTab === 'gear' && U[0]) {
-    // the paper doll: the fighter large in the middle, slots down both sides
-    const u = U[0], z = Math.min(CH / 4.4, CW / 5.2), hw = CW / z / 2, hh = CH / z / 2;
-    return { z, x: Math.max(hw, Math.min(COLS - hw, u.b.x)), y: Math.max(hh, Math.min(ROWS - hh, u.b.y - 1.2)) };
+    // the paper doll: the fighter large in the middle, slots down both sides; at an event, the fighter
+    // and the event's character side by side
+    const u = U[0], ev = runScreen === 'event', z = Math.min(CH / 4.4, CW / (ev ? 6.2 : 5.2)), hw = CW / z / 2, hh = CH / z / 2;
+    const x = ev ? (u.b.x + EVENT_X) / 2 + 0.2 : u.b.x;
+    return { z, x: Math.max(hw, Math.min(COLS - hw, x)), y: Math.max(hh, Math.min(ROWS - hh, u.b.y - 1.2)) };
   }
   if (mode === 'build' || mode === 'rival') {
     const z = Math.min(CW / 11.6, CH / ROWS);
@@ -4819,6 +5075,146 @@ function drawMarks(u, S, pal) {
     ctx.lineJoin = 'miter';
   }
 }
+// ---- event characters: drawn beside your fighter, in the creatures' style (solid ink, paper highlights,
+// one accent each), with a small idle loop. (x, gy) is the middle of their footprint on the floor.
+const EVENT_X = 5.4, GOLD = '#d9a524';
+function drawEventChar(id, x, gy, t, pal) {
+  const ink = pal.ink, paper = pal.steel;
+  const fillE = (cx, cy, rx, ry, rot = 0, c = ink) => { ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, rot, 0, 6.283); ctx.fill(); };
+  const line = (pts, c, w) => { ctx.lineCap = 'round'; ctx.lineJoin = 'round'; stroke(pts, c, w); };
+  const poly = (pts, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const [px, py] of pts.slice(1)) ctx.lineTo(px, py); ctx.closePath(); ctx.fill(); };
+  const shadow = (w) => { ctx.globalAlpha = 0.12; fillE(x, gy - 0.02, w, 0.06); ctx.globalAlpha = 1; };
+  ctx.save();
+  if (id === 'gremlin') {
+    // a hunched little trader with a sack on his back and a coin he keeps flipping
+    const bob = Math.sin(t * 3) * 0.02, tw = Math.sin(t * 5) > 0.92 ? 0.25 : 0;
+    shadow(0.45);
+    line([{ x: x - 0.12, y: gy - 0.3 }, { x: x - 0.18, y: gy }], ink, 0.08); line([{ x: x + 0.1, y: gy - 0.3 }, { x: x + 0.14, y: gy }], ink, 0.08);
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.04;   // the sack, paper
+    ctx.beginPath(); ctx.ellipse(x + 0.26, gy - 0.62 + bob, 0.26, 0.3, 0.3, 0, 6.283); ctx.fill(); ctx.stroke();
+    line([{ x: x + 0.1, y: gy - 0.86 + bob }, { x: x + 0.2, y: gy - 0.9 + bob }], ink, 0.04);
+    fillE(x, gy - 0.44 + bob, 0.28, 0.3, -0.2);                                // body
+    fillE(x - 0.16, gy - 0.8 + bob, 0.22, 0.19);                               // head
+    poly([[x - 0.3, gy - 0.86 + bob], [x - 0.72, gy - 1.02 + bob - tw * 0.3], [x - 0.3, gy - 0.74 + bob]], ink);   // ears, one twitching
+    poly([[x - 0.02, gy - 0.88 + bob], [x + 0.34, gy - 1.08 + bob], [x - 0.04, gy - 0.76 + bob]], ink);
+    fillE(x - 0.23, gy - 0.84 + bob, 0.055, 0.06, 0, paper); fillE(x - 0.08, gy - 0.84 + bob, 0.055, 0.06, 0, paper);
+    fillE(x - 0.25, gy - 0.83 + bob, 0.025, 0.03); fillE(x - 0.1, gy - 0.83 + bob, 0.025, 0.03);
+    ctx.strokeStyle = paper; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.arc(x - 0.16, gy - 0.76 + bob, 0.09, 0.3, 2.8); ctx.stroke();   // the grin
+    line([{ x: x - 0.12, y: gy - 0.5 + bob }, { x: x - 0.42, y: gy - 0.6 + bob }], ink, 0.07);
+    const flip = Math.abs(Math.cos(t * 4)), cy = gy - 0.78 - Math.abs(Math.sin(t * 2)) * 0.3;
+    fillE(x - 0.46, cy, 0.09 * flip + 0.015, 0.09, 0, GOLD);                  // the coin
+  } else if (id === 'demon') {
+    // a tall figure in a long coat, horns, red eyes, and a contract floating at his hand
+    const sway = Math.sin(t * 1.3) * 0.03;
+    shadow(0.4);
+    line([{ x: x - 0.1, y: gy - 0.5 }, { x: x - 0.12, y: gy }], ink, 0.06); line([{ x: x + 0.1, y: gy - 0.5 }, { x: x + 0.12, y: gy }], ink, 0.06);
+    poly([[x - 0.2 + sway, gy - 1.55], [x + 0.2 + sway, gy - 1.55], [x + 0.36, gy - 0.35], [x + 0.1, gy - 0.42], [x - 0.08, gy - 0.3], [x - 0.36, gy - 0.4]], ink);
+    fillE(x + sway, gy - 1.72, 0.16, 0.18);
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.05; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 0.09 + sway, gy - 1.85); ctx.quadraticCurveTo(x - 0.28 + sway, gy - 2.0, x - 0.2 + sway, gy - 2.2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 0.09 + sway, gy - 1.85); ctx.quadraticCurveTo(x + 0.28 + sway, gy - 2.0, x + 0.2 + sway, gy - 2.2); ctx.stroke();
+    fillE(x - 0.06 + sway, gy - 1.73, 0.03, 0.02, 0, pal.red); fillE(x + 0.06 + sway, gy - 1.73, 0.03, 0.02, 0, pal.red);
+    line([{ x: x - 0.14 + sway, y: gy - 1.45 }, { x: x - 0.42, y: gy - 1.2 }, { x: x - 0.55, y: gy - 1.25 }], ink, 0.05);
+    const cx = x - 0.8, cy = gy - 1.25 + Math.sin(t * 2) * 0.06;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.12 + Math.sin(t * 1.7) * 0.05);
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.03; ctx.fillRect(-0.16, -0.22, 0.32, 0.44); ctx.strokeRect(-0.16, -0.22, 0.32, 0.44);
+    ctx.globalAlpha = 0.4; for (let i = 0; i < 4; i++) line([{ x: -0.1, y: -0.13 + i * 0.07 }, { x: 0.1 - (i === 3) * 0.08, y: -0.13 + i * 0.07 }], ink, 0.018); ctx.globalAlpha = 1;
+    fillE(0.06, 0.15, 0.045, 0.045, 0, pal.red);
+    ctx.restore();
+  } else if (id === 'tailor') {
+    // a floating sheet of a ghost with a needle on a long blue thread
+    const f = Math.sin(t * 1.6) * 0.08, top = gy - 1.45 + f, hem = gy - 0.35 + f;
+    ctx.globalAlpha = 0.1; fillE(x, gy - 0.02, 0.35 - f, 0.05); ctx.globalAlpha = 1;
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.045; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(x - 0.34, hem); ctx.lineTo(x - 0.34, top + 0.34); ctx.arc(x, top + 0.34, 0.34, Math.PI, 0); ctx.lineTo(x + 0.34, hem);
+    for (let i = 4; i >= 0; i--) { const hx = x - 0.34 + i * 0.17, dy = Math.sin(t * 4 + i) * 0.04; ctx.quadraticCurveTo(hx + 0.085, hem + 0.1 + dy, hx, hem); }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    fillE(x - 0.12, top + 0.3, 0.05, 0.08); fillE(x + 0.06, top + 0.3, 0.05, 0.08);
+    // a pincushion arm, and the needle circling on its thread
+    const a = t * 1.8, nx = x - 0.5 + Math.cos(a) * 0.3, ny = top + 0.75 + Math.sin(a) * 0.2;
+    ctx.strokeStyle = pal.blue; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.moveTo(x - 0.3, top + 0.6); ctx.quadraticCurveTo(x - 0.7, top + 1.1, nx, ny); ctx.stroke();
+    line([{ x: nx - 0.1, y: ny + 0.06 }, { x: nx + 0.1, y: ny - 0.06 }], ink, 0.03);
+  } else if (id === 'smith') {
+    // a stout dwarf with a paper beard, striking an anvil; sparks on every blow
+    const ph = (t % 1.3) / 1.3, up = ph < 0.75 ? ph / 0.75 : 1 - (ph - 0.75) / 0.25;
+    shadow(0.6);
+    poly([[x - 0.85, gy - 0.42], [x - 0.3, gy - 0.42], [x - 0.35, gy - 0.34], [x - 0.5, gy - 0.3], [x - 0.48, gy], [x - 0.68, gy], [x - 0.66, gy - 0.3], [x - 0.8, gy - 0.34]], ink);   // anvil
+    fillE(x + 0.08, gy - 0.42, 0.32, 0.36);
+    line([{ x: x - 0.04, y: gy - 0.15 }, { x: x - 0.06, y: gy }], ink, 0.1); line([{ x: x + 0.18, y: gy - 0.15 }, { x: x + 0.2, y: gy }], ink, 0.1);
+    fillE(x + 0.04, gy - 0.9, 0.17, 0.17);
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.035;
+    ctx.beginPath(); ctx.moveTo(x - 0.12, gy - 0.86); ctx.quadraticCurveTo(x - 0.16, gy - 0.4, x + 0.02, gy - 0.3); ctx.quadraticCurveTo(x + 0.2, gy - 0.45, x + 0.16, gy - 0.86); ctx.closePath(); ctx.fill(); ctx.stroke();
+    fillE(x - 0.04, gy - 0.94, 0.025, 0.025, 0, paper);
+    poly([[x - 0.16, gy - 0.98], [x + 0.22, gy - 0.98], [x + 0.18, gy - 1.12], [x - 0.12, gy - 1.12]], ink);   // cap
+    const sx = x - 0.1, sy = gy - 0.62, th = 2.84 + up * 1.6, hx2 = sx + Math.cos(th) * 0.5, hy2 = sy + Math.sin(th) * 0.5;
+    line([{ x: sx, y: sy }, { x: hx2, y: hy2 }], ink, 0.06);
+    ctx.save(); ctx.translate(hx2, hy2); ctx.rotate(th); ctx.fillStyle = ink; ctx.fillRect(-0.07, -0.11, 0.14, 0.22); ctx.restore();
+    if (ph > 0.97 || ph < 0.12) for (let i = 0; i < 6; i++) {
+      const a = -Math.PI / 2 + (i - 2.5) * 0.35, k = ph < 0.12 ? ph / 0.12 : 0;
+      line([{ x: x - 0.58 + Math.cos(a) * (0.08 + k * 0.2), y: gy - 0.45 + Math.sin(a) * (0.08 + k * 0.2) }, { x: x - 0.58 + Math.cos(a) * (0.16 + k * 0.35), y: gy - 0.45 + Math.sin(a) * (0.16 + k * 0.35) }], pal.shock, 0.035);
+    }
+  } else if (id === 'mimic') {
+    // a chest whose lid breathes; teeth and a pair of eyes in the dark gap
+    const open = 0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 1.4)), w = 0.46, h = 0.5;
+    shadow(0.55);
+    ctx.fillStyle = ink; ctx.fillRect(x - w, gy - h, w * 2, h);
+    ctx.fillStyle = paper; ctx.fillRect(x - w, gy - h + 0.12, w * 2, 0.05); ctx.fillRect(x - w + 0.1, gy - h, 0.06, h); ctx.fillRect(x + w - 0.16, gy - h, 0.06, h);
+    fillE(x, gy - h + 0.2, 0.05, 0.06, 0, GOLD);
+    for (let i = 0; i < 7; i++) poly([[x - w + 0.05 + i * 0.125, gy - h], [x - w + 0.11 + i * 0.125, gy - h - 0.1], [x - w + 0.17 + i * 0.125, gy - h]], paper);
+    ctx.save(); ctx.translate(x + w, gy - h); ctx.rotate(-open);
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-w * 2, 0); ctx.quadraticCurveTo(-w * 2, -0.34, -w, -0.34); ctx.quadraticCurveTo(0, -0.34, 0, 0); ctx.fill();
+    ctx.fillStyle = paper; ctx.fillRect(-0.16, -0.3, 0.06, 0.3); ctx.fillRect(-w * 2 + 0.1, -0.24, 0.06, 0.24);
+    for (let i = 0; i < 7; i++) poly([[-w * 2 + 0.05 + i * 0.125, 0], [-w * 2 + 0.11 + i * 0.125, 0.09], [-w * 2 + 0.17 + i * 0.125, 0]], paper);
+    ctx.restore();
+    const blink = Math.sin(t * 0.9) > 0.97 ? 0.2 : 1;
+    fillE(x - 0.14, gy - h - 0.08 * open * 8 * 0.5, 0.035, 0.035 * blink, 0, GOLD); fillE(x + 0.1, gy - h - 0.08 * open * 8 * 0.5, 0.035, 0.035 * blink, 0, GOLD);
+  } else if (id === 'shrine') {
+    // a stepped stone altar with a paper bell above it; echoes ring out from the bell
+    shadow(0.55);
+    ctx.fillStyle = ink; ctx.fillRect(x - 0.5, gy - 0.16, 1, 0.16); ctx.fillRect(x - 0.38, gy - 0.6, 0.76, 0.46); ctx.fillRect(x - 0.46, gy - 0.7, 0.92, 0.1);
+    ctx.fillStyle = paper; ctx.fillRect(x - 0.2, gy - 0.48, 0.4, 0.03);
+    const by = gy - 1.25 + Math.sin(t * 1.5) * 0.05;
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.04;
+    ctx.beginPath(); ctx.moveTo(x - 0.22, by + 0.2); ctx.quadraticCurveTo(x - 0.2, by - 0.2, x, by - 0.22); ctx.quadraticCurveTo(x + 0.2, by - 0.2, x + 0.22, by + 0.2); ctx.closePath(); ctx.fill(); ctx.stroke();
+    fillE(x, by + 0.24, 0.05, 0.05);
+    for (let k = 0; k < 2; k++) {
+      const p = (t * 0.6 + k * 0.5) % 1;
+      ctx.globalAlpha = (1 - p) * 0.7; ctx.strokeStyle = pal.blue; ctx.lineWidth = 0.035;
+      ctx.beginPath(); ctx.arc(x, by, 0.3 + p * 0.8, 0, 6.283); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (id === 'well') {
+    // a round stone well with a little roof, a bucket on a rope, and coins winking below
+    shadow(0.6);
+    line([{ x: x - 0.42, y: gy - 0.5 }, { x: x - 0.42, y: gy - 1.3 }], ink, 0.06); line([{ x: x + 0.42, y: gy - 0.5 }, { x: x + 0.42, y: gy - 1.3 }], ink, 0.06);
+    poly([[x - 0.62, gy - 1.25], [x, gy - 1.65], [x + 0.62, gy - 1.25]], ink);
+    line([{ x: x - 0.42, y: gy - 1.12 }, { x: x + 0.42, y: gy - 1.12 }], ink, 0.04);
+    const ry = gy - 0.95 + Math.sin(t) * 0.12;
+    line([{ x, y: gy - 1.12 }, { x, y: ry }], pal.far, 0.02);
+    poly([[x - 0.09, ry], [x + 0.09, ry], [x + 0.07, ry + 0.14], [x - 0.07, ry + 0.14]], ink);
+    ctx.fillStyle = ink; ctx.fillRect(x - 0.5, gy - 0.55, 1, 0.55);
+    fillE(x, gy - 0.55, 0.5, 0.1, 0, ink); fillE(x, gy - 0.55, 0.42, 0.07, 0, pal.far);
+    ctx.fillStyle = paper; for (let i = 0; i < 3; i++) ctx.fillRect(x - 0.5, gy - 0.4 + i * 0.14, 1, 0.02);
+    for (let i = 0; i < 3; i++) { const p = (t * 0.7 + i / 3) % 1, a = Math.sin(p * Math.PI); if (a > 0.3) { ctx.globalAlpha = a; fillE(x - 0.25 + i * 0.25, gy - 0.56, 0.035 * a, 0.02, 0, GOLD); } }
+    ctx.globalAlpha = 1;
+  } else if (id === 'sensei') {
+    // an old master, one of us: a stick figure in a straw hat, long paper beard, balanced on one leg
+    const s = Math.sin(t * 1.1) * 0.04, hip = { x: x + s, y: gy - 0.72 }, neck = { x: x + s * 1.5, y: gy - 1.2 };
+    shadow(0.3);
+    line([hip, { x: x + s * 0.3, y: gy }], ink, 0.1);
+    line([hip, { x: x + 0.2 + s, y: gy - 0.5 }, { x: x + 0.02 + s, y: gy - 0.42 }], ink, 0.1);   // the tucked leg
+    line([hip, neck], ink, 0.12);
+    line([neck, { x: x - 0.28 + s, y: gy - 1.0 }, { x: x - 0.34 + s, y: gy - 1.16 }], ink, 0.09);
+    line([neck, { x: x + 0.3 + s, y: gy - 1.0 }], ink, 0.09);
+    line([{ x: x + 0.34 + s, y: gy - 1.5 }, { x: x + 0.34 + s, y: gy }], pal.far, 0.05);   // the staff
+    fillE(neck.x, neck.y - 0.2, 0.15, 0.16);
+    ctx.fillStyle = paper; ctx.strokeStyle = ink; ctx.lineWidth = 0.03;
+    ctx.beginPath(); ctx.moveTo(neck.x - 0.08, neck.y - 0.14); ctx.quadraticCurveTo(neck.x - 0.02, neck.y + 0.28 + Math.sin(t * 2) * 0.03, neck.x + 0.06, neck.y + 0.1); ctx.lineTo(neck.x + 0.1, neck.y - 0.14); ctx.closePath(); ctx.fill(); ctx.stroke();
+    poly([[neck.x - 0.36, neck.y - 0.3], [neck.x, neck.y - 0.56], [neck.x + 0.36, neck.y - 0.3]], ink);
+    ctx.strokeStyle = pal.blue; ctx.lineWidth = 0.04; ctx.beginPath(); ctx.moveTo(neck.x - 0.2, neck.y - 0.33); ctx.lineTo(neck.x + 0.2, neck.y - 0.33); ctx.stroke();
+  }
+  ctx.restore();
+}
 function render() {
   const pal = world && world.impact > 0 ? PAL_INV : PAL;
   updateCamera();
@@ -4835,7 +5231,8 @@ function render() {
   drawArena(pal);
   if (mode === 'fight') drawSqueeze();
   if (mode === 'rival') { ctx.fillStyle = pal.fog; ctx.fillRect(0, 0, 9, ROWS); }
-  if (mode === 'build') {
+  if (mode === 'build' && runScreen === 'event' && run && run.event) drawEventChar(run.event.id, EVENT_X, SPAWN_R + 1, performance.now() / 1000, pal);
+  else if (mode === 'build') {
     ctx.fillStyle = pal.fog; ctx.fillRect(11, 0, COLS - 11, ROWS);
     if (flashCell && flashCell.t > 0) { ctx.fillStyle = `rgba(214,63,43,${0.5 * flashCell.t / 30})`; ctx.fillRect(flashCell.c, flashCell.r, 1, 1); flashCell.t--; }
   }
@@ -5619,7 +6016,7 @@ function itemLines(inst) {
     out.push(['sig', `${WEAP[it.weapon].name}: ${WTYPE[it.weapon].sig}`]);
   }
   if (it.skill) out.push(['head', `${SKILL[it.skill].name}: ${SKILL[it.skill].desc}`]);
-  if (it.acro) out.push(['head', `Acrobatics ${it.acro}: ${acroMoves(it.acro)}`]);
+  if (it.acro) { const a = acroOf(inst); out.push(['head', `Acrobatics ${a}: ${acroMoves(a)}${inst.acroUp ? ' (trained)' : ''}`]); }
   if (desc && (it.keystone || it.relic)) out.push(['rule', desc]);
   for (const o of it.onHit || []) out.push(['st', `${pctS(o.chance)} ${stName(o.apply)}${o.stacks > 1 ? ` ×${o.stacks}` : ''} on hit`]);
   for (const k of inst.affixes) if (k === 'status' && it.family && FAMILY[it.family].status) out.push(['st', `+${pctS(AFFIX.status)} ${stName(FAMILY[it.family].status)} on hit`]);
@@ -5647,7 +6044,7 @@ function compareLine(inst, to = targetSlot(inst)) {
   if (!cur) return `<span class="up">Fills your empty ${slotName(to).toLowerCase()} slot</span>`;
   const a = itemCmpNums(cur), b = itemCmpNums(inst), out = [], ci = ITEM[cur.item];
   if (ni.weapon && ci.weapon !== ni.weapon) out.push(`<span>${WEAP[ci.weapon].name} → ${WEAP[ni.weapon].name}</span>`);
-  if (ni.acro !== undefined && ci.acro !== ni.acro) out.push(`<span class="${ni.acro > ci.acro ? 'up' : 'dn'}">Acro ${ci.acro || 0} → ${ni.acro}</span>`);
+  if (ni.acro !== undefined && acroOf(cur) !== acroOf(inst)) out.push(`<span class="${acroOf(inst) > acroOf(cur) ? 'up' : 'dn'}">Acro ${acroOf(cur)} → ${acroOf(inst)}</span>`);
   for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
     const d = (b[k] || 0) - (a[k] || 0);
     if (Math.abs(d) < (PCT_STATS.has(k) ? 0.005 : 0.5)) continue;
@@ -5702,7 +6099,7 @@ function renderRun() {
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
-    const cells = [['HP', Math.round(100 + st.hp)], ['Damage', w ? `${Math.round(w.min + st.atk)}–${Math.round(w.max + st.atk)}` : '—'], ['Crit', pctS(st.crit)],
+    const cells = [['HP', Math.round((100 + st.hp) * st.hpMult)], ['Damage', w ? `${Math.round(w.min + st.atk)}–${Math.round(w.max + st.atk)}` : '—'], ['Crit', pctS(st.crit)],
       ['Def', Math.round(st.def)], ['Haste', fmtStat('haste', st.haste)], ['Evasion', pctS(st.evasion)],
       ['Skill', b.skill ? SKILL[b.skill].name : '—'], ['Moves', `${b.acro} / 4`], ['Statuses', applies.map((k) => stSvg(k)).join('') || '—']];
     const extra = ['critDmg', 'resist', 'ls', 'regen', 'thorns', 'pen', 'speed', 'skillHaste'].filter((k) => Math.abs(st[k]) > 1e-3).map((k) => `<span>${statLine(k, st[k])}</span>`).join('');
@@ -5716,10 +6113,10 @@ function renderRun() {
     let sel = '';
     if (runSel && runSel.uid) {
       const inst = run.bag.find((x) => x.uid === runSel.uid);
-      if (inst) sel = itemCard(inst, `${wearBtns(inst, 'data-bagact="wear" data-to')}<button class="ghost sm" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`, true);
+      if (inst) sel = itemCard(inst, `${wearBtns(inst, 'data-bagact="wear" data-to')}${mergeBtn(inst)}<button class="ghost sm" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`, true);
     } else if (runSel && runSel.slot) {
       const inst = run.equip[runSel.slot];
-      sel = inst ? itemCard(inst, runSel.slot !== 'weapon' ? `<button class="ghost sm" data-bagact="off" ${run.bagFull() ? 'disabled' : ''}>Take off</button>` : '')
+      sel = inst ? itemCard(inst, `${mergeBtn(inst)}${runSel.slot !== 'weapon' ? `<button class="ghost sm" data-bagact="off" ${run.bagFull() ? 'disabled' : ''}>Take off</button>` : ''}`)
         : `<p class="hint">Nothing in your ${slotName(runSel.slot).toLowerCase()} slot. Hunt for it: every creature drops its family's gear.</p>`;
     }
     body = `<div class="gstats runst">${cells.map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
@@ -5728,6 +6125,24 @@ function renderRun() {
       <div class="row-h"><span class="lbl">Bag</span><span class="lbl">${run.bag.length} / ${RUNCFG.bag}</span></div>
       <div class="bag">${bag}</div>${sel}`;
     actions = `<button class="go wide" data-go="back">Back</button>`;
+  } else if (runScreen === 'event') {
+    const ev = run.event, meta = EVENTS[ev.id], res = ev.result, opts = eventOptions(run);
+    body = `<div class="evhead"><span class="lbl">Event</span><b>${meta.name}</b><p>${res ? res.text : meta.line}</p></div>`;
+    if (res) {
+      const g = res.gained && run.find(res.gained);
+      if (g) body += itemCard(g);
+      actions = `<button class="go wide" data-ev="done">Continue</button>`;
+    } else if (runSel && runSel.pick) {
+      const o = opts.find((x) => x.key === runSel.pick), mine = run.owned().filter((i) => o.pick(i));
+      body += `<div class="row-h"><span class="lbl">${o.label}</span><span class="lbl">Choose an item</span></div>
+        <div class="bag evpick">${mine.map((i) => `<button class="bslot" data-evitem="${i.uid}" style="--rc:${RAR_COL[i.rarity]}">${itemIcon(i)}<small>${ITEM[i.item].name}</small></button>`).join('')}</div>`;
+      actions = `<button class="ghost wide" data-ev="back">Never mind</button>`;
+    } else {
+      body += `<div class="evopts">${opts.map((o) => {
+        const off = o.disabled || (o.pick && !run.owned().some((i) => o.pick(i)));
+        return `<button class="evopt ${o.key === 'leave' ? 'leave' : ''}" data-evopt="${o.key}" ${off ? 'disabled' : ''}><b>${o.label}</b>${o.detail ? `<small>${o.detail}</small>` : ''}</button>`;
+      }).join('')}</div>`;
+    }
   } else if (runScreen === 'duel') {
     const g = run.ghost;
     body = `<div class="row-h"><span class="lbl">Tonight's duel</span><span class="lbl">Day ${run.day}</span></div>
@@ -5745,6 +6160,8 @@ function renderRun() {
 }
 // Wear buttons: a trinket with both trinket slots full asks which one it replaces. `attr` ends in the
 // attribute that carries the choice.
+// two of the same item at the same rarity merge into one a rarity up
+const mergeBtn = (inst) => (run.twinOf(inst) ? `<button class="go sm" data-bagact="merge">Merge → ${RARITY[upR(inst.rarity)].name}</button>` : '');
 function wearBtns(inst, attr) {
   if (ITEM[inst.item].slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2) {
     return ['trinket1', 'trinket2'].map((t) => `<button class="go sm swap" ${attr}="${t}" aria-label="Wear, replacing ${ITEM[run.equip[t].item].name}">⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('');
@@ -5763,12 +6180,13 @@ function showRun(screen) {
   ui.hud.hidden = true; ui.result.hidden = true;
   showPanel('run');
   $('#doll').hidden = screen !== 'gear' && screen !== 'loot';
+  if (screen === 'event') U[0].face = 1;
   if (!$('#doll').hidden) renderDoll();
-  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over' }[screen];
+  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over', event: 'Event' }[screen];
   renderRun();
   if (run.over) Run.clear(); else run.save();
 }
-const runHome = () => (run.over ? 'over' : run.loot ? 'loot' : run.isDuel ? 'duel' : 'pick');
+const runHome = () => (run.over ? 'over' : run.loot ? 'loot' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
 function startRun(r) {
   if (!freeBuild) freeBuild = builds[0];
   run = r;
@@ -5784,7 +6202,7 @@ function runFight(offer) {
   applyRunBuild(); runOffer = offer;
   if (run.isDuel) {
     const g = run.ghost;
-    builds[1] = { ...runBuild(g.equip, TEMPLATES[g.t]), name: g.name };
+    builds[1] = { ...runBuild(g.equip, TEMPLATES[g.t], g.boons), name: g.name };
     huntKind = null;
     saveGhost(run.snapshot());   // entering a duel saves this build for other runs to meet
   } else { huntKind = offer.hunt; huntTier = offer.tier; }
@@ -5809,12 +6227,22 @@ ui.runPanel.addEventListener('click', (ev) => {
     if (!run.over) run.next(); else Run.clear();
     showRun(run.over ? 'over' : runHome()); return;
   }
+  if (t.dataset.evopt) {
+    const o = eventOptions(run).find((x) => x.key === t.dataset.evopt);
+    if (o.key === 'leave') { run.endEvent(); showRun(runHome()); return; }
+    if (o.pick) { runSel = { pick: o.key }; renderRun(); return; }
+    chooseEvent(run, o.key); run.save(); applyRunBuild(); renderRun(); return;
+  }
+  if (t.dataset.evitem) { chooseEvent(run, runSel.pick, t.dataset.evitem); runSel = null; run.save(); applyRunBuild(); renderRun(); return; }
+  if (t.dataset.ev === 'back') { runSel = null; renderRun(); return; }
+  if (t.dataset.ev === 'done') { run.endEvent(); showRun(runHome()); return; }
   if (t.dataset.bag) { runSel = { uid: t.dataset.bag }; renderRun(); return; }
   if (t.dataset.bagact) {
     const a = t.dataset.bagact;
     if (a === 'wear') { run.wear(run.bag.find((x) => x.uid === runSel.uid), t.dataset.to); runSel = null; }
     else if (a === 'sell') { toast(`Sold for ${run.sell(runSel.uid)} gold.`); runSel = null; }
     else if (a === 'off') { run.unwear(runSel.slot); runSel = null; }
+    else if (a === 'merge') { const m = run.merge(runSel.uid || run.equip[runSel.slot].uid); if (m) toast(`Merged into ${aName(m)}.`); runSel = null; }
     run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderDoll(); renderRun(); return;
   }
   const go = t.dataset.go;
@@ -5856,7 +6284,7 @@ window.__homeTurf = {
   play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
-  run: { Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
+  run: { Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
