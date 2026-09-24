@@ -2,7 +2,8 @@
 
 This is a proposal, not a plan of record. The backup of the game before any of
 this is in `versions/home-turf-v2-rivals.html`. For how the run could meet
-other players' builds (async PvP), see `docs/async-pvp.md`.
+other players' builds (async PvP), see `docs/async-pvp.md`. For gear,
+trinkets, statuses and mobs, see `docs/gear.md`.
 
 ## The pitch in one line
 
