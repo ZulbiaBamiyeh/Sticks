@@ -164,6 +164,7 @@
   .chips, .tools { display: grid; gap: 8px; }
   .chips { grid-template-columns: repeat(3, 1fr); }
   .tools { grid-template-columns: repeat(4, 1fr); }
+  .tools.three { grid-template-columns: repeat(3, 1fr); }
   .opt {
     background: var(--panel);
     border: 1.5px solid var(--line);
@@ -321,7 +322,7 @@
     </div>
     <div class="rv-head">
       <h2 class="rv-name" id="rvName">Tack</h2>
-      <p class="rv-tag" id="rvTag">Keeps spikes on the porch.</p>
+      <p class="rv-tag" id="rvTag">Guards the porch.</p>
     </div>
     <div class="cards">
       <div class="card">
@@ -403,6 +404,8 @@ const COLS = 20, ROWS = 12, DT = 1 / 60;
 const W = 0.56, H = 1.46;                       // fighter body box, in tiles
 const P = { accG: 80, accA: 46, fric: 64, g: 58, jumpV: 19.6, cut: 0.45, maxFall: 25, padV: 27.5 };
 const BUDGET = 10, COST = { block: 1, spikes: 2, pad: 2 };
+// Spikes are switched off for now: they're stripped from every layout and the build tools. The code stays.
+const SPIKES_ON = false;
 const SPAWN_C = 2, SPAWN_R = 10, BMIN = 1, BMAX = 8;   // local build columns; 9 and 10 are no-man's-land
 const SQ_START = 20, SQ_SPEED = 0.42, SQ_MAX = 7.5, TIME_CAP = 75;
 const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16;
@@ -410,7 +413,7 @@ const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16;
 const WEAP = {
   sword: { name: 'Sword', speed: 7.5, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
   daggers: { name: 'Daggers', speed: 8.1, atk: 'stab1', stop: 0.55, stat: '4f · flurry', desc: 'Fastest hands and feet in the game, with the shortest reach.' },
-  spear: { name: 'Spear', speed: 6.3, atk: 'thrust', stop: 2.25, stat: '9f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
+  spear: { name: 'Spear', speed: 6.3, atk: 'thrust', stop: 2.25, stat: '11f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
   hammer: { name: 'Hammer', speed: 5.7, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '18f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
@@ -426,8 +429,8 @@ const SKILL = {
 const SKILLS = Object.keys(SKILL);
 // Projectiles. v is launch speed and g is gravity, both in tiles per second.
 const SHOT = {
-  arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 9, kb: [4.5, -2.5], stun: 12, hs: 3 } },
-  star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4, kb: [2.5, -1.2], stun: 7, hs: 2 } },
+  arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 10, kb: [4.5, -2.5], stun: 12, hs: 3 } },
+  star: { v: 21, g: 3, len: 0.2, hit: { dmg: 5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 4 };
 const CRIT = 1.6;
@@ -663,18 +666,18 @@ function validate(build) {
 const ATK = {
   slash1: { w: 7, a: 5, r: 13, dmg: 10, kb: [4.5, -3], stun: 16, hs: 4, box: [0.1, -1.5, 1.35, -0.15], lunge: 3.5, melee: 1, trail: 1, chain: 'slash2' },
   slash2: { w: 6, a: 5, r: 13, dmg: 10, kb: [5, -6], stun: 16, hs: 4, box: [0.05, -1.75, 1.3, -0.3], lunge: 3, melee: 1, trail: 1, chain: 'slash3' },
-  slash3: { w: 11, a: 7, r: 20, dmg: 16, kb: [6.5, -15], stun: 36, hs: 8, box: [0, -2, 1.35, -0.1], lunge: 6, hop: -9, melee: 1, trail: 1, tumble: 1, big: 1 },
+  slash3: { w: 11, a: 7, r: 20, dmg: 15, kb: [6.5, -15], stun: 36, hs: 8, box: [0, -2, 1.35, -0.1], lunge: 6, hop: -9, melee: 1, trail: 1, tumble: 1, big: 1 },
   aslash: { w: 4, a: 12, r: 8, dmg: 8, kb: [7, -7], stun: 20, hs: 5, box: [-0.85, -1.8, 1.25, 0.25], melee: 1, trail: 1, air: 1 },
   stab1: { w: 4, a: 3, r: 10, dmg: 6, kb: [3.5, -2], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3.5, melee: 1, trail: 1, chain: 'stab2', fast: 1 },
   stab2: { w: 3, a: 3, r: 10, dmg: 6, kb: [3.5, -2.5], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3, melee: 1, trail: 1, chain: 'stab3', fast: 1, back: 1 },
-  stab3: { w: 6, a: 5, r: 17, dmg: 12, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
-  thrust: { w: 9, a: 4, r: 15, dmg: 11, kb: [8.5, -3.5], stun: 20, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
+  stab3: { w: 6, a: 5, r: 17, dmg: 10, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
+  thrust: { w: 11, a: 4, r: 18, dmg: 10, kb: [8.5, -3.5], stun: 20, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
   rise: { w: 8, a: 5, r: 15, dmg: 10, kb: [3, -12], stun: 26, hs: 6, box: [-0.25, -3.3, 1.0, -1.0], melee: 1, trail: 1, tumble: 1 },
-  hammer: { w: 17, a: 6, r: 22, dmg: 19, kb: [12, -9], stun: 40, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1 },
+  hammer: { w: 17, a: 6, r: 22, dmg: 20, kb: [12, -9], stun: 40, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1 },
   kick: { w: 5, a: 4, r: 12, dmg: 5, kb: [9, -4], stun: 18, hs: 4, box: [0.1, -1.15, 1.0, -0.35] },
-  shoot: { w: 18, a: 1, r: 10, shot: 'arrow', cd: 12 },
+  shoot: { w: 18, a: 1, r: 10, shot: 'arrow', cd: 8 },
   throw: { w: 10, a: 1, r: 4, shot: 'star', next: 'throw2' },
-  throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 22 },
+  throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 16 },
 };
 
 const STANCE = {
@@ -1450,6 +1453,7 @@ function hurt(u, d, src, by) {
   else if (src === 'zone') st[u.side].zone += d;
   if (d >= 1) popText(u.b.x, u.b.y - H - 0.35, String(Math.round(d)), TEAM[u.side], 0.5);
   if (u.hidden && d >= 1) reveal(u);
+  if (src !== 'zone' && d >= 1 && !world.firstHit) { world.firstHit = true; if (!headless) music.intensify(); }
   if (u.hp <= 0) kill(u);
 }
 function kill(u) {
@@ -1929,17 +1933,17 @@ const TEMPLATES = [
   [...row(3, 8, 8), S_(6, 10), B(1, 8)],
   [B(4, 7), B(5, 7), B(7, 8), B(8, 8), PD(3, 10), S_(6, 10)],
   [B(5, 6), B(6, 6), B(7, 6), PD(7, 10), S_(4, 10), S_(5, 10)],
-];
+].map((t) => (SPIKES_ON ? t : t.filter((p) => p.t !== 'spikes')));
 // The ladder. Each rival brings its own half, weapon and skill.
 const RIVALS = [
   { name: 'Quill', weapon: 'bow', skill: 'blink', t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
-  { name: 'Pike', weapon: 'spear', skill: 'parry', t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
-  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Lull', weapon: 'bow', skill: 'darksight', t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
-  { name: 'Moth', weapon: 'daggers', skill: 'darksight', t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
-  { name: 'Gaff', weapon: 'spear', skill: 'hook', t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
-  { name: 'Tack', weapon: 'sword', skill: 'parry', t: 0, tag: 'Keeps spikes on the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
+  { name: 'Tack', weapon: 'sword', skill: 'parry', t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
   { name: 'Anvil', weapon: 'hammer', skill: 'hook', t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
+  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
+  { name: 'Gaff', weapon: 'spear', skill: 'hook', t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
+  { name: 'Moth', weapon: 'daggers', skill: 'darksight', t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
+  { name: 'Pike', weapon: 'spear', skill: 'parry', t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', pieces: TEMPLATES[0].slice() }, null];
@@ -2342,75 +2346,101 @@ function render() {
 }
 
 // ---------------------------------------------------------------- music
-// Fights play a soundtrack file. It fades in when a fight starts, keeps going through replays and
-// rematches, goes muffled under a KO's slow motion, and fades out on the build and rival screens.
-const MUSIC = { fight: 'Music/Wildfrost OST - Spirit Call.mp3', volume: 0.55 };
+// Fight music works like Wildfrost's: each fight opens on a soft version, and the full track kicks in when the
+// first blow lands. It keeps going through replays and rematches (dropping back to soft for each new fight),
+// goes muffled under a KO's slow motion, and fades out on the build and rival screens.
+const MUSIC = {
+  fight: 'Music/Wildfrost OST - Spirit Call.mp3',
+  calm: null,          // a separate track to play before the first hit; null plays the fight track softened instead
+  volume: 0.55, calmVolume: 0.38, calmHz: 900,
+};
 const MUSIC_KEY = 'homeTurf.music';
 let headless = false;   // headless test fights stay silent
 const music = {
   on: (() => { try { return localStorage.getItem(MUSIC_KEY) !== 'off'; } catch { return true; } })(),
-  el: null, ctx: null, gain: null, filter: null, want: false, muffled: false, stopT: 0,
+  ctx: null, filter: null, layers: null, stage: 'calm', want: false, muffled: false, stopT: 0,
   init() {
-    if (this.el) return;
-    const el = this.el = new Audio(encodeURI(MUSIC.fight));
-    el.loop = true; el.preload = 'auto';
-    // Web Audio gives smooth fades (iOS ignores element volume) and the KO filter sweep. Pages opened
-    // straight from disk can't route a file through it, so they fall back to the plain element.
+    if (this.layers) return;
+    const make = (file) => { const el = new Audio(encodeURI(file)); el.loop = true; el.preload = 'auto'; return { el, gain: null, to: 0 }; };
+    this.layers = { fight: make(MUSIC.fight) };
+    if (MUSIC.calm) this.layers.calm = make(MUSIC.calm);
+    // Web Audio gives smooth fades (iOS ignores element volume) and the filter sweeps. Pages opened straight
+    // from disk can't route a file through it, so they fall back to plain volume changes.
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx || location.protocol === 'file:') return;
     try {
-      const ctx = new Ctx(), src = ctx.createMediaElementSource(el);
-      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = 20000;
-      this.gain = ctx.createGain(); this.gain.gain.value = 0;
-      src.connect(this.filter).connect(this.gain).connect(ctx.destination);
+      const ctx = new Ctx();
+      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = MUSIC.calmHz;
+      this.filter.connect(ctx.destination);
+      for (const L of Object.values(this.layers)) {
+        L.gain = ctx.createGain(); L.gain.gain.value = 0;
+        ctx.createMediaElementSource(L.el).connect(L.gain).connect(this.filter);
+      }
       this.ctx = ctx;
-    } catch { this.ctx = null; }
+    } catch { this.ctx = null; this.filter = null; for (const L of Object.values(this.layers)) L.gain = null; }
   },
-  fade(to, secs) {
-    if (this.ctx) { const g = this.gain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(to, t + secs); }
-    else this.el.volume = to;
-  },
-  play() {
-    this.want = true;
-    if (!this.on) return;
-    this.init(); clearTimeout(this.stopT);
-    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
-    const p = this.el.play();
-    if (p) p.catch(() => {});
-    this.fade(MUSIC.volume, 0.8);
-  },
-  // Fade out and pause. keepWant leaves the fight asking for music, for when it's only muted.
-  stop(secs = 0.9, keepWant = false) {
-    if (!keepWant) this.want = false;
-    if (!this.el) return;
-    this.fade(0, secs);
+  ramp(param, to, secs) { const t = this.ctx.currentTime; param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); param.linearRampToValueAtTime(to, t + secs); },
+  // Bring every layer and the filter to where the current stage wants them.
+  mix(secs) {
+    if (!this.layers) return;
+    const { fight, calm } = this.layers, live = this.want && this.on, hot = this.stage === 'fight';
+    fight.to = !live ? 0 : hot ? MUSIC.volume : calm ? 0 : MUSIC.calmVolume;
+    if (calm) calm.to = live && !hot ? MUSIC.calmVolume : 0;
+    if (this.ctx && this.ctx.state === 'suspended' && live) this.ctx.resume();
+    for (const L of Object.values(this.layers)) {
+      if (L.to > 0 && L.el.paused) { const p = L.el.play(); if (p) p.catch(() => {}); }
+      if (L.gain) this.ramp(L.gain.gain, L.to, secs); else L.el.volume = L.to;
+    }
+    this.sweep(hot ? 0.12 : 0.5);
     clearTimeout(this.stopT);
-    this.stopT = setTimeout(() => { if (!this.want || !this.on) this.el.pause(); }, secs * 1000 + 60);
+    this.stopT = setTimeout(() => { for (const L of Object.values(this.layers)) if (L.to === 0) L.el.pause(); }, secs * 1000 + 80);
   },
+  sweep(tc) {
+    if (!this.filter) return;
+    const hz = this.muffled ? 650 : this.stage === 'calm' && !this.layers.calm ? MUSIC.calmHz : 20000;
+    const f = this.filter.frequency, t = this.ctx.currentTime;
+    f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.setTargetAtTime(hz, t, tc);
+  },
+  // A new fight: start soft.
+  begin() {
+    const wasHot = this.stage === 'fight';
+    this.stage = 'calm'; this.want = true;
+    if (!this.on) return;
+    this.init();
+    if (this.layers.calm && wasHot) this.layers.calm.el.currentTime = 0;
+    this.mix(wasHot ? 1.2 : 0.8);
+  },
+  // The first blow landed: the full track comes in.
+  intensify() {
+    if (this.stage === 'fight') return;
+    this.stage = 'fight';
+    if (!this.want || !this.on || !this.layers) return;
+    if (this.layers.calm) this.layers.fight.el.currentTime = 0;
+    this.mix(this.layers.calm ? 0.35 : 0.25);
+  },
+  stop(secs = 0.9) { this.want = false; this.mix(secs); },
   // Called every frame: dull the music while a KO plays out in slow motion.
   tick() {
     if (!this.filter) return;
     const m = mode === 'fight' && world.ko && world.slowT > 0;
     if (m === this.muffled) return;
     this.muffled = m;
-    const f = this.filter.frequency, t = this.ctx.currentTime;
-    f.cancelScheduledValues(t); f.setValueAtTime(f.value, t);
-    f.setTargetAtTime(m ? 650 : 20000, t, m ? 0.05 : 0.4);
+    this.sweep(m ? 0.05 : 0.4);
   },
   toggle() {
     this.on = !this.on;
     try { localStorage.setItem(MUSIC_KEY, this.on ? 'on' : 'off'); } catch { /* not remembered */ }
     $('#sndBtn').setAttribute('aria-pressed', String(this.on));
-    if (this.on && mode === 'fight') this.play();
-    else if (!this.on) this.stop(0.25, true);
+    if (this.on && this.want) this.init();
+    this.mix(0.25);
   },
 };
 $('#sndBtn').setAttribute('aria-pressed', String(music.on));
 $('#sndBtn').addEventListener('click', () => music.toggle());
 document.addEventListener('visibilitychange', () => {
-  if (!music.el) return;
-  if (document.hidden) music.el.pause();
-  else if (music.want && music.on) music.play();
+  if (!music.layers) return;
+  if (document.hidden) for (const L of Object.values(music.layers)) L.el.pause();
+  else music.mix(0.3);
 });
 
 // ---------------------------------------------------------------- UI
@@ -2439,7 +2469,10 @@ function toast(msg) {
   ui.toast.textContent = msg; ui.toast.hidden = false;
   clearTimeout(toastT); toastT = setTimeout(() => { ui.toast.hidden = true; }, 2400);
 }
-const HOME_HINT = 'Your fighter knows where your spikes are. The rival finds them by stepping on them. Pads launch only the fighter who built them.';
+const HOME_HINT = SPIKES_ON
+  ? 'Your fighter knows where your spikes are. The rival finds them by stepping on them. Pads launch only the fighter who built them.'
+  : 'Blocks shape the routes both fighters take. Pads launch only the fighter who built them, so they\'re shortcuts only you can use.';
+if (!SPIKES_ON) { document.querySelector('#tools [data-t="spikes"]').remove(); document.getElementById('tools').classList.add('three'); }
 function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
@@ -2498,10 +2531,9 @@ function showResult() {
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
   ui.resK.textContent = world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
   const mySpikes = A.spikes.filter((o) => o === 0).length, theirSpikes = A.spikes.filter((o) => o === 1).length;
-  const rows = [
-    ['Traps dealt', `you ${Math.round(st[0].trap)} · ${name} ${Math.round(st[1].trap)}`],
-    ['Spikes found', `${name} found ${st[1].found} of ${mySpikes} · you found ${st[0].found} of ${theirSpikes}`],
-  ];
+  const rows = [];
+  if (st[0].trap + st[1].trap) rows.push(['Traps dealt', `you ${Math.round(st[0].trap)} · ${name} ${Math.round(st[1].trap)}`]);
+  if (mySpikes + theirSpikes) rows.push(['Spikes found', `${name} found ${st[1].found} of ${mySpikes} · you found ${st[0].found} of ${theirSpikes}`]);
   if (st[0].skill + st[1].skill) rows.push(['Skills used', `you ${st[0].skill} · ${name} ${st[1].skill}`]);
   if (st[0].crit + st[1].crit) rows.push(['Critical damage', `you ${Math.round(st[0].crit)} · ${name} ${Math.round(st[1].crit)}`]);
   if (st[0].parry + st[1].parry) rows.push(['Parries', `you ${st[0].parry} · ${name} ${st[1].parry}`]);
@@ -2661,7 +2693,7 @@ function startFight(seed, replay = false) {
   ui.phase.textContent = `vs ${rivalName()}`;
   ui.seed.textContent = `Seed ${seed}`;
   renderTicker(); updateHud();
-  if (!headless) music.play();
+  if (!headless) music.begin();
 }
 const newSeed = () => 1 + Math.floor(Math.random() * 99999);
 
@@ -2785,7 +2817,7 @@ window.__homeTurf = {
   fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
     const saved = [builds[0], builds[1]];
     builds[0] = blue; builds[1] = red;
-    headless = true; startFight(seed); headless = false;
+    headless = true; startFight(seed);
     let f = 0;
     while (f++ < maxFrames && !(world.over && world.overT > 5)) {
       if (world.hs > 0) { world.hs--; continue; }
@@ -2793,7 +2825,7 @@ window.__homeTurf = {
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
     const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
-    builds[0] = saved[0]; builds[1] = saved[1];
+    builds[0] = saved[0]; builds[1] = saved[1]; headless = false;
     return res;
   },
   // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).

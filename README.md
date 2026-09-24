@@ -27,11 +27,14 @@ on their own.
 - **Rivals:** eight named rivals, each with its own half, weapon and skill. You
   scout each one before the fight and can change your build to counter it.
   Your record against each rival is kept in this browser.
-- **Your half:** 10 points to spend on blocks (1), spikes (2) and pads (2).
-  Columns 9 and 10 are no-man's-land and stay open.
-- **Home advantage:** your fighter knows where your spikes are. The rival
-  finds them by stepping on them, then avoids them. Pads launch only the
-  fighter who built them.
+- **Your half:** 10 points to spend on blocks (1) and pads (2). Columns 9 and
+  10 are no-man's-land and stay open.
+- **Home advantage:** pads launch only the fighter who built them, so they're
+  shortcuts only you can use.
+- **Spikes are switched off for now.** The code is still there: set
+  `SPIKES_ON = true` in `index.html` to bring back the spikes tool and the
+  spikes in the rival layouts. When they're on, your fighter knows where your
+  spikes are, and the rival finds them by stepping on them.
 - **No camping:** after 20 seconds the arena closes in from both walls.
 - **Legal halves only:** a placement is refused if the rival couldn't reach
   your spawn, if it makes a pit someone can't climb out of, or if it would
@@ -50,8 +53,12 @@ Fights are deterministic from a seed, so **Replay** runs the same fight again.
 ### Music
 
 Fights play *Spirit Call* from the Wildfrost soundtrack, the same file the
-Chess repo uses. It fades in when a fight starts and keeps going through
-replays and rematches. It fades out on the build and rival screens. The speaker
+Chess repo uses. Like Wildfrost, each fight opens on a soft version: the track
+plays quieter behind a lowpass filter. The full track sweeps in when the first
+blow lands. It keeps going through replays and rematches, dropping back to soft
+for each new fight, and fades out on the build and rival screens. To use a
+separate song before the first hit, set `MUSIC.calm` to its file; the game then
+crossfades into Spirit Call on the first hit. The speaker
 button in the header mutes it, and that choice is remembered. To change the
 track, drop a file in `Music/` and point `MUSIC.fight` in `index.html` at it.
 The soundtrack isn't ours, so swap it for something licensed before shipping
@@ -98,5 +105,5 @@ example `60`) to sample both fighters' position and AI state every 60 frames.
 - **Demos:** the rival page loops the rival's weapon combo and skill, and picking
   a weapon or skill on the build page makes your fighter show it off.
 - **Juggle protection:** each extra hit on a fighter already sent flying does
-  less damage, and the third lets it escape. Spikes and hammers can't chain a
-  fighter to death.
+  less damage, and the third lets it escape, so launches can't chain a fighter
+  to death.

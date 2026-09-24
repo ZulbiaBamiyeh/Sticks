@@ -24,7 +24,7 @@ anything else.
   - **Event:** a small choice with a catch. Example: "A rival offers to trade
     halves for one fight."
   - **Rest:** get back a life, or rebuild your half for free.
-  - **Boss:** at the end of each act. Anvil already works as act 1's boss.
+  - **Boss:** at the end of each act. The hardest hand-made rivals work as bosses.
 - **Lives, not carried-over HP:** 3 hearts, and a loss costs one. Fights are
   noisy (one seed can swing a matchup 20 points), so a single bad fight
   shouldn't end a run. Carried-over HP makes every fight after an unlucky one
@@ -150,7 +150,7 @@ content plugs in through hooks instead of `if` statements:
 
 This is small enough to finish and big enough to feel like a run:
 
-1. Map with 1 act, 6 stops, and Anvil as the boss. 3 hearts.
+1. Map with 1 act, 6 stops, and one of the eight hand-made rivals as the boss. 3 hearts.
 2. Pick-one-of-three after each win.
 3. Four new pieces: crumble block, portal pair, mine and turret.
 4. Two upgrades each for the six weapons and four skills.
