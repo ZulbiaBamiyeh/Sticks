@@ -971,13 +971,19 @@ const SK_POSE = {
 };
 
 // ---------------------------------------------------------------- fighters
-function makeUnit(side, weapon, skill, acro = 0, trinket = null) {
+// Gear stats: hp (flat), atk (+damage), crit (chance), armor (damage taken off), speed (+run speed),
+// haste (skill cooldowns off), proc (+status chance), ls (lifesteal), regen (HP a second), onHit (extra statuses).
+const NO_STATS = { hp: 0, atk: 0, crit: 0, armor: 0, speed: 0, haste: 0, proc: 0, ls: 0, regen: 0, onHit: [] };
+function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
+  const gs = { ...NO_STATS, ...(stats || {}) }, hpMax = Math.round(100 + gs.hp);
   const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
   const pose = { p: {}, v: {} };
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
-    side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: 100, hpShow: 100,
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed, acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
+    side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
+    dmgMul: 1 + gs.atk, critCh: gs.crit, armor: Math.min(0.6, gs.armor), skMul: Math.max(0.4, 1 - gs.haste),
+    onHit: [...(trinket ? [TRINKET[trinket]] : []), ...gs.onHit.map((k) => ({ name: STATUS[k].name.toLowerCase(), status: k }))],
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
@@ -1676,7 +1682,7 @@ function startSkill(u, name, face) {
   u.state = 'skill'; u.skName = name; u.sf = 0;
   u.ai.macro = null; u.ai.path.length = 0; u.backflip = false;
   if (face) u.face = face;
-  u.skCd = SKILL[u.skill].cd;
+  u.skCd = SKILL[u.skill].cd * (u.skMul || 1);
   if (!world.demo) world.stats[u.side].skill++;
   if (u.hidden && name !== 'cast') reveal(u);
   return true;
@@ -1783,7 +1789,7 @@ function doBlink(u, x, y, lookX) {
   if (u.scarf) for (const p of u.scarf) { p.x += dx; p.y += dy; p.px += dx; p.py += dy; }
   u.trail.length = 0;
   b.x = x; b.y = y; b.vx = 0; b.vy = 0; b.gr = false; b.jumping = false;
-  u.iT = Math.max(u.iT, 6); u.skCd = SKILL.blink.cd; u.react = Math.min(u.react, 2);
+  u.iT = Math.max(u.iT, 6); u.skCd = SKILL.blink.cd * (u.skMul || 1); u.react = Math.min(u.react, 2);
   u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false;
   if (lookX !== undefined) u.face = Math.sign(lookX - x) || u.face;
   if (u.hidden) reveal(u);
@@ -2127,14 +2133,14 @@ function breakDuel(u) {
     stagger(o, 20, 0);
     if (!blinkTo(u, o, 'behind')) stagger(o, 12, -o.face * 5);
   } else if (u.skill === 'parry') {
-    u.state = 'skill'; u.skName = 'parry'; u.sf = 4; u.skCd = SKILL.parry.cd;
+    u.state = 'skill'; u.skName = 'parry'; u.sf = 4; u.skCd = SKILL.parry.cd * (u.skMul || 1);
     parrySuccess(u, o, (u.b.x + o.b.x) / 2, u.b.y - 1.05);
   } else if (u.skill === 'darksight') {
     stagger(o, 14, -o.face * 3);
     startSkill(u, 'cast');
   } else {
     // the hook wraps the other blade and yanks the fighter off its feet
-    u.skCd = SKILL.hook.cd; world.stats[u.side].skill++;
+    u.skCd = SKILL.hook.cd * (u.skMul || 1); world.stats[u.side].skill++;
     const dir = Math.sign(u.b.x - o.b.x) || 1;
     o.state = 'stun'; o.stunT = 32; o.tumble = true; o.bounced = false; o.spin = -0.22;
     o.b.vx = dir * 4; o.b.vy = -9; o.b.gr = false;
@@ -2269,6 +2275,7 @@ function applyHit(att, def, d, dirX, crit) {
     }
   }
   att.hitLanded = true;
+  if (!crit && att.critCh > 0 && d.dmg && rng() < att.critCh) crit = true;   // gear crit chance
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = (def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5) || (def.state === 'atk' && def.mob && !!MOB[def.mob].armor && MOB[def.mob].armor(def));   // a big slime can't be knocked out of its leap
   const s = def.st, shattered = s.frozen > 0;
@@ -2304,14 +2311,20 @@ function applyHit(att, def, d, dirX, crit) {
     world.stats[att.side].crit += dmg;
     if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
   }
-  hurt(def, dmg, 'hit', att.side, null, zap ? [[kind, 1 - zap / dmg], ['shock', zap / dmg]] : [[kind, 1]]);
+  const taken = dmg * (1 - (def.armor || 0));
+  hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap / dmg], ['shock', zap / dmg]] : [[kind, 1]]);
+  if (att.gs && att.gs.ls > 0 && att.state !== 'dead') att.hp = Math.min(att.hpMax, att.hp + taken * att.gs.ls);
   proc(att, def, d.dmg);
 }
 
 // ---------------------------------------------------------------- statuses
 function proc(att, def, base) {
-  const t = (att.trinket && TRINKET[att.trinket]) || att.sting;
-  if (!t || def.state === 'dead' || def.state === 'duel' || world.demo || !(base > 0) || rng() >= Math.min(1, base / 9)) return;
+  const all = att.onHit && att.onHit.length ? att.onHit : att.sting ? [att.sting] : null;
+  if (!all) return;
+  for (const t of all) procOne(att, def, base, t);
+}
+function procOne(att, def, base, t) {
+  if (def.state === 'dead' || def.state === 'duel' || world.demo || !(base > 0) || rng() >= Math.min(1, base / 9 * (1 + ((att.gs && att.gs.proc) || 0)))) return;
   const s = def.st, k = t.status, K = STATUS[k], x = def.b.x, y = def.b.y - H * 0.6;
   if (k === 'chill' && (s.frozen > 0 || s.thaw > 0)) return;
   s.by = att.side;
@@ -2794,10 +2807,15 @@ const MOB = {
       let stepping = u.legs.filter((l) => l.k < 1).length;
       for (let i = 0; i < u.legs.length; i++) {
         const l = u.legs[i];
-        if (!grounded) {   // dangling or dropping: the outer legs reach out and up, the inner ones hang, all paddling slowly
-          const ang = world.t * 0.1 + i * 1.3, outer = Math.abs(l.o) > 0.45, spread = u.state === 'atk' && u.phase === 'a' ? 1.25 : 1;
-          const gx = b.x + l.o * (outer ? 1.05 : 0.8) * spread, gy = b.y - (outer ? 0.42 : 0.08) + Math.sin(ang) * 0.05;
+        if (!grounded && u.hang) {   // dangling: the outer legs reach out and up, the inner ones hang, all paddling slowly
+          const ang = world.t * 0.1 + i * 1.3, outer = Math.abs(l.o) > 0.45;
+          const gx = b.x + l.o * (outer ? 1.05 : 0.8), gy = b.y - (outer ? 0.42 : 0.08) + Math.sin(ang) * 0.05;
           l.x = approach(l.x, gx, 0.06); l.y = approach(l.y, gy, 0.06);
+          l.k = 1; continue;
+        }
+        if (!grounded) {   // falling or leaping: legs reach down and a little out, ready to land
+          const gx = b.x + l.o * 0.7, gy = b.y + 0.04 - Math.abs(l.o) * 0.12;
+          l.x = approach(l.x, gx, 0.2); l.y = approach(l.y, gy, 0.2);
           l.k = 1; continue;
         }
         const tx = b.x + l.o + b.vx * 0.07;
@@ -2970,7 +2988,7 @@ function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
   const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v), T = TIER[tier];
   const hp = Math.round(at(K.hp) * T.hp), bw = at(K.bw), bh = at(K.bh), y = K.spawnY ? K.spawnY(slot) : SPAWN_R + 1;
   const u = {
-    mob: kind, name: K.name, size, slot, tier, elite: tier === 'elite', dmgMul: T.dmg, cdMul: T.cd, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpShow: hp, bw, bh,
+    mob: kind, name: K.name, size, slot, tier, elite: tier === 'elite', dmgMul: T.dmg, cdMul: T.cd, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpMax: hp, hpShow: hp, bw, bh,
     b: { x, y, vx: 0, vy: 0, gr: !K.spawnY, speed: 0 },
     face: -1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0, hitDone: false, hitLanded: false,
     stunT: 0, juggle: 0, guardT: 0, react: 30 + Math.floor(rng() * 30), cd: 40 + Math.floor(rng() * 50), iT: 0, flash: 0, tumble: false, spin: 0, rot: 0,
@@ -3153,6 +3171,7 @@ function act(u) {
   if (u.flipT > 0) u.flipT--;
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
+  if (u.gs && u.gs.regen > 0 && world.t % 60 === 0 && !world.over) u.hp = Math.min(u.hpMax, u.hp + u.gs.regen);
   if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
   statusStep(u);
   if (u.state === 'dead') return;
@@ -3604,7 +3623,8 @@ function simStep() {
   } else if (w.t >= TIME_CAP * 60) {
     w.over = true; w.ko = false; w.overT = 0;
     if (!headless) music.ko();
-    w.winner = w.hunt ? 1 : U[0].hp === U[1].hp ? -1 : U[0].hp > U[1].hp ? 0 : 1;
+    const f0 = U[0].hp / U[0].hpMax, f1 = w.hunt ? 1 : U[1].hp / U[1].hpMax;
+    w.winner = w.hunt ? 1 : f0 === f1 ? -1 : f0 > f1 ? 0 : 1;
     log('Time.', -1);
   }
   for (const u of U) { if (u.hpShow > u.hp) u.hpShow = Math.max(u.hp, u.hpShow - (w.t % 2 ? 0.6 : 0)); }
@@ -4345,13 +4365,13 @@ function statusChips(u) {
 function updateHud() {
   if (mode !== 'fight') return;
   const [b, r] = U;
-  ui.fillB.style.width = `${b.hp}%`; ui.chipB.style.width = `${b.hpShow}%`;
+  ui.fillB.style.width = `${100 * b.hp / b.hpMax}%`; ui.chipB.style.width = `${100 * b.hpShow / b.hpMax}%`;
   if (world.hunt) {
     const h = world.hunt, left = U.reduce((s, u) => s + (u.side && u.state !== 'dead' ? mobWorth(u) : 0), 0);
     const pct = 100 * left / h.max;
     h.show = Math.max(pct, h.show - 0.6);
     ui.fillR.style.width = `${pct}%`; ui.chipR.style.width = `${h.show}%`;
-  } else { ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`; }
+  } else { ui.fillR.style.width = `${100 * r.hp / r.hpMax}%`; ui.chipR.style.width = `${100 * r.hpShow / r.hpMax}%`; }
   ui.clock.textContent = clockStr(world.over ? world.t - world.overT : world.t);
   ui.clock.classList.toggle('sq', world.zone > 1.001 && !world.over);
   for (const side of [0, 1]) {
@@ -4606,8 +4626,8 @@ function startFight(seed, replay = false) {
   if (hunt) {
     const mobs = hunt.spawn(huntTier), max = mobs.reduce((s, m) => s + mobWorth(m), 0);
     world.hunt = { kind: huntKind, tier: huntTier, name: huntTier === 'elite' && hunt.eliteName ? hunt.eliteName : `${huntTier === 'easy' ? '' : TIER[huntTier].label + ' '}${hunt.name}`, max, show: 100 };
-    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket), ...mobs];
-  } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket));
+    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket, builds[0].stats), ...mobs];
+  } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket, builds[side].stats));
   for (const u of U) {
     if (u.mob) continue;
     u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
