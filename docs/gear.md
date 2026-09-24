@@ -120,8 +120,9 @@ so the fighter AI needs target choice before mobs can come in groups.
 1. Five passive trinkets carrying Burn, Poison, Bleed, Chill and Shock. In
    random-loadout sims each trinket wins 50–56% against a different one, and
    fighting without one wins 35%, so trinkets play like loot, the way skills do.
-2. Two hunts: the Ink Slime (splits in two) and the Paper Bats (three bats that
-   take turns to dive). Fighters pick the nearest creature as their target.
+2. Four hunts: the Ink Slime (splits in two), the Paper Bats (three bats that
+   take turns to dive), the Ink Serpent (rears and lunges) and the Block Golem
+   (slams a shockwave, throws its fist from range). Fighters pick the nearest creature as their target.
 3. The PvP numbers from `npm run sim` didn't move when hunts went in.
 
 Still to do: the AI's choices around statuses (pressing a frozen rival,

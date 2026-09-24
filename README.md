@@ -59,6 +59,14 @@ Then two stick figures fight it out on their own.
     leap.
   - **Paper Bats:** three folded-paper bats circle overhead and take turns to
     dive, with a "!" before each dive. A frozen bat drops out of the air.
+  - **Ink Serpent:** a chain of points that follows its head along the floor,
+    with humps rolling down its back. It rears up, then lunges a long way. It
+    shrugs off hits quickly and strikes back, and it can't be knocked out of a
+    lunge.
+  - **Block Golem:** three stacked slate blocks. Hits barely move it and never
+    interrupt it. Up close it lifts its top block and slams a shockwave along the
+    floor, which fighters jump. From range it throws the block as a lobbed shot,
+    and a new one grows back.
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
