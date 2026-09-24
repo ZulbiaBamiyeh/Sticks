@@ -1604,7 +1604,7 @@ function fireShot(u) {
 // strike, block, strike, block, with sparks at every contact. It ends one of three ways, all decided by the
 // fight's seed: a fighter breaks it with a ready skill, one wins it (faster weapons and better acrobats win
 // more often, and good acrobats may vault over the top), or both are thrown apart.
-const DUEL_GAP = { sword: 1.15, daggers: 0.95, spear: 1.6, hammer: 1.35 };
+const DUEL_GAP = { sword: 1.4, daggers: 1.15, spear: 1.8, hammer: 1.55 };
 const DUEL_STRIKE = {
   high: { w: { fx: -0.1, fy: -0.36, wa: -2.3, wb: -2, lean: -0.08 }, a: { fx: 0.44, fy: -0.06, wa: -0.45, wb: -0.3, lean: 0.3 } },
   low: { w: { fx: -0.06, fy: 0.36, wa: 2.2, wb: 2, lean: 0.28 }, a: { fx: 0.46, fy: 0.22, wa: 0.4, wb: 0.3, lean: 0.36 } },
@@ -1618,17 +1618,19 @@ const DUEL_BLOCK = {
 const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98 };
 const isBlade = (u) => !isRanged(u);
 function canDuel(a, b) {
-  return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) && a.b.gr && b.b.gr &&
-    Math.abs(a.b.y - b.b.y) < 0.5 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
+  return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) &&
+    Math.abs(a.b.y - b.b.y) < 0.9 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
 }
 function startDuel(a, b) {
-  const n = 3 + Math.floor(rng() * 4), types = Object.keys(DUEL_STRIKE), beats = [];
+  const n = 4 + Math.floor(rng() * 4), types = Object.keys(DUEL_STRIKE), beats = [];
   let s = rng() < 0.5 ? a : b;
-  for (let i = 0; i < n; i++) { beats.push({ s, type: types[Math.floor(rng() * 3)], len: Math.max(9, 14 - i) }); s = s === a ? b : a; }
+  for (let i = 0; i < n; i++) { beats.push({ s, type: types[Math.floor(rng() * 3)], len: Math.max(9, 15 - i) }); s = s === a ? b : a; }
+  // most exchanges lock blades halfway through: crossed, pushing, sparks grinding
+  if (rng() < 0.7) beats.splice(Math.floor(n / 2), 0, { s: beats[Math.floor(n / 2)].s, type: 'bind', len: 30 });
   // how it ends
   let fin = null;
   for (const u of rng() < 0.5 ? [a, b] : [b, a]) {
-    if (!fin && u.skill && u.skCd <= 0 && rng() < 0.6) fin = { kind: 'skill', u, at: 1 + Math.floor(rng() * (n - 1)) };
+    if (!fin && u.skill && u.skCd <= 0 && rng() < 0.5) fin = { kind: 'skill', u, at: Math.max(3, beats.length - 1 - Math.floor(rng() * 2)) };
   }
   if (!fin) {
     if (rng() < 0.2) fin = { kind: 'draw' };
@@ -1653,12 +1655,29 @@ function startDuel(a, b) {
 function stepDuel() {
   const D = world.duel, beat = D.beats[D.i], s = beat.s, d = s === D.a ? D.b : D.a;
   if (D.a.state !== 'duel' || D.b.state !== 'duel') { world.duel = null; return; }
-  const f = ++D.f, hitF = 6;
-  // the striker drives forward a little on each beat and the defender gives ground
-  if (f < hitF) D.mid += s.face * 0.03;
+  const f = ++D.f, hitF = 6, bind = beat.type === 'bind';
+  // the striker drives forward a little on each beat and the defender gives ground; in a lock they shove back and forth
+  if (bind) D.mid += Math.sin(f * 0.45) * 0.025;
+  else if (f < hitF) D.mid += s.face * 0.03;
+  const gap = bind ? D.gap * 0.72 : D.gap;
   for (const u of [D.a, D.b]) {
-    const tx = D.mid - u.face * D.gap / 2;
+    const tx = D.mid - u.face * gap / 2;
     u.b.vx = Math.max(-7, Math.min(7, (tx - u.b.x) * 10));
+    if (!u.b.gr) u.b.vy = Math.min(u.b.vy, 3.5);   // an exchange in the air drifts down slowly
+  }
+  if (bind) {
+    const shake = Math.sin(f * 1.7) * 0.03;
+    for (const u of [D.a, D.b]) {
+      u.dpose = { hipH: 0.56, lean: 0.38, head: 0.05, fx: 0.42 + shake, fy: -0.08, wa: -1.3, wb: -1.25, bx: 0.3, by: 0.0, ffx: 0.52, bfx: -0.52, ka: 0.5 };
+      u.duelSwing = false;
+    }
+    if (f % 5 === 0) {
+      const cx = D.mid, cy = s.b.y - 1.45;
+      sparks(cx, cy, 0, 3); if (f % 10 === 0) { ring(cx, cy, 0.35, 'spark'); sfxShake(1.5); }
+    }
+    if (f === 2) { world.hs = Math.max(world.hs, 4); world.punch = 1; }
+    if (f >= beat.len) { D.f = 0; if (++D.i >= D.beats.length) finishDuel(); }
+    return;
   }
   const st = DUEL_STRIKE[beat.type];
   s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitF ? 0.35 : 0.7 }, f < hitF ? st.w : st.a);
@@ -1678,7 +1697,7 @@ function stepDuel() {
 }
 function endDuel() {
   const D = world.duel;
-  world.duel = null; world.duelCd = world.t + 240;
+  world.duel = null; world.duelCd = world.t + 75;
   for (const u of [D.a, D.b]) if (u.state === 'duel') { u.state = 'free'; u.react = 0; u.dpose = null; u.duelSwing = false; }
   return D;
 }
@@ -1823,8 +1842,9 @@ function applyHit(att, def, d, dirX, crit) {
     return;
   }
   // A blade fighter squared up to a swing can catch it and turn it into an exchange.
-  if (d.melee && !d.air && !crit && !att.ambush && def.state === 'free' && def.b.gr && def.react <= 0 && facingPoint(def, att.b.x) &&
-      !isRanged(def) && canDuel(att, def) && rng() < 0.3) { att.hitDone = true; startDuel(def, att); return; }
+  const guarding = (def.state === 'free' && def.react <= 0) || (def.state === 'atk' && def.phase === 'w' && def.atkDef.melee);
+  if (d.melee && !d.air && !crit && !att.ambush && guarding && def.b.gr && facingPoint(def, att.b.x) &&
+      !isRanged(def) && canDuel(att, def) && rng() < (def.w === att.w ? 0.55 : 0.4)) { att.hitDone = true; startDuel(def, att); return; }
   att.hitLanded = true;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
@@ -2415,8 +2435,8 @@ function camTarget() {
   let x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
   let y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
   if (world.ko && world.slowT > 0) { const l = U.find((u) => u.state === 'dead').rag.P[2]; x0 = x1 = l.x; y0 = y1 = l.y; }
-  const zFit = Math.min(CW / COLS, CH / ROWS), zMax = Math.min(CW / 6.5, CH / 5.5);
-  let z = Math.min(CW / (x1 - x0 + 6), CH / (y1 - y0 + 5));
+  const zFit = Math.min(CW / COLS, CH / ROWS), zMax = Math.min(CW / 6.5, CH / 5.5) * (world.duel ? 1.2 : 1);
+  let z = world.duel ? Math.min(CW / (x1 - x0 + 4), CH / (y1 - y0 + 4)) : Math.min(CW / (x1 - x0 + 6), CH / (y1 - y0 + 5));
   z = Math.max(zFit, Math.min(zMax, z));
   const hw = CW / z / 2, hh = CH / z / 2;
   const cx = hw * 2 >= COLS ? COLS / 2 : Math.max(hw, Math.min(COLS - hw, (x0 + x1) / 2));
@@ -2426,7 +2446,7 @@ function camTarget() {
 function updateCamera() {
   const t = camTarget();
   if (!cam.init) { Object.assign(cam, t); cam.init = true; return; }
-  const k = mode === 'fight' ? 0.08 : 0.2;
+  const k = mode === 'fight' ? (world.duel ? 0.14 : 0.08) : 0.2;
   cam.z += (t.z - cam.z) * k; cam.x += (t.x - cam.x) * k; cam.y += (t.y - cam.y) * k;
 }
 const toScreen = (x, y) => ({ x: (x - cam.x) * cam.z + CW / 2, y: (y - cam.y) * cam.z + CH / 2 });

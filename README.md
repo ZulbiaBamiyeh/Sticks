@@ -44,9 +44,11 @@ figures fight it out on their own.
   so fighters find wall-jump and wall-run routes on their own. Shooters kite by
   picking the escape jump that lands farthest away, favouring high ground, and
   shoot from the top of it. Blades hop over low shots even at level 0.
-- **Blade exchanges:** when two blades meet, or a blade fighter squares up to a
-  swing, the fight goes into a short choreographed exchange of strikes and
-  blocks, with sparks on every contact. It ends one of three ways, decided by
+- **Blade exchanges:** when two blades meet, in the air or on the ground, or a
+  blade fighter catches a swing, the fight goes into a short choreographed
+  exchange of strikes and blocks, with sparks on every contact. Most exchanges
+  lock blades halfway through, crossed and pushing. The camera moves in, and an
+  exchange that starts mid-air drifts slowly down to the floor. It ends one of three ways, decided by
   the fight's seed:
   - a fighter breaks it with a ready skill (Blink behind, a Parry riposte, a
     Dark Sight vanish or a Hook that trips);
