@@ -60,6 +60,23 @@ crumble blocks and wall jumps are new edge types in `buildNav`, and `validate`
 keeps every half fair automatically. That's the payoff of the existing
 architecture.
 
+## Acrobatics: the first run stat (in the prototype now)
+
+Acrobatics runs from 0 to 4, and each level unlocks a move: roll, wall jump,
+wall run, air flip. In a run it's a natural level-up reward. Each level visibly
+changes how your fighter moves, and the sim shows a steady edge: about 44% at
+level 0, up to about 55% at level 4. That's enough to matter without deciding
+the fight.
+
+Ideas for later levels:
+- Ledge hang.
+- A slide under low gaps.
+- Wall-run attacks.
+- Charms that change a move, for example a Blink that resets on a wall jump.
+
+Blade exchanges also take acrobatics into account: better acrobats win more of
+them and can vault out over the top.
+
 ## Weapons that would add something
 
 Each one should change *how the fight moves*, not just the numbers.

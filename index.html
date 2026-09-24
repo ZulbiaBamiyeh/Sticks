@@ -237,6 +237,19 @@
   .opt[aria-pressed="true"] .sk-ic svg { --c: var(--on-ink); }
   .skill b { font-size: 16px; letter-spacing: 0.01em; text-overflow: clip; }
 
+  /* acrobatics: a stat bar where each step unlocks a move */
+  .acro { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .acro button { border: 1.5px solid var(--line); background: var(--panel); padding: 7px 2px 6px; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0; }
+  .acro button:first-child { border-radius: 6px 0 0 6px; }
+  .acro button:last-child { border-radius: 0 6px 6px 0; }
+  .acro button.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .acro button[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--blue); }
+  .acro-pips { display: inline-flex; gap: 3px; margin-right: 6px; vertical-align: 1px; }
+  .acro-pips i { width: 7px; height: 7px; border-radius: 1px; background: var(--line); }
+  .acro-pips i.on { background: var(--red); }
+  #rvAcro { font-size: 14px; }
+
   /* rival page */
   .ladder { display: inline-flex; align-items: center; gap: 4px; margin-left: -6px; }
   .nav-b { display: inline-grid; place-items: center; width: 28px; height: 28px; margin: -6px 0; border: 0; background: transparent; border-radius: 6px; padding: 0; }
@@ -340,6 +353,7 @@
       <span class="lbl">Scouting report</span>
       <p id="rvTip"></p>
     </div>
+    <div class="bring"><span class="lbl">Acrobatics</span><span id="rvAcro"></span></div>
     <div class="bring"><span class="lbl">You bring</span><b id="rvYou">Sword · Blink</b></div>
     <div class="actions">
       <button class="ghost" id="rvEdit">Edit build</button>
@@ -352,6 +366,8 @@
     <div class="chips" id="weapons"></div>
     <div class="row-h"><span class="lbl">Skill</span><span class="lbl">Cooldown</span></div>
     <div class="tools" id="skills"></div>
+    <div class="row-h"><span class="lbl">Acrobatics</span><span class="lbl" id="acroLbl">Level 2</span></div>
+    <div class="acro" id="acro"></div>
     <p class="hint" id="loadHint"></p>
     <div class="row-h"><span class="lbl">Your half · tap to build</span><span class="budget" id="budget">9 / 10 pts</span></div>
     <div class="tools" id="tools">
@@ -408,13 +424,13 @@ const BUDGET = 10, COST = { block: 1, spikes: 2, pad: 2 };
 const SPIKES_ON = false;
 const SPAWN_C = 2, SPAWN_R = 10, BMIN = 1, BMAX = 8;   // local build columns; 9 and 10 are no-man's-land
 const SQ_START = 20, SQ_SPEED = 0.42, SQ_MAX = 7.5, TIME_CAP = 75;
-const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16;
+const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16, EV_WJ = 32, EV_DJ = 64, EV_WR = 128, EV_MANTLE = 256;
 // range > 0 marks a ranged weapon and is the distance its fighter likes to keep; stop is where melee fighters plant their feet.
 const WEAP = {
   sword: { name: 'Sword', speed: 7.5, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
-  daggers: { name: 'Daggers', speed: 8.1, atk: 'stab1', stop: 0.55, stat: '4f · flurry', desc: 'Fastest hands and feet in the game, with the shortest reach.' },
-  spear: { name: 'Spear', speed: 6.3, atk: 'thrust', stop: 2.25, stat: '11f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
-  hammer: { name: 'Hammer', speed: 5.7, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
+  daggers: { name: 'Daggers', speed: 7.8, atk: 'stab1', stop: 0.55, stat: '4f · flurry', desc: 'Fastest hands and feet in the game, with the shortest reach.' },
+  spear: { name: 'Spear', speed: 6.3, atk: 'thrust', stop: 2.25, stat: '9f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
+  hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '18f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
 };
@@ -422,17 +438,17 @@ const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
 const SKILL = {
   blink: { name: 'Blink', cd: 450, stat: '7.5s', desc: 'Teleports up to three tiles, through walls. Dodges, closes gaps, gets away.' },
-  darksight: { name: 'Dark Sight', cd: 420, dur: 210, stat: '7s', desc: 'Invisible for three and a half seconds. The rival loses track, and the first hit out of it crits.' },
+  darksight: { name: 'Dark Sight', cd: 480, dur: 210, stat: '8s', desc: 'Invisible for three and a half seconds. The rival loses track, and the first hit out of it crits.' },
   parry: { name: 'Parry', cd: 390, stat: '6.5s', desc: 'Catches a hit, a shot or a hook. The attacker is left wide open.' },
-  hook: { name: 'Hook', cd: 360, stat: '6s', desc: 'Throws a chain across the arena and drags the rival in.' },
+  hook: { name: 'Hook', cd: 300, stat: '5s', desc: 'Throws a chain across the arena and drags the rival in.' },
 };
 const SKILLS = Object.keys(SKILL);
 // Projectiles. v is launch speed and g is gravity, both in tiles per second.
 const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 10, kb: [4.5, -2.5], stun: 12, hs: 3 } },
-  star: { v: 21, g: 3, len: 0.2, hit: { dmg: 5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
+  star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
 };
-const HOOK = { v: 30, back: 36, range: 8.5, dmg: 4 };
+const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
 const CRIT = 1.6;
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -505,18 +521,44 @@ const standable = (c, r) => c > 0 && c < COLS - 1 && r > 1 && r < ROWS - 1 && !s
 // ---------------------------------------------------------------- physics
 // One controller shared by the real fight and by every planning simulation,
 // so a jump the planner found is a jump the fighter can make.
+// Acrobatics (b.acro) unlocks moves in this same controller: 2 = wall slide and wall jump,
+// 3 = wall run (hold jump against a wall), 4 = a second jump in the air. Rolls (level 1) are a fighter state.
+const ACRO = { slideV: 4.2, wjVX: 8.6, wjVY: 16.2, wjLock: 10, wrV: 11.5, wrFrames: 24, djV: 16 };
+const touchingWall = (b, s) => (s > 0 ? boxSolid(b.x + W / 2, b.y - H + 0.25, b.x + W / 2 + 0.06, b.y - 0.3) : boxSolid(b.x - W / 2 - 0.06, b.y - H + 0.25, b.x - W / 2, b.y - 0.3));
 function physStep(b, dir, press, hold, side, ctl, fr) {
   let ev = 0;
+  const acro = b.acro || 0;
+  // after a wall jump, pushing back toward the wall is ignored for a moment so the fighter actually leaves it
+  if (b.wjT > 0) { b.wjT--; if (dir === b.wjSide) dir = 0; }
   if (b.gr) {
     if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accG * DT);
     else b.vx = approach(b.vx, 0, P.fric * fr * DT);
   } else if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accA * DT);
-  if (ctl && press && b.gr) { b.vy = -P.jumpV; b.gr = false; b.jumping = true; ev |= EV_JUMP; }
+  if (ctl && press) {
+    if (b.gr) { b.vy = -P.jumpV; b.gr = false; b.jumping = true; ev |= EV_JUMP; }
+    else if (acro >= 2 && b.onWall) {
+      b.vx = -b.onWall * ACRO.wjVX; b.vy = -ACRO.wjVY; b.jumping = true; b.wjT = ACRO.wjLock; b.wjSide = b.onWall;
+      b.wr = 0; b.dj = false; ev |= EV_WJ;
+    } else if (acro >= 4 && !b.dj) { b.vy = -ACRO.djV; b.jumping = true; b.dj = true; ev |= EV_DJ; }
+  }
   if (b.jumping) {
     if (b.vy >= 0) b.jumping = false;
-    else if (!hold) { b.vy *= P.cut; b.jumping = false; }
+    else if (!hold && !b.wr) { b.vy *= P.cut; b.jumping = false; }
   }
   b.vy = Math.min(b.vy + P.g * DT, P.maxFall);
+  // wall run: holding jump into a wall carries the fighter straight up it
+  if (acro >= 3 && ctl && hold && dir && !b.wrUsed && !b.wr && (b.gr || b.vy < 4) && touchingWall(b, dir)) {
+    b.wr = ACRO.wrFrames; b.wrUsed = true; b.wrSide = dir; b.gr = false; b.jumping = false; ev |= EV_WR;
+  }
+  if (b.wr > 0) {
+    if (ctl && hold && dir === b.wrSide && touchingWall(b, b.wrSide)) { b.vy = -ACRO.wrV; b.vx = b.wrSide * 0.6; b.wr--; }
+    else {
+      // ran off the top of the wall: pop over the ledge
+      if (!touchingWall(b, b.wrSide) && b.vy < 0) { b.vx = b.wrSide * 5; b.vy = Math.min(b.vy, -7); ev |= EV_MANTLE; }
+      b.wr = 0;
+    }
+  }
+  if (acro >= 2 && !b.gr && !b.wr && b.onWall && dir === b.onWall && b.vy > ACRO.slideV) b.vy = approach(b.vy, ACRO.slideV, 90 * DT);
   const dx = b.vx * DT;
   b.x += dx; b.wallV = 0;
   if (dx !== 0 && boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
@@ -528,8 +570,10 @@ function physStep(b, dir, press, hold, side, ctl, fr) {
   b.y += dy; b.gr = false;
   if (boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
     if (dy > 0) { b.y = Math.floor(b.y - 1e-6); b.landV = b.vy; b.vy = 0; b.gr = true; if (!wasGr) ev |= EV_LAND; }
-    else { b.y = Math.floor(b.y - H) + 1 + H + 1e-4; b.vy = 0; }
+    else { b.y = Math.floor(b.y - H) + 1 + H + 1e-4; b.vy = 0; if (b.wr) b.wr = 0; }
   }
+  if (b.gr) { b.dj = false; b.wrUsed = false; b.wr = 0; b.onWall = 0; }
+  else b.onWall = acro >= 2 ? (touchingWall(b, 1) ? 1 : touchingWall(b, -1) ? -1 : 0) : 0;
   b.spike = -1;
   const c0 = Math.floor(b.x - W / 2), c1 = Math.floor(b.x + W / 2 - 1e-6), r0 = Math.floor(b.y - H), r1 = Math.floor(b.y - 1e-6);
   for (let r = Math.max(0, r0); r <= Math.min(ROWS - 1, r1); r++) for (let c = Math.max(0, c0); c <= Math.min(COLS - 1, c1); c++) {
@@ -541,26 +585,57 @@ function physStep(b, dir, press, hold, side, ctl, fr) {
   }
   return ev;
 }
-const stateOf = (b) => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, gr: b.gr, jumping: b.jumping });
+const BODY_KEYS = ['x', 'y', 'vx', 'vy', 'gr', 'jumping', 'onWall', 'wjT', 'wjSide', 'wr', 'wrSide', 'wrUsed', 'dj'];
+const stateOf = (b) => { const s = {}; for (const k of BODY_KEYS) s[k] = b[k]; return s; };
 
 // ---------------------------------------------------------------- navigation
 // A "macro" is a scripted input: hold a direction (after a delay) and hold jump for n frames.
+// Acrobatic macros add wall jumps (wj: how many, wb: steer back to the same wall to climb it)
+// and a second jump in the air at frame dj.
 const MACROS = [];
 for (const dir of [-1, 0, 1]) for (const hold of [5, 10, 18]) for (const delay of (dir ? [0, 8] : [0])) MACROS.push({ dir, hold, delay });
 MACROS.push({ dir: -1, hold: 0, delay: 0 }, { dir: 1, hold: 0, delay: 0 });
+const MACROS_BY_ACRO = [MACROS];
+for (let lv = 1; lv <= 4; lv++) {
+  const extra = [];
+  for (const dir of [-1, 1]) {
+    if (lv >= 2) extra.push({ dir, hold: 18, delay: 0, wj: 1 }, { dir, hold: 10, delay: 0, wj: 1 }, { dir, hold: 18, delay: 0, wj: 3, wb: 1 }, { dir, hold: 18, delay: 6, wj: 2 });
+    if (lv >= 3) extra.push({ dir, hold: 40, delay: 0 }, { dir, hold: 40, delay: 0, wj: 1 });
+    if (lv >= 4) extra.push({ dir, hold: 18, delay: 0, dj: 17 }, { dir, hold: 10, delay: 0, dj: 12 }, { dir, hold: 18, delay: 0, dj: 17, wj: 1 });
+  }
+  if (lv >= 4) extra.push({ dir: 0, hold: 18, delay: 0, dj: 17 });
+  MACROS_BY_ACRO.push(lv >= 2 ? [...MACROS, ...extra] : MACROS);
+}
 const PADM = [];
 for (const dir of [-1, 0, 1]) for (const delay of (dir ? [0, 10, 22] : [0])) PADM.push({ dir, hold: 0, delay });
 
-function simMacro(s, m, side, speed) {
-  const b = { x: s.x, y: s.y, vx: s.vx, vy: s.vy, gr: s.gr, jumping: s.jumping, speed };
-  let air = !b.gr, land = -1, spikes = null, f = 0;
+// The inputs a macro gives on its next frame. Shared by the planner and by fighters running the macro.
+const macroState = (m) => ({ f: 0, dir: m.dir, hold: m.hold, wj: m.wj || 0, lastWJ: -99, jf: 0 });
+function macroInput(ms, m, b, out) {
+  const f = ms.f++;
+  let press = f === 0 && m.hold > 0;
+  if (ms.wj > 0 && !b.gr && b.onWall && f - ms.lastWJ > 5 && b.vy > -5 && (b.acro || 0) >= 2) {
+    press = true; ms.wj--; ms.lastWJ = f; ms.jf = f; ms.hold = 14;
+    ms.dir = m.wb ? b.onWall : -b.onWall;   // climb the same wall, or carry on away from it
+  }
+  if (m.dj && f === m.dj && !b.gr) { press = true; ms.jf = f; ms.hold = 14; }
+  out.dir = f >= m.delay ? ms.dir : 0;
+  out.press = press;
+  out.hold = f - ms.jf < ms.hold;
+  return out;
+}
+
+function simMacro(s, m, side, speed, acro = 0) {
+  const b = { ...s, speed, acro }, ms = macroState(m), inp = {};
+  let air = !b.gr, land = -1, spikes = null, f = 0, fancy = 0;
   for (; f < 170; f++) {
-    const dir = land >= 0 ? 0 : (f >= m.delay ? m.dir : 0);
-    const ev = physStep(b, dir, f === 0 && m.hold > 0, f < m.hold, side, true, 1);
+    macroInput(ms, m, b, inp);
+    const ev = physStep(b, land >= 0 ? 0 : inp.dir, inp.press, inp.hold, side, true, 1);
+    if (ev & (EV_WJ | EV_WR | EV_DJ)) fancy++;
     if (b.spike >= 0) { if (!spikes) spikes = []; if (!spikes.includes(b.spike)) spikes.push(b.spike); }
     if ((ev & EV_PAD) && (air || f > 0)) {
       const i = b.pad;
-      return { c: i % COLS, r: Math.floor(i / COLS), frames: f + 1, spikes, x: b.x };
+      return { c: i % COLS, r: Math.floor(i / COLS), frames: f + 1, spikes, x: b.x, fancy };
     }
     if (!b.gr) air = true;
     else if (air && land < 0) land = f;
@@ -568,10 +643,10 @@ function simMacro(s, m, side, speed) {
     if (!air && f > 40) return null;
   }
   if (land < 0 || !b.gr) return null;
-  return { c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), frames: f + 1, spikes, x: b.x };
+  return { c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), frames: f + 1, spikes, x: b.x, fancy };
 }
 
-function buildNav(side, speed, cMax = COLS) {
+function buildNav(side, speed, cMax = COLS, acro = 0) {
   const idx = new Int16Array(COLS * ROWS).fill(-1), nodes = [];
   for (let r = 1; r < ROWS - 1; r++) for (let c = 1; c < Math.min(cMax, COLS - 1); c++) {
     if (!standable(c, r)) continue;
@@ -579,27 +654,29 @@ function buildNav(side, speed, cMax = COLS) {
     idx[i] = nodes.length;
     nodes.push({ c, r, i, pad: A.pads[i] === side, spike: A.spikes[i], edges: [] });
   }
+  const macros = MACROS_BY_ACRO[acro];
   nodes.forEach((n, ni) => {
     const best = new Map();
     const add = (res, type, m) => {
       const j = idx[res.r * COLS + res.c];
       if (j < 0 || j === ni) return;
       const key = j * 2 + (res.spikes ? 1 : 0);
-      const cost = res.frames + (type === 'jump' ? 5 : type === 'pad' ? 3 : 1);
+      // acrobatic routes cost a little extra, so fighters only climb walls when it's worth it
+      const cost = res.frames + (type === 'jump' ? 5 : type === 'pad' ? 3 : 1) + (res.fancy ? 6 : 0);
       const cur = best.get(key);
       if (!cur || cost < cur.cost) best.set(key, { from: ni, to: j, type, m, cost, spikes: res.spikes || [] });
     };
     const s = { x: n.c + 0.5, y: n.r + 1, vx: 0, vy: 0, gr: true, jumping: false };
     if (n.pad) {
-      for (const m of PADM) { const res = simMacro(s, m, side, speed); if (res) add(res, 'pad', m); }
+      for (const m of PADM) { const res = simMacro(s, m, side, speed, acro); if (res) add(res, 'pad', m); }
     } else {
       for (const d of [-1, 1]) {
         const nc = n.c + d, i = n.r * COLS + nc;
         if (nc < cMax && standable(nc, n.r)) add({ c: nc, r: n.r, frames: Math.round(60 / speed), spikes: A.spikes[i] >= 0 ? [i] : null }, 'walk', { dir: d });
       }
-      for (const m of MACROS) {
+      for (const m of macros) {
         if (m.hold === 0) { const nc = n.c + m.dir; if (solidAt(nc, n.r) || standable(nc, n.r)) continue; }
-        const res = simMacro(s, m, side, speed);
+        const res = simMacro(s, m, side, speed, acro);
         if (res) add(res, m.hold ? 'jump' : 'drop', m);
       }
     }
@@ -670,14 +747,22 @@ const ATK = {
   aslash: { w: 4, a: 12, r: 8, dmg: 8, kb: [7, -7], stun: 20, hs: 5, box: [-0.85, -1.8, 1.25, 0.25], melee: 1, trail: 1, air: 1 },
   stab1: { w: 4, a: 3, r: 10, dmg: 6, kb: [3.5, -2], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3.5, melee: 1, trail: 1, chain: 'stab2', fast: 1 },
   stab2: { w: 3, a: 3, r: 10, dmg: 6, kb: [3.5, -2.5], stun: 15, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3, melee: 1, trail: 1, chain: 'stab3', fast: 1, back: 1 },
-  stab3: { w: 6, a: 5, r: 17, dmg: 10, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
-  thrust: { w: 11, a: 4, r: 18, dmg: 10, kb: [8.5, -3.5], stun: 20, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
+  stab3: { w: 6, a: 5, r: 17, dmg: 9, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
+  thrust: { w: 9, a: 4, r: 16, dmg: 11, kb: [8.5, -3.5], stun: 20, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
   rise: { w: 8, a: 5, r: 15, dmg: 10, kb: [3, -12], stun: 26, hs: 6, box: [-0.25, -3.3, 1.0, -1.0], melee: 1, trail: 1, tumble: 1 },
-  hammer: { w: 17, a: 6, r: 22, dmg: 20, kb: [12, -9], stun: 40, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1 },
+  hammer: { w: 17, a: 6, r: 22, dmg: 23, kb: [12, -9], stun: 44, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1,
+    shock: { r: 2.1, dmg: 6, kb: [7, -7], stun: 22, hs: 6, tumble: 1 } },
   kick: { w: 5, a: 4, r: 12, dmg: 5, kb: [9, -4], stun: 18, hs: 4, box: [0.1, -1.15, 1.0, -0.35] },
-  shoot: { w: 18, a: 1, r: 10, shot: 'arrow', cd: 8 },
+  shoot: { w: 18, a: 1, r: 10, shot: 'arrow', cd: 5 },
   throw: { w: 10, a: 1, r: 4, shot: 'star', next: 'throw2' },
   throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 16 },
+  // air moves: shots fired mid-jump, and plunges that dive onto whoever is below
+  ashoot: { w: 11, a: 1, r: 8, shot: 'arrow', air: 1, cd: 10 },
+  athrow: { w: 6, a: 1, r: 3, shot: 'star', air: 1, next: 'athrow2' },
+  athrow2: { w: 4, a: 1, r: 10, shot: 'star', air: 1, back: 1, cd: 14 },
+  plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
+  aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
+  dash: { w: 7, a: 6, r: 18, dmg: 9, kb: [7, -5], stun: 22, hs: 6, box: [0.1, -1.5, 1.45, -0.15], lunge: 12.5, melee: 1, trail: 1 },
 };
 
 const STANCE = {
@@ -730,6 +815,24 @@ const ATK_POSE = {
   shoot: { w: { lean: -0.06 }, a: {}, r: {} },
   throw: { w: { fx: -0.28, fy: -0.26, lean: -0.1, hipH: 0.64, bx: 0.2, by: 0.22 }, a: { fx: 0.54, fy: 0.04, lean: 0.36, hipH: 0.6 }, r: { fx: 0.44, fy: 0.14, lean: 0.32 } },
   throw2: { w: { bx: -0.08, by: -0.12, fx: 0.3, fy: 0.26, lean: 0.26 }, a: { bx: 0.54, by: 0.02, fx: -0.12, fy: 0.3, lean: 0.42 }, r: { bx: 0.4, by: 0.14, lean: 0.3 } },
+  ashoot: { w: { lean: -0.2, head: -0.1 }, a: { lean: -0.25 }, r: { lean: -0.1 } },
+  athrow: { w: { fx: -0.3, fy: -0.3, lean: -0.25, bx: 0.2, by: 0.2 }, a: { fx: 0.54, fy: 0.1, lean: 0.25 }, r: { fx: 0.44, fy: 0.16 } },
+  athrow2: { w: { bx: -0.1, by: -0.2, fx: 0.3, fy: 0.2, lean: 0.1 }, a: { bx: 0.54, by: 0.08, fx: -0.12, fy: 0.26, lean: 0.35 }, r: { bx: 0.4, by: 0.14 } },
+  plunge: {
+    w: { fx: 0.08, fy: -0.42, wa: -1.6, wb: -1.4, bx: 0.0, by: -0.35, lean: -0.15, hipH: 0.74, ffx: 0.3, ffy: 0.35, bfx: -0.1, bfy: 0.45 },
+    a: { fx: 0.16, fy: 0.36, wa: 1.5, wb: 1.5, bx: 0.1, by: 0.36, lean: 0.25, hipH: 0.7, ffx: 0.25, ffy: 0.3, bfx: -0.15, bfy: 0.4 },
+    r: { fx: 0.26, fy: 0.42, wa: 1.3, wb: 1.3, bx: 0.14, by: 0.42, lean: 0.5, hipH: 0.44, head: 0.2 },
+  },
+  aslam: {
+    w: { fx: -0.1, fy: -0.46, wa: -2.7, lean: -0.32, hipH: 0.72, ffx: 0.3, ffy: 0.4, bfx: -0.1, bfy: 0.45 },
+    a: { fx: 0.32, fy: 0.28, wa: 1.2, lean: 0.42, hipH: 0.66 },
+    r: { fx: 0.4, fy: 0.42, wa: 1.0, lean: 0.55, hipH: 0.44, head: 0.2 },
+  },
+  dash: {
+    w: { fx: -0.22, fy: 0.3, wa: 2.6, lean: 0.62, hipH: 0.5, bx: 0.22, by: 0.2, ffx: 0.4, bfx: -0.46, head: 0.1 },
+    a: { fx: 0.52, fy: 0.04, wa: 0.12, lean: 0.56, hipH: 0.52, bx: -0.36, by: 0.1, ffx: 0.56, bfx: -0.56 },
+    r: { fx: 0.4, fy: 0.26, wa: 0.9, lean: 0.42, hipH: 0.56 },
+  },
 };
 // Skill poses. Hook throws with the back hand so the weapon stays up.
 const SK_POSE = {
@@ -743,13 +846,14 @@ const SK_POSE = {
 };
 
 // ---------------------------------------------------------------- fighters
-function makeUnit(side, weapon, skill) {
+function makeUnit(side, weapon, skill, acro = 0) {
   const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
   const pose = { p: {}, v: {} };
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
-    side, w: weapon, skill: skill || null, hp: 100, hpShow: 100,
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed },
+    side, w: weapon, skill: skill || null, acro, macros: MACROS_BY_ACRO[acro], hp: 100, hpShow: 100,
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed, acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
+    rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, tumble: false, bounced: false, spin: 0,
     rot: 0, rotV: 0, rotDriven: false, backflip: false, downT: 0, iT: 0, spikeCd: 0,
@@ -789,9 +893,20 @@ function startAtk(u, name) {
     if (e) { e.surprise = 18; popText(e.b.x, e.b.y - H - 0.8, '!', TEAM[e.side], 0.9); }
   }
 }
+// Roll (acrobatics 1): a low, fast tumble that can't be hit for most of its length.
+function startRoll(u, dir, len = 16) {
+  const b = u.b;
+  if (u.acro < 1 || u.rollCd > 0 || !b.gr || u.state === 'dead') return false;
+  u.state = 'roll'; u.rollT = u.rollMax = len; u.rollDir = dir; u.face = dir;
+  b.vx = dir * Math.max(10.5, Math.abs(b.vx)); u.iT = Math.max(u.iT, len - 5); u.rollCd = 50;
+  u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false; u.flipT = 0;
+  dust(b.x, b.y, 3, 0.4);
+  if (!world.demo) world.stats[u.side].rolls++;
+  return true;
+}
 function startMacro(u, m, keepFace) {
   const ai = u.ai;
-  ai.macro = m; ai.mf = 0; ai.air = !u.b.gr;
+  ai.macro = m; ai.mf = 0; ai.air = !u.b.gr; ai.ms = macroState(m);
   if (!keepFace && m.dir) u.face = m.dir;
 }
 
@@ -822,21 +937,22 @@ function think(u) {
   if (u.surprise > 0) u.surprise--;
   if (u.state === 'atk') {
     comboLogic(u, e);
-    if (u.atkDef.air) { const dx = e.b.x - b.x; inp.dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; }
+    if (u.atkDef.air && !u.atkDef.shot) { const dx = e.b.x - b.x; inp.dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; }
     return;
   }
   if (u.state !== 'free') { ai.macro = null; ai.path.length = 0; return; }
   if (u.padLaunched) { u.padLaunched = false; choosePadMacro(u); }
   if (ai.macro) {
     const m = ai.macro, f = ai.mf++;
-    inp.dir = f >= m.delay ? m.dir : 0; inp.press = f === 0 && m.hold > 0; inp.hold = f < m.hold;
+    macroInput(ai.ms, m, b, inp);
     if (!b.gr) ai.air = true;
-    if ((ai.air && b.gr && f > 1) || ai.mf > 120) { ai.macro = null; ai.replan = 0; inp.dir = 0; inp.press = false; }
+    if ((ai.air && b.gr && f > 1) || ai.mf > 170) { ai.macro = null; ai.replan = 0; inp.dir = 0; inp.press = false; }
     else { if (!b.gr && !trySkill(u, e, true)) tryAirAttack(u, e); return; }
   }
   if (trySkill(u, e, !b.gr)) return;
   if (!b.gr) { tryAirAttack(u, e); return; }
   if (tryDodge(u, e)) return;
+  if (tryEvade(u, e)) return;
   if (tryAttack(u, e)) return;
   if (tryDeflect(u, e)) return;
   if (e.ghost && searchLook(u, e)) return;
@@ -844,6 +960,10 @@ function think(u) {
   stuckCheck(u);
   if (--ai.replan <= 0) plan(u, e);
   follow(u, e);
+  // closing on a shooter across open floor: the occasional roll for a burst of speed
+  const ddx = e.b.x - b.x;
+  if (u.acro >= 1 && !isRanged(u) && isRanged(e) && !e.ghost && b.gr && u.rollCd <= 0 && u.in.dir === Math.sign(ddx) &&
+      Math.abs(e.b.y - b.y) < 0.6 && Math.abs(ddx) > 3 && Math.abs(ddx) < 7 && rng() < 0.04 && rollSafe(u, u.in.dir)) startRoll(u, u.in.dir);
 }
 
 function comboLogic(u, e) {
@@ -856,9 +976,23 @@ function comboLogic(u, e) {
 }
 
 function tryAirAttack(u, e) {
-  if ((u.w !== 'sword' && u.w !== 'daggers') || u.react > 0 || u.state !== 'free' || e.state === 'dead' || lying(e)) return false;
-  const f = Math.sign(e.b.x - u.b.x) || u.face;
-  if (inBox(u.b.x, u.b.y, f, ATK.aslash.box, e.b.x, e.b.y, 0)) { u.face = f; startAtk(u, 'aslash'); return true; }
+  if (u.react > 0 || u.state !== 'free' || e.state === 'dead' || lying(e)) return false;
+  const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, f = Math.sign(dx) || u.face;
+  if (isRanged(u)) {
+    // shoot from the top of a jump, once any wall jumps the macro still needs are done
+    if (u.cd > 0 || e.ghost || b.vy < -7 || b.wr > 0 || (u.ai.macro && u.ai.ms.wj > 0)) return false;
+    if (Math.hypot(dx, dy) < 2 || rng() > 0.3) return false;
+    const sol = aimAt(u, e);
+    if (!sol) return false;
+    u.face = f; u.aimSol = sol; startAtk(u, u.w === 'bow' ? 'ashoot' : 'athrow');
+    return true;
+  }
+  if (e.ghost) return false;
+  // dive onto someone below
+  if (dy > 0.7 && dy < 5 && b.vy > -6 && Math.abs(dx) < (u.w === 'hammer' ? 1.9 : 1.2) + dy * 0.12 && !(u.ai.macro && u.ai.ms.wj > 0)) {
+    u.face = f; startAtk(u, u.w === 'hammer' ? 'aslam' : 'plunge'); return true;
+  }
+  if ((u.w === 'sword' || u.w === 'daggers') && inBox(b.x, b.y, f, ATK.aslash.box, e.b.x, e.b.y, 0)) { u.face = f; startAtk(u, 'aslash'); return true; }
   return false;
 }
 
@@ -888,20 +1022,65 @@ function shotThreat(u, maxT) {
 
 function tryDodge(u, e) {
   if (u.surprise > 0 || u.dodged === e.atkId) return false;
-  if (meleeThreat(u, e) < 0 || e.atkName === 'hammer') return false;   // a hammer swing is too tall to jump; tryAttack walks back from it
+  if (meleeThreat(u, e) < 0) return false;
   u.dodged = e.atkId;
-  const remain = e.atkDef.w - e.af;
+  const remain = e.atkDef.w - e.af, toward = Math.sign(e.b.x - u.b.x) || u.face;
+  // Roll through the swing and come up behind the attacker.
+  if (u.acro >= 1 && u.rollCd <= 0 && rng() < 0.6) {
+    const dir = Math.abs(e.b.x - u.b.x) < 1.7 ? toward : -toward;
+    if (rollSafe(u, dir)) return startRoll(u, dir);
+  }
+  if (e.atkName === 'hammer') return false;   // too tall to jump; tryAttack walks back from it
   // Beat a slow swing to the punch, unless it's a hammer that will swing straight through the hit.
-  if ((u.w === 'sword' || u.w === 'daggers') && e.atkName !== 'hammer' && remain > ATK[WEAP[u.w].atk].w + 1 && rng() < 0.5) {
-    u.face = Math.sign(e.b.x - u.b.x) || u.face; startAtk(u, WEAP[u.w].atk); return true;
+  if ((u.w === 'sword' || u.w === 'daggers') && remain > ATK[WEAP[u.w].atk].w + 1 && rng() < 0.5) {
+    u.face = toward; startAtk(u, WEAP[u.w].atk); return true;
   }
   const p = { bow: 0.6, stars: 0.6, daggers: 0.55, sword: 0.4, spear: 0.3, hammer: 0.2 }[u.w] + (remain > 10 ? 0.25 : 0);
   if (rng() < p) {
-    const away = Math.sign(u.b.x - e.b.x) || -u.face, m = { dir: away, hold: 12, delay: 0 };
-    const r = simMacro(stateOf(u.b), m, u.side, u.b.speed);
+    const away = -toward, m = { dir: away, hold: 12, delay: 0 };
+    const r = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
     if (r && !knownHit(u, r) && Math.abs(r.x - u.b.x) > 1.2) { u.face = -away; startMacro(u, m, true); u.ai.path.length = 0; u.backflip = true; return true; }
   }
   return false;
+}
+// Is there floor to roll along in this direction, clear of known spikes and the closing walls?
+function rollSafe(u, dir) {
+  const b = u.b, r = Math.floor(b.y - 1e-3);
+  for (let k = 0.6; k <= 2.6; k += 0.5) {
+    const x = b.x + dir * k, c = Math.floor(x), i = r * COLS + c;
+    if (!standable(c, r) || (A.spikes[i] >= 0 && u.known.has(i)) || inZone(x)) return false;
+  }
+  return true;
+}
+// Shots on the way in: roll through them, or hop over a low one.
+function tryEvade(u, e) {
+  if (u.surprise > 0 || !u.b.gr) return false;
+  const t = shotThreat(u, 14);
+  if (t < 2 || u.evaded === u.threat) return false;
+  u.evaded = u.threat;
+  const toward = Math.sign(e.b.x - u.b.x) || u.face, dirs = isRanged(u) ? [-toward, toward] : [toward, -toward];
+  if (u.acro >= 1 && u.rollCd <= 0 && t <= 10) for (const d of dirs) if (rollSafe(u, d)) return startRoll(u, d);
+  // hop: only if the hop really clears the shot
+  for (const m of [{ dir: dirs[0], hold: 10, delay: 0 }, { dir: dirs[0], hold: 18, delay: 0 }, { dir: 0, hold: 18, delay: 0 }]) {
+    if (!pathClears(u, m, t + 8)) continue;
+    const r = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
+    if (r && !knownHit(u, r) && !inZone(r.x)) { u.face = toward; startMacro(u, m, true); u.ai.path.length = 0; return true; }
+  }
+  return false;
+}
+// Step a macro and the rival's shots together: does the fighter stay out of every shot?
+function pathClears(u, m, frames) {
+  const b = { ...stateOf(u.b), speed: u.b.speed, acro: u.acro }, ms = macroState(m), inp = {};
+  const sh = shots.filter((a) => a.owner !== u.side && !a.stuck && !a.dead).map((a) => ({ x: a.x, y: a.y, vx: a.vx, vy: a.vy, g: SHOT[a.kind].g }));
+  for (let f = 0; f < frames; f++) {
+    macroInput(ms, m, b, inp);
+    physStep(b, inp.dir, inp.press, inp.hold, u.side, true, 1);
+    for (const a of sh) {
+      a.x += a.vx * DT; a.y += a.vy * DT; a.vy += a.g * DT;
+      if (a.x > b.x - W / 2 - 0.1 && a.x < b.x + W / 2 + 0.1 && a.y > b.y - H - 0.05 && a.y < b.y) return false;
+    }
+  }
+  return true;
 }
 
 function tryAttack(u, e) {
@@ -927,7 +1106,12 @@ function tryAttack(u, e) {
   if (u.w === 'spear' && dy < -0.9 && dy > -3.2 && Math.abs(dx) < 1.1) { u.face = f; startAtk(u, 'rise'); return true; }
   const name = wp.atk, def = ATK[name], lead = def.w / 60 * 0.6;
   if (inBox(b.x, b.y, f, def.box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
-  if ((u.w === 'sword' || u.w === 'daggers') && dy < -0.8 && dy > -3.6 && Math.abs(dx) < 2.2) {
+  // sword: a long dash slash from just out of reach
+  if (u.w === 'sword' && !(u.ai.dashT > world.t) && eb.gr && Math.abs(dy) < 0.5 && Math.abs(dx) > 1.9 && Math.abs(dx) < 3 &&
+      walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u) && !(e.state === 'atk' && e.atkName === 'hammer')) {
+    u.ai.dashT = world.t + 80; u.face = f; startAtk(u, 'dash'); return true;
+  }
+  if ((u.w === 'sword' || u.w === 'daggers') && !eb.gr && dy < -0.8 && dy > -3.6 && Math.abs(dx) < 2.2) {   // a rival standing on a ledge gets climbed to instead
     startMacro(u, { dir: Math.abs(dx) > 0.5 ? f : 0, hold: dy < -2 ? 18 : 10, delay: 0 });
     u.face = f; u.react = 10; u.ai.path.length = 0; return true;
   }
@@ -983,15 +1167,33 @@ function meleeEngage(u, e) {
   }
   return true;
 }
+// Kiting: when the rival gets close, take the jump that lands farthest from it,
+// favouring high ground and a clear shot. Wall jumps, wall runs and flips are all candidates.
 function rangedEngage(u, e) {
-  const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y;
-  if (e.state === 'dead' || Math.hypot(dx, dy) > (u.w === 'stars' ? 2.1 : 2.4) || u.react > 0) return false;
-  const away = -Math.sign(dx) || 1, m = { dir: away, hold: 14, delay: 0 };
-  const r = simMacro(stateOf(b), m, u.side, b.speed);
-  if (r && !knownHit(u, r) && Math.abs(r.x - b.x) > 1.5) {
-    u.face = Math.sign(dx) || u.face; startMacro(u, m, true); u.ai.path.length = 0; u.backflip = true; u.react = 20;
+  const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, dist = Math.hypot(dx, dy), ai = u.ai;
+  if (e.state === 'dead' || u.react > 0 || ai.escT > world.t) return false;
+  const danger = isRanged(e) ? 2.2 : u.w === 'stars' ? 3.1 : 3.3;
+  if (dist > danger) return false;
+  ai.escT = world.t + 8;
+  const ex = e.b.x + e.b.vx * 0.35, cur = Math.hypot(b.x - ex, dy);
+  let best = null, bs = -1e9;
+  for (const m of u.macros) {
+    if (!m.hold) continue;
+    const r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
+    if (!r || knownHit(u, r) || inZone(r.x)) continue;
+    const ly = r.r + 1, d = Math.hypot(r.x - ex, (ly - e.b.y) * 1.2);
+    let sc = d * 10 - r.frames * 0.12 + (lineClear(r.x, ly - 1.2, e.b.x, e.b.y - 0.9) ? 6 : 0) + Math.max(0, e.b.y - ly) * 5 + rng() * 4;
+    if (d < 2.2) sc -= 40;
+    if (sc > bs) { bs = sc; best = { m, d }; }
+  }
+  if (best && best.d > cur + 0.9) {
+    u.face = Math.sign(dx) || u.face; startMacro(u, best.m, true); ai.path.length = 0;
+    if (!best.m.wj && !best.m.dj && best.m.dir === -Math.sign(dx) && best.m.hold <= 18) u.backflip = true;
+    u.react = 10;
     return true;
   }
+  // cornered: roll straight past the rival
+  if (u.acro >= 1 && !isRanged(e) && dist < 2 && rollSafe(u, Math.sign(dx) || u.face)) return startRoll(u, Math.sign(dx) || u.face);
   return false;
 }
 
@@ -1013,6 +1215,8 @@ function score(u, e, n, d, isStart) {
     const los = lineClear(nx, ny - 1.2, ex, ey - 0.9);
     // Stars fly flat, so they need a clear line far more than the bow does.
     s = d * 0.45 + 18 * Math.abs(de - range) + (los ? 0 : u.w === 'stars' ? 140 : 70) + (de < 3.2 ? (3.2 - de) * 70 : 0);
+    // kiting: high ground is worth a detour, and so is a spot with more ways out
+    s -= Math.max(0, Math.min(4, ey - ny)) * (10 + u.acro * 4) + Math.min(10, n.edges.length) * 1.5;
   } else s = d + 28 * Math.max(0, de - Math.max(0.9, WEAP[u.w].stop)) + (Math.abs(ny - ey) > 0.5 ? 25 : 0);
   if (n.spike >= 0 && u.known.has(n.i)) s += 500;
   if (n.pad) s += 1e5;   // your own pad throws you; nobody can stand on it
@@ -1041,8 +1245,8 @@ function plan(u, e) {
 }
 function findMacro(u, e) {
   const to = u.nav.nodes[e.to], s = stateOf(u.b);
-  for (const m of [e.m, ...MACROS]) {
-    const r = simMacro(s, m, u.side, u.b.speed);
+  for (const m of [e.m, ...u.macros]) {
+    const r = simMacro(s, m, u.side, u.b.speed, u.acro);
     if (r && r.c === to.c && r.r === to.r && !knownHit(u, r)) return m;
   }
   return null;
@@ -1080,7 +1284,7 @@ function choosePadMacro(u) {
   const g = target || (ai.goal >= 0 ? nav.nodes[ai.goal] : null), s = stateOf(u.b);
   let best = null, bs = 1e9;
   for (const m of PADM) {
-    const r = simMacro(s, m, u.side, u.b.speed);
+    const r = simMacro(s, m, u.side, u.b.speed, u.acro);
     if (!r) continue;
     let sc = g ? Math.abs(r.c - g.c) + Math.abs(r.r - g.r) * 1.5 : 0;
     if (knownHit(u, r)) sc += 50;
@@ -1098,9 +1302,9 @@ function stuckCheck(u) {
   if (moved < 0.15 && ai.path.length) {
     if (++ai.stuck >= 2) {
       ai.stuck = 0; ai.blocked.clear();
-      const order = MACROS.slice().sort(() => rng() - 0.5);
+      const order = u.macros.slice().sort(() => rng() - 0.5);
       for (const m of order) {
-        const r = simMacro(stateOf(b), m, u.side, b.speed);
+        const r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
         if (r && standable(r.c, r.r) && !knownHit(u, r) && (r.c !== Math.floor(b.x))) { startMacro(u, m); ai.path.length = 0; break; }
       }
     }
@@ -1131,7 +1335,7 @@ function endSkill(u, react) { u.state = 'free'; u.skName = null; u.react = react
 function skillStep(u) {
   const f = ++u.sf;
   if (u.skName === 'parry') { if (f >= 24) endSkill(u, 4); }
-  else if (u.skName === 'cast') { if (f === 5) goHidden(u); if (f >= 12) endSkill(u, 2); }
+  else if (u.skName === 'cast') { if (f === 1) u.iT = Math.max(u.iT, 10); if (f === 2) goHidden(u); if (f >= 7) endSkill(u, 1); }
   else if (u.skName === 'hook') {
     if (f === 8) throwHook(u);
     if ((f > 8 && !u.hook) || f > 150) endSkill(u, 3);
@@ -1148,14 +1352,15 @@ function aiBlink(u, e, air) {
     u.skTried = e.atkId;
     if (rng() < 0.85) return blinkTo(u, e, ranged ? 'away' : 'behind');
   }
-  if (shotThreat(u, 14) >= 3 && u.skTried !== u.threat) {
+  // Blink straight through an incoming shot: toward the shooter for a blade, away from it for a shooter.
+  if (shotThreat(u, 16) >= 2 && u.skTried !== u.threat) {
     u.skTried = u.threat;
-    if (rng() < 0.6) return blinkTo(u, e, ranged ? 'away' : 'toward', true);
+    if (rng() < 0.8) return blinkTo(u, e, ranged ? 'away' : 'toward', true);
   }
   if (air || e.ghost || lying(e)) return false;
   const dist = Math.hypot(e.b.x - b.x, e.b.y - b.y);
-  if (ranged) return !eRanged && dist < 2.1 && blinkTo(u, e, 'away');
-  if (eRanged && dist > 2.8 && dist < 11) return blinkTo(u, e, 'toward');
+  if (ranged) return !eRanged && dist < 2.6 && blinkTo(u, e, 'away');   // kite
+  if (eRanged) return false;   // save it for the next shot
   if (dist > 2.4 && dist < 5.5 && (Math.abs(e.b.y - b.y) > 0.6 || !walkLine(b.x, e.b.x, Math.floor(b.y - 1e-3), u))) return blinkTo(u, e, 'close');
   return false;
 }
@@ -1269,12 +1474,14 @@ function parrySuccess(u, att, x, y, what = 'shot') {
 }
 
 // ---- Dark Sight
+// Dark Sight is a vanish: cast into an incoming hit or shot, the smoke takes it, and the fighter slips away unseen.
 function aiDarkSight(u, e) {
-  if (e.ghost || lying(e) || shotThreat(u, 24) >= 0) return false;   // a shot already in the air would give it away
+  if (e.ghost || lying(e)) return false;
+  const t = meleeThreat(u, e), st = shotThreat(u, 10);
+  if (((t >= 1 && t <= 6) || (st >= 1 && st <= 6)) && rng() < 0.35) return startSkill(u, 'cast');
   const dist = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y), eRanged = !!WEAP[e.w].range;
-  if (!isRanged(u)) return dist > 2.4 && dist < 9 && startSkill(u, 'cast');
-  if (!eRanged) return dist < 2.6 && startSkill(u, 'cast');
-  return dist > 3.5 && dist < 7 && startSkill(u, 'cast');
+  if (!isRanged(u)) return eRanged && dist > 3 && dist < 8 && shotThreat(u, 24) < 0 && startSkill(u, 'cast');   // close in on a shooter unseen
+  return !eRanged && dist < 2.4 && startSkill(u, 'cast');   // lose a blade that got too close
 }
 function goHidden(u) {
   u.hidden = SKILL.darksight.dur;
@@ -1392,6 +1599,140 @@ function fireShot(u) {
   u.ambush = false;
 }
 
+// ---------------------------------------------------------------- blade exchanges
+// When two blades meet, the fight goes into a short choreographed exchange instead of a trade of hits:
+// strike, block, strike, block, with sparks at every contact. It ends one of three ways, all decided by the
+// fight's seed: a fighter breaks it with a ready skill, one wins it (faster weapons and better acrobats win
+// more often, and good acrobats may vault over the top), or both are thrown apart.
+const DUEL_GAP = { sword: 1.15, daggers: 0.95, spear: 1.6, hammer: 1.35 };
+const DUEL_STRIKE = {
+  high: { w: { fx: -0.1, fy: -0.36, wa: -2.3, wb: -2, lean: -0.08 }, a: { fx: 0.44, fy: -0.06, wa: -0.45, wb: -0.3, lean: 0.3 } },
+  low: { w: { fx: -0.06, fy: 0.36, wa: 2.2, wb: 2, lean: 0.28 }, a: { fx: 0.46, fy: 0.22, wa: 0.4, wb: 0.3, lean: 0.36 } },
+  thrust: { w: { fx: -0.12, fy: 0.2, wa: -0.05, wb: 0, lean: -0.1 }, a: { fx: 0.56, fy: 0.12, wa: -0.05, wb: 0, lean: 0.42 } },
+};
+const DUEL_BLOCK = {
+  high: { fx: 0.3, fy: -0.22, wa: -1.25, wb: -1.2, bx: 0.2, by: -0.1, lean: -0.16 },
+  low: { fx: 0.32, fy: 0.26, wa: 1.05, wb: 1.1, bx: 0.2, by: 0.3, lean: -0.08 },
+  thrust: { fx: 0.3, fy: 0.04, wa: -1.45, wb: -1.4, bx: 0.22, by: 0.05, lean: -0.22 },
+};
+const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98 };
+const isBlade = (u) => !isRanged(u);
+function canDuel(a, b) {
+  return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) && a.b.gr && b.b.gr &&
+    Math.abs(a.b.y - b.b.y) < 0.5 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
+}
+function startDuel(a, b) {
+  const n = 3 + Math.floor(rng() * 4), types = Object.keys(DUEL_STRIKE), beats = [];
+  let s = rng() < 0.5 ? a : b;
+  for (let i = 0; i < n; i++) { beats.push({ s, type: types[Math.floor(rng() * 3)], len: Math.max(9, 14 - i) }); s = s === a ? b : a; }
+  // how it ends
+  let fin = null;
+  for (const u of rng() < 0.5 ? [a, b] : [b, a]) {
+    if (!fin && u.skill && u.skCd <= 0 && rng() < 0.6) fin = { kind: 'skill', u, at: 1 + Math.floor(rng() * (n - 1)) };
+  }
+  if (!fin) {
+    if (rng() < 0.2) fin = { kind: 'draw' };
+    else {
+      const edge = (a.acro - b.acro) * 0.05;
+      const w = rng() < 0.5 + edge ? a : b;
+      fin = { kind: w.acro >= 2 && rng() < 0.45 ? 'vault' : 'cut', u: w };
+    }
+  }
+  world.duel = { a, b, beats, i: 0, f: 0, fin, mid: (a.b.x + b.b.x) / 2, gap: Math.max(DUEL_GAP[a.w], DUEL_GAP[b.w]) };
+  for (const u of [a, b]) {
+    const o = u === a ? b : a;
+    u.state = 'duel'; u.face = Math.sign(o.b.x - u.b.x) || u.face; u.skName = null;
+    u.ai.macro = null; u.ai.path.length = 0; u.backflip = false; u.flipT = 0; u.dpose = null;
+  }
+  const mx = world.duel.mid, my = a.b.y - 1.05;
+  sparks(mx, my, 0, 16); ring(mx, my, 1.1, 'spark');
+  world.hs = Math.max(world.hs, 6); world.punch = 1; sfxShake(5);
+  world.stats[0].clash++;
+  if (world.stats[0].clash === 1) log('Blades locked.', -1);
+}
+function stepDuel() {
+  const D = world.duel, beat = D.beats[D.i], s = beat.s, d = s === D.a ? D.b : D.a;
+  if (D.a.state !== 'duel' || D.b.state !== 'duel') { world.duel = null; return; }
+  const f = ++D.f, hitF = 6;
+  // the striker drives forward a little on each beat and the defender gives ground
+  if (f < hitF) D.mid += s.face * 0.03;
+  for (const u of [D.a, D.b]) {
+    const tx = D.mid - u.face * D.gap / 2;
+    u.b.vx = Math.max(-7, Math.min(7, (tx - u.b.x) * 10));
+  }
+  const st = DUEL_STRIKE[beat.type];
+  s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitF ? 0.35 : 0.7 }, f < hitF ? st.w : st.a);
+  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: 0.5 }, DUEL_BLOCK[beat.type]);
+  s.duelSwing = f >= hitF - 1 && f <= hitF + 2;
+  d.duelSwing = false;
+  if (f === hitF) {
+    const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[beat.type];
+    sparks(cx, cy, -s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, beat.type === 'high' ? -0.9 : beat.type === 'low' ? 0.9 : 0, 0.9, 'spark');
+    world.hs = Math.max(world.hs, 2); sfxShake(2);
+  }
+  if (D.fin.kind === 'skill' && D.i === D.fin.at && f === 3) { breakDuel(D.fin.u); return; }
+  if (f >= beat.len) {
+    D.f = 0;
+    if (++D.i >= D.beats.length) finishDuel();
+  }
+}
+function endDuel() {
+  const D = world.duel;
+  world.duel = null; world.duelCd = world.t + 240;
+  for (const u of [D.a, D.b]) if (u.state === 'duel') { u.state = 'free'; u.react = 0; u.dpose = null; u.duelSwing = false; }
+  return D;
+}
+function stagger(u, frames, push) {
+  u.state = 'stun'; u.stunT = frames; u.tumble = false; u.b.vx = push; u.flash = 4;
+}
+function finishDuel() {
+  const D = endDuel(), { a, b, fin } = D;
+  if (fin.kind === 'draw') {
+    for (const u of [a, b]) stagger(u, 14, -u.face * 7);
+    const mx = (a.b.x + b.b.x) / 2, my = a.b.y - 1.05;
+    sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark');
+    world.hs = Math.max(world.hs, 9); sfxShake(6);
+    return;
+  }
+  const w = fin.u, l = w === a ? b : a, fin2 = WEAP[w.w].atk === 'slash1' ? 'slash3' : WEAP[w.w].atk === 'stab1' ? 'stab3' : WEAP[w.w].atk;
+  if (fin.kind === 'vault') {
+    // flip over the top and come down behind
+    stagger(l, 34, 0);
+    w.b.vy = -15; w.b.vx = w.face * 7.5; w.b.gr = false; w.flipT = w.flipMax = 20; w.flipDir = 1;
+    w.react = 0; streak(w.b.x, w.b.y - 1, -Math.PI / 2, 1, TEAM[w.side]);
+    log(w.side ? `${rivalName()} vaulted over your guard.` : 'Your fighter vaulted over the rival\'s guard.', w.side);
+    return;
+  }
+  // the winner's finisher gets through a guard that's out of position
+  stagger(l, ATK[fin2].w + 6, 0);
+  w.face = Math.sign(l.b.x - w.b.x) || w.face; startAtk(w, fin2);
+  world.punch = 1;
+  log(w.side ? `${rivalName()} won the exchange.` : 'Your fighter won the exchange.', w.side);
+}
+function breakDuel(u) {
+  const D = endDuel(), o = u === D.a ? D.b : D.a;
+  if (u.skill === 'blink') {
+    stagger(o, 20, 0);
+    if (!blinkTo(u, o, 'behind')) stagger(o, 12, -o.face * 5);
+  } else if (u.skill === 'parry') {
+    u.state = 'skill'; u.skName = 'parry'; u.sf = 4; u.skCd = SKILL.parry.cd;
+    parrySuccess(u, o, (u.b.x + o.b.x) / 2, u.b.y - 1.05);
+  } else if (u.skill === 'darksight') {
+    stagger(o, 14, -o.face * 3);
+    startSkill(u, 'cast');
+  } else {
+    // the hook wraps the other blade and yanks the fighter off its feet
+    u.skCd = SKILL.hook.cd; world.stats[u.side].skill++;
+    const dir = Math.sign(u.b.x - o.b.x) || 1;
+    o.state = 'stun'; o.stunT = 32; o.tumble = true; o.bounced = false; o.spin = -0.22;
+    o.b.vx = dir * 4; o.b.vy = -9; o.b.gr = false;
+    callout(o, 'HOOKED', u.side); sparks(o.b.x, o.b.y - 1, dir, 10);
+    world.hs = Math.max(world.hs, 6); sfxShake(5);
+    hurt(o, HOOK.dmg, 'hit', u.side);
+  }
+  log(u.side ? `${rivalName()} broke the exchange with ${SKILL[u.skill].name}.` : `Your fighter broke the exchange with ${SKILL[u.skill].name}.`, u.side);
+}
+
 // ---------------------------------------------------------------- effects
 const sfxShake = (n) => { world.shake = Math.max(world.shake, n); };
 function sparks(x, y, dir, n, c) {
@@ -1453,14 +1794,15 @@ function hurt(u, d, src, by) {
   else if (src === 'zone') st[u.side].zone += d;
   if (d >= 1) popText(u.b.x, u.b.y - H - 0.35, String(Math.round(d)), TEAM[u.side], 0.5);
   if (u.hidden && d >= 1) reveal(u);
-  if (src !== 'zone' && d >= 1 && !world.firstHit) { world.firstHit = true; if (!headless) music.intensify(); }
   if (u.hp <= 0) kill(u);
 }
 function kill(u) {
   u.state = 'dead';
   u.b.vx *= 1.3; u.b.vy = Math.min(u.b.vy, 0) - 4;
   u.rag = makeRag(u); u.hidden = 0; u.skName = null;
+  if (world.duel) endDuel();
   world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true;
+  if (!headless) music.ko();
   world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11);
   log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
 }
@@ -1470,16 +1812,19 @@ function applyHit(att, def, d, dirX, crit) {
   if (d.box && parrying(def) && facingPoint(def, att.b.x)) { att.hitDone = true; parrySuccess(def, att); return; }
   if (d.melee && def.state === 'atk' && def.atkDef.melee && def.phase === 'a' && def.face === -att.face && !def.hitDone) {
     def.hitDone = true;
+    if (canDuel(att, def)) { startDuel(att, def); return; }
     for (const x of [att, def]) {
       x.state = 'stun'; x.stunT = 12; x.tumble = false; x.b.vx = -x.face * 7; x.ai.macro = null; x.ai.path.length = 0;
     }
     const mx = (att.b.x + def.b.x) / 2, my = Math.min(att.b.y, def.b.y) - 1.05;
     sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark');
     world.hs = Math.max(world.hs, 9); sfxShake(6);
-    world.stats[0].clash++;
-    log('Clash. Blades met and both fighters bounced off.', -1);
+    if (!world.stats[0].bounce++) log('Clash. Blades met and both fighters bounced off.', -1);
     return;
   }
+  // A blade fighter squared up to a swing can catch it and turn it into an exchange.
+  if (d.melee && !d.air && !crit && !att.ambush && def.state === 'free' && def.b.gr && def.react <= 0 && facingPoint(def, att.b.x) &&
+      !isRanged(def) && canDuel(att, def) && rng() < 0.3) { att.hitDone = true; startDuel(def, att); return; }
   att.hitLanded = true;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
@@ -1546,11 +1891,14 @@ function atkStep(u) {
     if (d.lunge) b.vx = u.face * d.lunge * (world.demo ? 0.4 : 1);
     if (d.hop) { b.vy = d.hop; b.gr = false; }
     if (d.shot) fireShot(u);
+    if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
+    if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
   }
+  if (d.plunge && u.phase === 'a' && !b.gr) b.vy = Math.max(b.vy, 20);
   if (u.af === d.w + d.a) u.phase = 'r';
   if (u.atkName === 'aslash') u.rot = 2 * Math.PI * Math.min(1, u.af / (d.w + d.a));
   if (u.atkName === 'stab3' && u.af >= d.w) u.rot = 2 * Math.PI * Math.min(1, (u.af - d.w) / (d.a + 5));
-  if (u.atkName === 'hammer' && u.af === d.w + 2) { dust(b.x + u.face * 1.5, b.y, 6, 0.8); sfxShake(4); }
+  if (u.atkName === 'hammer' && u.af === d.w + 2) { dust(b.x + u.face * 1.5, b.y, 6, 0.8); sfxShake(4); if (b.gr) shockwave(u, d.shock, b.x + u.face * 1.2); }
   if (u.atkName === 'thrust' && u.af === d.w) streak(b.x + u.face * 1.6, b.y - 0.95, u.face > 0 ? 0 : Math.PI, 1.3, 'spark');
   if (d.shot && u.phase === 'w' && u.af % 4 === 0) { const s = aimAt(u, targetOf(u)); if (s) u.aimSol = s; }
   if (u.af >= d.w + d.a + d.r) {
@@ -1567,6 +1915,9 @@ function act(u) {
   if (u.cd > 0) u.cd--;
   if (u.flash > 0) u.flash--;
   if (u.spikeCd > 0) u.spikeCd--;
+  if (u.rollCd > 0) u.rollCd--;
+  if (u.landT > 0) u.landT--;
+  if (u.flipT > 0) u.flipT--;
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
   if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
@@ -1576,6 +1927,11 @@ function act(u) {
     case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
     case 'atk': atkStep(u); if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; } break;
     case 'skill': skillStep(u); break;
+    case 'roll':
+      // a roll keeps its speed, then scrubs it off at the end; rolling off a ledge just becomes a fall
+      fr = u.rollT > 5 ? 0.12 : 1.2;
+      if (--u.rollT <= 0 || (!b.gr && u.rollT < u.rollMax - 2)) { u.state = 'free'; u.react = Math.min(u.react, 2); }
+      break;
     case 'stun':
       u.stunT--; fr = 0.5;
       if (u.tumble) u.rot += u.spin;
@@ -1587,6 +1943,25 @@ function act(u) {
   const vyBefore = b.vy;
   const ev = physStep(b, dir, press, hold, world.demo ? -2 : u.side, ctl, fr);   // pads stay still during demos
   if (ev & EV_JUMP) dust(b.x, b.y + 0.02, 3, 0.4);
+  if (ev & EV_WJ) {
+    // kick off the wall: puff at the wall, spin away from it
+    const wx = b.x + b.wjSide * (W / 2 + 0.25);
+    dust(wx, b.y - 0.5, 4, 0.3); streak(wx, b.y - 0.8, b.wjSide > 0 ? Math.PI : 0, 0.7, TEAM[u.side]);
+    u.face = -b.wjSide; u.flipT = u.flipMax = 16; u.flipDir = -1; u.backflip = false;
+    if (!world.demo) world.stats[u.side].acro++;
+  }
+  if (ev & EV_DJ) {
+    ring(b.x, b.y + 0.05, 0.55, TEAM[u.side]); dust(b.x, b.y, 3, 0.3);
+    u.flipT = u.flipMax = 20; u.flipDir = 1; u.backflip = false;
+    if (!world.demo) world.stats[u.side].acro++;
+  }
+  if (ev & EV_WR) { dust(b.x + b.wrSide * W / 2, b.y, 3, 0.2); u.face = b.wrSide; if (!world.demo) world.stats[u.side].acro++; }
+  if (ev & EV_MANTLE) { u.flipT = u.flipMax = 12; u.flipDir = 1; }
+  if (b.wr > 0 && world.t % 5 === 0) dust(b.x + b.wrSide * W / 2, b.y - 0.2, 1, 0.1);
+  if (u.state === 'free' && !b.gr) {
+    if (b.wr > 0) u.face = b.wrSide;
+    else if (b.onWall && b.vy > 0 && u.in.dir === b.onWall) { u.face = -b.onWall; if (world.t % 4 === 0) dust(b.x + b.onWall * W / 2, b.y - 1.1, 1, 0.1); }
+  }
   if (ev & EV_PAD) {
     A.padAnim[b.pad] = 1; dust(b.x, b.y, 5, 0.6); ring(b.x, b.y - 0.1, 0.9, TEAM[u.side]);
     world.stats[u.side].pads++;
@@ -1594,6 +1969,10 @@ function act(u) {
     if (u.state === 'free') u.padLaunched = true;
   } else if (ev & EV_LAND) {
     dust(b.x, b.y, vyBefore > 14 ? 5 : 2, 0.5);
+    if (vyBefore > 9) u.landT = 9;
+    u.flipT = 0;
+    // a parkour roll out of a big drop keeps the momentum going
+    if (u.state === 'free' && u.acro >= 1 && vyBefore > 17 && Math.abs(b.vx) > 4 && !u.ai.macro) startRoll(u, Math.sign(b.vx), 12);
     if (u.tumble) {
       if (b.landV > 12 && !u.bounced) { b.vy = -b.landV * 0.38; b.gr = false; u.bounced = true; sfxShake(3); dust(b.x, b.y, 6, 1); }
       else {
@@ -1601,7 +1980,8 @@ function act(u) {
         u.rot = wrap(u.rot); u.rotDriven = false;
       }
     }
-    if (u.state === 'atk' && u.atkDef.air) { u.state = 'free'; u.react = 8; u.ai.replan = 0; }
+    if (u.state === 'atk' && u.atkDef.plunge && u.phase !== 'r') landPlunge(u);
+    else if (u.state === 'atk' && u.atkDef.air) { u.state = 'free'; u.react = 8; u.ai.replan = 0; }
     if (u.backflip) { u.backflip = false; }
   }
   if ((ev & EV_WALL) && u.tumble && Math.abs(b.wallV) > 7) {
@@ -1616,6 +1996,26 @@ function act(u) {
   }
   if (u.backflip && !b.gr && u.rot > -2 * Math.PI) u.rot -= 0.2;
   if (b.gr && Math.abs(b.vx) > 5 && u.state === 'free' && world.t % 7 === 0) dust(b.x - Math.sign(b.vx) * 0.2, b.y, 1, 0.2);
+}
+
+// A plunge hits the floor: a crouched landing, and for the hammer a shockwave along the ground.
+function landPlunge(u) {
+  const d = u.atkDef, b = u.b;
+  u.phase = 'r'; u.af = d.w + d.a;
+  dust(b.x, b.y, d.shock ? 12 : 6, d.shock ? 2.4 : 0.9); sfxShake(d.shock ? 8 : 4);
+  if (d.shock) shockwave(u, d.shock, b.x);
+}
+// A shockwave runs along the floor. It hits anyone standing on it, and a roll doesn't get under it.
+function shockwave(u, sh, x) {
+  const b = u.b;
+  ring(x, b.y - 0.1, sh.r, TEAM[u.side]); ring(x, b.y - 0.1, sh.r * 0.6, 'spark');
+  for (const s2 of [-1, 1]) streak(x + s2 * 1.1, b.y - 0.1, s2 > 0 ? 0 : Math.PI, 1.2, 'spark');
+  world.hs = Math.max(world.hs, 4); world.impact = Math.max(world.impact, 1);
+  const e = foe(u);
+  if (e && e.state !== 'dead' && e.b.gr && !u.hitDone && Math.abs(e.b.x - x) < sh.r && Math.abs(e.b.y - b.y) < 0.7) {
+    if (e.state === 'roll') e.iT = 0;
+    u.hitDone = true; applyHit(u, e, sh, Math.sign(e.b.x - b.x) || u.face);
+  }
 }
 
 function resolveHits() {
@@ -1691,10 +2091,10 @@ function poseTarget(u) {
       atkPose = ATK_POSE[u.atkName][u.phase] || {};
       Object.assign(T, atkPose);
       if (u.phase === 'a') { T.ka = 0.62; T.kb = 0.4; T.d = 0.35; } else if (u.phase === 'w') T.ka = 0.32; else T.ka = 0.14;
-      if (u.atkName === 'shoot') {
+      if (u.atkDef.shot === 'arrow') {
         const s = u.aimSol;
         if (s) T.ai = Math.atan2(s.vy, s.vx * u.face);
-        T.draw = u.phase === 'w' ? Math.min(1, u.af / (ATK.shoot.w - 3)) : 0;
+        T.draw = u.phase === 'w' ? Math.min(1, u.af / (u.atkDef.w - 3)) : 0;
         T.ka = u.phase === 'a' ? 0.7 : 0.35;
       }
     }
@@ -1708,6 +2108,9 @@ function poseTarget(u) {
     T.kb = 0.2;
   } else if (st === 'getup') {
     Object.assign(T, { drop: 0, hipH: 0.5, lean: 0.45 }); T.kb = 0.25;
+  } else if (st === 'duel') {
+    if (u.dpose) { Object.assign(T, u.dpose); T.ka = u.dpose.ka; T.kb = 0.4; T.d = 0.4; }
+    T.ffy = T.hipH; T.bfy = T.hipH;
   } else if (st === 'skill') {
     const sp = SK_POSE[u.skName];
     if (u.skName === 'hook') {
@@ -1717,7 +2120,7 @@ function poseTarget(u) {
   }
   // Sneaking in Dark Sight: lower and leaning in.
   if (u.hidden && (st === 'free' || st === 'skill') && b.gr) { T.hipH -= 0.07; T.lean += 0.14; T.head += 0.1; }
-  if (st === 'down' || (st === 'stun' && u.tumble)) return T;
+  if (st === 'down' || (st === 'stun' && u.tumble) || st === 'duel') return T;
   if (b.gr) {
     if (st === 'free' && spd > 0.9) {
       u.gait += spd * DT * 2.3 * (fwd < 0 ? -1 : 1);
@@ -1730,8 +2133,36 @@ function poseTarget(u) {
   } else if (b.vy < 0) { T.ffx = 0.22; T.ffy = T.hipH * 0.5; T.bfx = -0.08; T.bfy = T.hipH * 0.62; }
   else { T.ffx = 0.2; T.ffy = T.hipH * 0.92; T.bfx = -0.24; T.bfy = T.hipH * 0.8; }
   if (atkPose) for (const k of LEGK) if (k in atkPose) T[k] = atkPose[k];
+  // Acrobatics set the legs too, so they come last.
+  if (st === 'roll' || (st === 'free' && u.flipT > 0)) {
+    Object.assign(T, TUCK); T.drop = st === 'roll' ? 0.32 : 0;
+    T.kb = 0.5; T.kl = 0.6; T.ka = 0.45; T.d = 0.4;
+  } else if (st === 'free' && !b.gr && b.wr > 0) {
+    // running up the wall: the body leans back (see poseStep) and the feet cycle against the wall
+    const g = world.t * 0.62;
+    Object.assign(T, { hipH: 0.64, lean: 0.25, head: -0.25, fx: 0.18 + Math.sin(g) * 0.2, fy: 0.2, bx: 0.1 - Math.sin(g) * 0.2, by: 0.22 });
+    T.ffx = 0.34 + Math.sin(g) * 0.22; T.ffy = 0.5 - Math.max(0, Math.cos(g)) * 0.25;
+    T.bfx = 0.34 - Math.sin(g) * 0.22; T.bfy = 0.5 - Math.max(0, -Math.cos(g)) * 0.25;
+    T.kl = 0.7; T.d = 0.35;
+  } else if (st === 'free' && !b.gr && b.onWall && b.vy > 0 && u.in.dir === b.onWall) {
+    // sliding down a wall with its back to it, one hand and one foot on the wall
+    Object.assign(T, WALL_SLIDE[w] || {}, WALL_SLIDE.base);
+  }
+  if (u.landT > 0 && b.gr && st === 'free') {
+    const k = u.landT / 9;
+    T.hipH -= 0.2 * k; T.lean += 0.2 * k; T.head -= 0.1 * k; T.ffy = T.hipH; T.bfy = T.hipH; T.kb = 0.5;
+  }
   return T;
 }
+const TUCK = { hipH: 0.46, lean: 0.85, head: 0.45, fx: 0.22, fy: 0.1, bx: 0.14, by: 0.16, ffx: 0.22, ffy: 0.2, bfx: 0.04, bfy: 0.26, wb: 1.2 };
+const WALL_SLIDE = {
+  base: { hipH: 0.6, lean: -0.22, head: 0.12, bx: -0.44, by: -0.02, ffx: 0.2, ffy: 0.46, bfx: -0.3, bfy: 0.4 },
+  sword: { fx: 0.26, fy: 0.08, wa: -1.1 },
+  spear: { fx: 0.24, fy: 0.2, wa: -0.4 },
+  hammer: { fx: 0.12, fy: 0.05, wa: -2.0 },
+  stars: { fx: 0.3, fy: 0.05 },
+  bow: { ai: 0.2 },
+};
 function poseStep(u) {
   if (u.state === 'dead') return;
   const T = poseTarget(u), p = u.pose.p, v = u.pose.v;
@@ -1740,11 +2171,14 @@ function poseStep(u) {
     v[k] = v[k] * T.d + (T[k] - p[k]) * g;
     p[k] += v[k];
   }
-  const driven = (u.state === 'stun' && u.tumble) || u.backflip || (u.state === 'atk' && (u.atkName === 'aslash' || (u.atkName === 'stab3' && u.af >= u.atkDef.w)));
+  if (u.flipT > 0 && u.state === 'free') u.rot = u.flipDir * 2 * Math.PI * (1 - u.flipT / u.flipMax);
+  if (u.state === 'roll') u.rot = 2 * Math.PI * Math.min(1, (u.rollMax - u.rollT) / (u.rollMax - 3));
+  const driven = (u.state === 'stun' && u.tumble) || u.backflip || u.state === 'roll' || (u.flipT > 0 && u.state === 'free') ||
+    (u.state === 'atk' && (u.atkName === 'aslash' || (u.atkName === 'stab3' && u.af >= u.atkDef.w)));
   if (driven) u.rotDriven = true;
   else {
     if (u.rotDriven) { u.rot = wrap(u.rot); u.rotDriven = false; }
-    const tr = u.state === 'down' ? -1.45 : 0;
+    const tr = u.state === 'down' ? -1.45 : u.b.wr > 0 ? -0.5 : 0;
     u.rotV = u.rotV * 0.6 + (tr - u.rot) * 0.2; u.rot += u.rotV;
   }
 }
@@ -1809,8 +2243,8 @@ function skel(u) {
 // Which hands still hold a star (the thrown one reappears once the volley is over).
 function heldStars(u) {
   if (u.w !== 'stars' || u.state !== 'atk') return 3;
-  if (u.atkName === 'throw') return u.phase === 'w' ? 3 : 2;
-  if (u.atkName === 'throw2') return u.phase === 'w' ? 2 : 0;
+  if (u.atkName === 'throw' || u.atkName === 'athrow') return u.phase === 'w' ? 3 : 2;
+  if (u.atkName === 'throw2' || u.atkName === 'athrow2') return u.phase === 'w' ? 2 : 0;
   return 3;
 }
 
@@ -1869,7 +2303,7 @@ function scarfStep(u, S) {
 }
 function trailStep(u, S) {
   for (const t of u.trail) t.age++;
-  const on = u.state === 'atk' && u.atkDef.trail && (u.phase === 'a' || (u.phase === 'w' && u.af >= u.atkDef.w - 2) || (u.phase === 'r' && u.af < u.atkDef.w + u.atkDef.a + 3));
+  const on = (u.state === 'duel' && u.duelSwing) || (u.state === 'atk' && u.atkDef.trail && (u.phase === 'a' || (u.phase === 'w' && u.af >= u.atkDef.w - 2) || (u.phase === 'r' && u.af < u.atkDef.w + u.atkDef.a + 3)));
   const [bs, ts] = u.state === 'atk' && u.atkDef.back && S.wp.bb ? [S.wp.bb, S.wp.bt] : [S.wp.base, S.wp.tip];
   if (on && bs) u.trail.push({ bx: bs.x, by: bs.y, tx: ts.x, ty: ts.y, age: 0 });
   u.trail = u.trail.filter((t) => t.age < 7);
@@ -1879,8 +2313,8 @@ function trailStep(u, S) {
 function newWorld(seed) {
   return {
     t: 0, rng: mulberry(seed), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
-    hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [],
-    stats: [0, 1].map(() => ({ dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
+    hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -1897,6 +2331,7 @@ function simStep() {
     if (w.t === SQ_START * 60) log('The walls are closing in. Nobody can hide at home now.', -1);
     for (const u of U) think(u);
   }
+  if (world.duel) stepDuel();
   for (const u of U) act(u);
   resolveHits();
   stepShots();
@@ -1915,6 +2350,7 @@ function simStep() {
     if (w.overT === (w.ko ? 130 : 40)) showResult();
   } else if (w.t >= TIME_CAP * 60) {
     w.over = true; w.ko = false; w.overT = 0;
+    if (!headless) music.ko();
     w.winner = U[0].hp === U[1].hp ? -1 : U[0].hp > U[1].hp ? 0 : 1;
     log('Time.', -1);
   }
@@ -1936,23 +2372,23 @@ const TEMPLATES = [
 ].map((t) => (SPIKES_ON ? t : t.filter((p) => p.t !== 'spikes')));
 // The ladder. Each rival brings its own half, weapon and skill.
 const RIVALS = [
-  { name: 'Quill', weapon: 'bow', skill: 'blink', t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
-  { name: 'Lull', weapon: 'bow', skill: 'darksight', t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
-  { name: 'Tack', weapon: 'sword', skill: 'parry', t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
-  { name: 'Anvil', weapon: 'hammer', skill: 'hook', t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
-  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
-  { name: 'Gaff', weapon: 'spear', skill: 'hook', t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
-  { name: 'Moth', weapon: 'daggers', skill: 'darksight', t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
-  { name: 'Pike', weapon: 'spear', skill: 'parry', t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
+  { name: 'Quill', weapon: 'bow', skill: 'blink', acro: 2, t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
+  { name: 'Lull', weapon: 'bow', skill: 'darksight', acro: 1, t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
+  { name: 'Pike', weapon: 'spear', skill: 'parry', acro: 2, t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
+  { name: 'Gaff', weapon: 'spear', skill: 'hook', acro: 2, t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
+  { name: 'Moth', weapon: 'daggers', skill: 'darksight', acro: 3, t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
+  { name: 'Anvil', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
+  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
+  { name: 'Tack', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
-const builds = [{ weapon: 'sword', skill: 'blink', pieces: TEMPLATES[0].slice() }, null];
+const builds = [{ weapon: 'sword', skill: 'blink', acro: 2, pieces: TEMPLATES[0].slice() }, null];
 let rivalIx = 0;
 const rivalName = () => (builds[1] && builds[1].name) || 'The rival';
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
   const r = RIVALS[rivalIx];
-  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, pieces: TEMPLATES[r.t].slice() };
+  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
 }
 
 // ---------------------------------------------------------------- canvas & camera
@@ -2346,101 +2782,81 @@ function render() {
 }
 
 // ---------------------------------------------------------------- music
-// Fight music works like Wildfrost's: each fight opens on a soft version, and the full track kicks in when the
-// first blow lands. It keeps going through replays and rematches (dropping back to soft for each new fight),
-// goes muffled under a KO's slow motion, and fades out on the build and rival screens.
+// Each fight plays a random Wildfrost track (never the same one twice in a row). It carries on through a
+// rematch if it's still playing, fades out with a KO's slow motion, and fades out on the build and rival screens.
 const MUSIC = {
-  fight: 'Music/Wildfrost OST - Spirit Call.mp3',
-  calm: null,          // a separate track to play before the first hit; null plays the fight track softened instead
-  volume: 0.55, calmVolume: 0.38, calmHz: 900,
+  tracks: ['Spirit Call', 'Serpent', "Winter's Wrath", 'Tundra Heart', 'March of the Pengoons', 'Luminice Dance', 'Trapped Spirits', 'The Wooly Snail']
+    .map((t) => `Music/Wildfrost OST - ${t}.mp3`),
+  volume: 0.55,
 };
 const MUSIC_KEY = 'homeTurf.music';
 let headless = false;   // headless test fights stay silent
 const music = {
   on: (() => { try { return localStorage.getItem(MUSIC_KEY) !== 'off'; } catch { return true; } })(),
-  ctx: null, filter: null, layers: null, stage: 'calm', want: false, muffled: false, stopT: 0,
+  el: null, ctx: null, gain: null, filter: null, track: -1, want: false, fading: false, stopT: 0,
   init() {
-    if (this.layers) return;
-    const make = (file) => { const el = new Audio(encodeURI(file)); el.loop = true; el.preload = 'auto'; return { el, gain: null, to: 0 }; };
-    this.layers = { fight: make(MUSIC.fight) };
-    if (MUSIC.calm) this.layers.calm = make(MUSIC.calm);
-    // Web Audio gives smooth fades (iOS ignores element volume) and the filter sweeps. Pages opened straight
+    if (this.el) return;
+    const el = this.el = new Audio();
+    el.loop = true; el.preload = 'auto';
+    // Web Audio gives smooth fades (iOS ignores element volume) and the KO filter sweep. Pages opened straight
     // from disk can't route a file through it, so they fall back to plain volume changes.
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx || location.protocol === 'file:') return;
     try {
       const ctx = new Ctx();
-      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = MUSIC.calmHz;
-      this.filter.connect(ctx.destination);
-      for (const L of Object.values(this.layers)) {
-        L.gain = ctx.createGain(); L.gain.gain.value = 0;
-        ctx.createMediaElementSource(L.el).connect(L.gain).connect(this.filter);
-      }
+      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = 20000;
+      this.gain = ctx.createGain(); this.gain.gain.value = 0;
+      ctx.createMediaElementSource(el).connect(this.filter).connect(this.gain).connect(ctx.destination);
       this.ctx = ctx;
-    } catch { this.ctx = null; this.filter = null; for (const L of Object.values(this.layers)) L.gain = null; }
+    } catch { this.ctx = null; this.filter = null; this.gain = null; }
   },
   ramp(param, to, secs) { const t = this.ctx.currentTime; param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); param.linearRampToValueAtTime(to, t + secs); },
-  // Bring every layer and the filter to where the current stage wants them.
-  mix(secs) {
-    if (!this.layers) return;
-    const { fight, calm } = this.layers, live = this.want && this.on, hot = this.stage === 'fight';
-    fight.to = !live ? 0 : hot ? MUSIC.volume : calm ? 0 : MUSIC.calmVolume;
-    if (calm) calm.to = live && !hot ? MUSIC.calmVolume : 0;
-    if (this.ctx && this.ctx.state === 'suspended' && live) this.ctx.resume();
-    for (const L of Object.values(this.layers)) {
-      if (L.to > 0 && L.el.paused) { const p = L.el.play(); if (p) p.catch(() => {}); }
-      if (L.gain) this.ramp(L.gain.gain, L.to, secs); else L.el.volume = L.to;
-    }
-    this.sweep(hot ? 0.12 : 0.5);
+  level(to, secs) {
+    if (this.gain) this.ramp(this.gain.gain, to, secs); else this.el.volume = to;
+    if (this.filter && to > 0) this.ramp(this.filter.frequency, 20000, 0.05);
     clearTimeout(this.stopT);
-    this.stopT = setTimeout(() => { for (const L of Object.values(this.layers)) if (L.to === 0) L.el.pause(); }, secs * 1000 + 80);
+    if (to === 0) this.stopT = setTimeout(() => this.el.pause(), secs * 1000 + 80);
   },
-  sweep(tc) {
-    if (!this.filter) return;
-    const hz = this.muffled ? 650 : this.stage === 'calm' && !this.layers.calm ? MUSIC.calmHz : 20000;
-    const f = this.filter.frequency, t = this.ctx.currentTime;
-    f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.setTargetAtTime(hz, t, tc);
-  },
-  // A new fight: start soft.
+  // A new fight: keep the current track if it's still going, otherwise start a different random one.
   begin() {
-    const wasHot = this.stage === 'fight';
-    this.stage = 'calm'; this.want = true;
+    this.want = true;
     if (!this.on) return;
     this.init();
-    if (this.layers.calm && wasHot) this.layers.calm.el.currentTime = 0;
-    this.mix(wasHot ? 1.2 : 0.8);
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.el.paused || this.fading || this.track < 0) {
+      let i = Math.floor(Math.random() * MUSIC.tracks.length);
+      if (i === this.track) i = (i + 1) % MUSIC.tracks.length;
+      this.track = i;
+      this.el.src = encodeURI(MUSIC.tracks[i]);
+      this.el.currentTime = 0;
+    }
+    this.fading = false;
+    const p = this.el.play();
+    if (p) p.catch(() => {});
+    this.level(MUSIC.volume, 0.12);
   },
-  // The first blow landed: the full track comes in.
-  intensify() {
-    if (this.stage === 'fight') return;
-    this.stage = 'fight';
-    if (!this.want || !this.on || !this.layers) return;
-    if (this.layers.calm) this.layers.fight.el.currentTime = 0;
-    this.mix(this.layers.calm ? 0.35 : 0.25);
+  // KO: the music sinks under the slow motion and fades away.
+  ko() {
+    if (!this.el || this.el.paused) return;
+    this.fading = true;
+    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(420, t + 2.2); }
+    this.level(0, 3.2);
   },
-  stop(secs = 0.9) { this.want = false; this.mix(secs); },
-  // Called every frame: dull the music while a KO plays out in slow motion.
-  tick() {
-    if (!this.filter) return;
-    const m = mode === 'fight' && world.ko && world.slowT > 0;
-    if (m === this.muffled) return;
-    this.muffled = m;
-    this.sweep(m ? 0.05 : 0.4);
-  },
+  stop(secs = 0.7) { this.want = false; if (this.el) { this.fading = true; this.level(0, secs); } },
   toggle() {
     this.on = !this.on;
     try { localStorage.setItem(MUSIC_KEY, this.on ? 'on' : 'off'); } catch { /* not remembered */ }
     $('#sndBtn').setAttribute('aria-pressed', String(this.on));
-    if (this.on && this.want) this.init();
-    this.mix(0.25);
+    if (this.on && this.want && mode === 'fight' && !world.over) this.begin();
+    else if (!this.on && this.el) { this.fading = true; this.level(0, 0.25); }
   },
 };
 $('#sndBtn').setAttribute('aria-pressed', String(music.on));
 $('#sndBtn').addEventListener('click', () => music.toggle());
 document.addEventListener('visibilitychange', () => {
-  if (!music.layers) return;
-  if (document.hidden) for (const L of Object.values(music.layers)) L.el.pause();
-  else music.mix(0.3);
+  if (!music.el) return;
+  if (document.hidden) music.el.pause();
+  else if (music.want && music.on && !music.fading) { const p = music.el.play(); if (p) p.catch(() => {}); }
 });
 
 // ---------------------------------------------------------------- UI
@@ -2458,10 +2874,20 @@ const SKILL_ICON = {
   parry: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M12 2.5 A 9 9 0 0 1 12 19.5" fill="none" stroke="#2358d6" stroke-width="2.6"/><path d="M7.5 19 V3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M4 15.5 H11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
   hook: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2.5 19.5 L10 12" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.4 1.6"/><path d="M10 12 L15 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M15 7 C 18.5 4 21 8.5 17.5 11.5 M15 7 C 12 3.5 7.5 6 10 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/></svg>',
 };
-const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill].name : 'No skill'}`;
+const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
+const ACRO_DESC = [
+  'Runs and jumps, nothing fancy.',
+  'Roll: tumbles through swings and shots without being hit.',
+  'Wall jump: slides down walls and kicks off them, and climbs a wall by kicking back and forth.',
+  'Wall run: runs straight up a wall and flips over the ledge at the top.',
+  'Air flip: a second jump in mid-air, with a flip.',
+];
+const acroMoves = (lv) => (lv ? ACRO_MOVES.slice(1, lv + 1).join(', ') : 'none');
+const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill].name : 'No skill'} · Acro ${bd.acro || 0}`;
 
 // Weapon and skill chips are generated from the tables so the numbers on them never drift.
 $('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
+$('#acro').innerHTML = ACRO_MOVES.map((m, i) => `<button data-a="${i}" aria-pressed="false" aria-label="Acrobatics ${i}: ${m}">${m}</button>`).join('');
 $('#skills').innerHTML = SKILLS.map((k) => `<button class="opt tool skill" data-s="${k}" aria-pressed="false"><span class="ic"><span class="sk-ic">${SKILL_ICON[k]}</span><small>${SKILL[k].stat}</small></span><b>${SKILL[k].name}</b></button>`).join('');
 
 let tool = 'block', toastT = 0;
@@ -2477,6 +2903,9 @@ function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
   for (const b of document.querySelectorAll('#tools .opt')) b.setAttribute('aria-pressed', String(b.dataset.t === tool));
+  const lv = builds[0].acro || 0;
+  for (const b of document.querySelectorAll('#acro button')) { const i = +b.dataset.a; b.classList.toggle('on', i >= 1 && i <= lv); b.setAttribute('aria-pressed', String(i === lv)); }
+  $('#acroLbl').textContent = `Level ${lv} of 4`;
   const s = spent(builds[0].pieces);
   ui.budget.textContent = `${s} / ${BUDGET} pts`;
   ui.budget.classList.toggle('full', s >= BUDGET);
@@ -2540,7 +2969,8 @@ function showResult() {
   if (st[0].hooks + st[1].hooks) rows.push(['Hooks landed', `you ${st[0].hooks} · ${name} ${st[1].hooks}`]);
   if (st[0].deflect + st[1].deflect) rows.push(['Shots knocked down', `you ${st[0].deflect} · ${name} ${st[1].deflect}`]);
   if (st[0].pads + st[1].pads) rows.push(['Pad launches', `you ${st[0].pads} · ${name} ${st[1].pads}`]);
-  if (st[0].clash) rows.push(['Clashes', String(st[0].clash)]);
+  if (st[0].clash) rows.push(['Blade exchanges', String(st[0].clash)]);
+  if (st[0].rolls + st[1].rolls + st[0].acro + st[1].acro) rows.push(['Acrobatics', `you ${st[0].rolls + st[0].acro} moves · ${name} ${st[1].rolls + st[1].acro}`]);
   ui.resS.innerHTML = '';
   for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; ui.resS.append(dt, dd); }
   ui.result.hidden = false; ui.live.hidden = true; ui.end.hidden = false;
@@ -2554,8 +2984,8 @@ function demoWorld() {
   shots = []; parts = [];
 }
 function demoUnit(side, bd) {
-  const u = makeUnit(side, bd.weapon, bd.skill);
-  u.nav = buildNav(side, u.b.speed);
+  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0);
+  u.nav = buildNav(side, u.b.speed, COLS, u.acro);
   const mid = u.nav.idx[10 * COLS + (side ? 10 : 9)];
   u.navOk = mid >= 0 ? reach(u.nav, mid, true) : new Uint8Array(u.nav.nodes.length).fill(1);
   u.skCd = 0;
@@ -2564,6 +2994,16 @@ function demoUnit(side, bd) {
 const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'] };
 function demoSteps(u, what) {
   if (what === 'weapon') return WEAPON_DEMO[u.w].map((x) => (typeof x === 'number' ? { wait: x } : { atk: x }));
+  if (what === 'acro') {
+    const wall = u.side ? 1 : -1;   // the arena wall right behind the spawn
+    return [
+      [],
+      [{ roll: -wall }, { wait: 30 }, { roll: wall }],
+      [{ macro: { dir: wall, hold: 18, delay: 0, wj: 1 } }],
+      [{ macro: { dir: wall, hold: 40, delay: 0, wj: 1 } }],
+      [{ macro: { dir: -wall, hold: 18, delay: 0, dj: 17 } }, { wait: 30 }, { macro: { dir: wall, hold: 40, delay: 0, wj: 1 } }],
+    ][u.acro];
+  }
   if (!u.skill) return [];
   if (u.skill === 'blink') return [{ blink: 1 }, { wait: 50 }, { blink: -1 }];
   if (u.skill === 'darksight') return [{ skill: 'cast' }, { wait: 120 }, { reveal: 1 }];
@@ -2571,7 +3011,7 @@ function demoSteps(u, what) {
   return [{ skill: 'hook' }];
 }
 function playDemo(u, what, loop) {
-  u.demo = { steps: loop ? [{ wait: 45 }, ...demoSteps(u, 'weapon'), { wait: 70 }, ...demoSteps(u, 'skill'), { wait: 80 }] : demoSteps(u, what), i: 0, t: 0, loop, home: u.b.x };
+  u.demo = { steps: loop ? [{ wait: 45 }, ...demoSteps(u, 'weapon'), { wait: 70 }, ...demoSteps(u, 'skill'), { wait: 70 }, ...demoSteps(u, 'acro'), { wait: 80 }] : demoSteps(u, what), i: 0, t: 0, loop, home: u.b.x };
   if (!loop && u.hidden) reveal(u);
 }
 function runDemo(u) {
@@ -2583,6 +3023,14 @@ function runDemo(u) {
     // keep the combo going: the next hit starts where the AI would chain it
     const n = d.steps[d.i + 1], ad = u.atkDef;
     if (n && n.atk && ad.chain === n.atk && u.phase === 'r' && u.af >= ad.w + ad.a + (ad.fast ? 1 : 3)) { d.i++; startAtk(u, n.atk); }
+    return;
+  }
+  if (u.ai.macro) {
+    // acrobatics demo: run the macro exactly as a fighter would
+    const m = u.ai.macro, f = u.ai.mf++;
+    macroInput(u.ai.ms, m, u.b, u.in);
+    if (!u.b.gr) u.ai.air = true;
+    if ((u.ai.air && u.b.gr && f > 1) || f > 170) { u.ai.macro = null; u.in.dir = 0; u.in.press = false; u.in.hold = false; }
     return;
   }
   if (u.state !== 'free' || !u.b.gr) return;
@@ -2602,6 +3050,8 @@ function runDemo(u) {
     startSkill(u, s.skill);
     if (s.skill === 'parry') u.demoParry = 7;
   } else if (s.reveal) reveal(u);
+  else if (s.roll) { u.rollCd = 0; startRoll(u, s.roll); }
+  else if (s.macro) { startMacro(u, s.macro); u.in.dir = 0; }
   else if (s.blink) {
     const dir = (u.side ? -1 : 1) * s.blink;
     for (const dx of [2.6, 2.2, 1.8, 3]) {
@@ -2654,6 +3104,8 @@ function enterRival() {
   $('#rvW').textContent = WEAP[bd.weapon].name; $('#rvWs').textContent = WEAP[bd.weapon].stat; $('#rvWd').textContent = WEAP[bd.weapon].desc;
   $('#rvSi').innerHTML = SKILL_ICON[bd.skill]; $('#rvS').textContent = SKILL[bd.skill].name; $('#rvSs').textContent = SKILL[bd.skill].stat; $('#rvSd').textContent = SKILL[bd.skill].desc;
   $('#rvTip').textContent = r.tip;
+  const pips = [1, 2, 3, 4].map((i) => `<i class="${i <= (bd.acro || 0) ? 'on' : ''}"></i>`).join('');
+  $('#rvAcro').innerHTML = `<span class="acro-pips" aria-hidden="true">${pips}</span>Level ${bd.acro || 0}: ${acroMoves(bd.acro || 0)}`;
   $('#rvYou').textContent = loadout(builds[0]);
   $('#rvFight').textContent = `Fight ${bd.name}`;
 }
@@ -2676,9 +3128,9 @@ function startFight(seed, replay = false) {
   A = makeArena(builds);
   world = newWorld(seed);
   world.recorded = replay;   // a replay is the same fight again, so it doesn't count toward the record
-  U = [makeUnit(0, builds[0].weapon, builds[0].skill), makeUnit(1, builds[1].weapon, builds[1].skill)];
+  U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0));
   for (const u of U) {
-    u.nav = buildNav(u.side, u.b.speed);
+    u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
     const mid = u.nav.idx[10 * COLS + (u.side ? 10 : 9)];
     u.navOk = reach(u.nav, mid, true);
     u.react = 8 + Math.floor(rng() * 10);
@@ -2723,7 +3175,7 @@ function applyTool(c, r) {
   bd.pieces = next;
   A = makeArena([bd, null]);
   const u = U[0];
-  u.nav = buildNav(0, u.b.speed);
+  u.nav = buildNav(0, u.b.speed, COLS, u.acro);
   u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true);
   refreshBuildUI();
 }
@@ -2768,8 +3220,17 @@ $('#skills').addEventListener('click', (ev) => {
   ui.hint.textContent = `${SKILL[k].name}: ${SKILL[k].desc}`;
   refreshBuildUI();
 });
+$('#acro').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  const lv = +b.dataset.a;
+  builds[0].acro = lv;
+  U = [demoUnit(0, builds[0])];
+  playDemo(U[0], 'acro');
+  ui.hint.textContent = ACRO_DESC[lv];
+  refreshBuildUI();
+});
 $('#tools').addEventListener('click', (ev) => { const b = ev.target.closest('.opt'); if (!b) return; tool = b.dataset.t; refreshBuildUI(); });
-$('#clearBtn').addEventListener('click', () => { builds[0].pieces = []; A = makeArena([builds[0], null]); const u = U[0]; u.nav = buildNav(0, u.b.speed); u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true); refreshBuildUI(); });
+$('#clearBtn').addEventListener('click', () => { builds[0].pieces = []; A = makeArena([builds[0], null]); const u = U[0]; u.nav = buildNav(0, u.b.speed, COLS, u.acro); u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true); refreshBuildUI(); });
 $('#fightBtn').addEventListener('click', () => startFight(newSeed()));
 $('#scoutBtn').addEventListener('click', enterRival);
 $('#rvEdit').addEventListener('click', enterBuild);
@@ -2808,7 +3269,6 @@ function frame(now) {
     }
   }
   render();
-  music.tick();
   requestAnimationFrame(frame);
 }
 

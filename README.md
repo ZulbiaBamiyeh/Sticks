@@ -5,26 +5,56 @@ Stick-figure fighting games. The first one is **Home Turf**.
 ## Home Turf
 
 An autobattler prototype built for phones. Each player builds their half of a
-small arena and picks a weapon and a skill. Then two stick figures fight it out
-on their own.
+small arena and picks a weapon, a skill and an acrobatics level. Then two stick
+figures fight it out on their own.
 
 - **Weapons:**
-  - **Sword:** 7-frame windup, 3-hit combo, knocks arrows and stars out of the air.
+  - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
+    reach, and it knocks arrows and stars out of the air.
   - **Daggers:** 4-frame flurry and the fastest feet, with the shortest reach.
   - **Spear:** longest reach, keeps you at the tip, and stabs up at jumpers.
-  - **Hammer:** 17-frame windup that hits can't interrupt, and it launches on hit.
-  - **Bow:** lobs arrows over walls.
-  - **Stars:** throws stars in flat, fast pairs, but needs a clear line.
+  - **Hammer:** 17-frame windup that hits can't interrupt, and it launches on
+    hit. Its swing sends a shockwave along the floor that a roll can't get under.
+  - **Bow:** lobs arrows over walls, and fires from the top of a jump.
+  - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
+    needs a clear line.
+  - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
+    Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):
-  - **Blink:** teleport up to 3 tiles, even through walls. It dodges swings and
-    shots, crosses behind melee fighters, closes on shooters, and escapes blades.
-  - **Dark Sight:** invisible for 3.5 s. The rival loses track and searches
-    where it last saw you. The attack that ends it crits, and the victim can't
-    react to it.
+  - **Blink:** teleport up to 3 tiles, even through walls. Blade fighters save
+    it to blink straight through an incoming shot. Shooters use it to kite
+    away from blades. It also dodges swings by crossing behind the attacker.
+  - **Dark Sight:** a vanish. Cast into an incoming hit or shot, the smoke takes
+    it, and the fighter is invisible for 3.5 s while the rival searches where it
+    last saw it. The attack that ends it crits, and the victim can't react to it.
   - **Parry:** a short guard that catches a swing, a shot or a hook. Shots
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
-- **Rivals:** eight named rivals, each with its own half, weapon and skill. You
+- **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
+  level unlocks a move, N+ style:
+  1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
+     through shots on the way in and through swings to come up behind. Big drops
+     end in a landing roll.
+  2. **Wall jump:** slide down walls and kick off them, or climb a single wall
+     by kicking back and forth.
+  3. **Wall run:** run straight up a wall and flip over the ledge at the top.
+  4. **Air flip:** a second jump in mid-air.
+
+  The route planner simulates these moves with the same physics as the fight,
+  so fighters find wall-jump and wall-run routes on their own. Shooters kite by
+  picking the escape jump that lands farthest away, favouring high ground, and
+  shoot from the top of it. Blades hop over low shots even at level 0.
+- **Blade exchanges:** when two blades meet, or a blade fighter squares up to a
+  swing, the fight goes into a short choreographed exchange of strikes and
+  blocks, with sparks on every contact. It ends one of three ways, decided by
+  the fight's seed:
+  - a fighter breaks it with a ready skill (Blink behind, a Parry riposte, a
+    Dark Sight vanish or a Hook that trips);
+  - one fighter wins it, where better acrobats win more often and may vault
+    over the top;
+  - both fighters are thrown apart.
+- **Rivals:** eight named rivals, each with its own half, weapon, skill and
+  acrobatics level. You
   scout each one before the fight and can change your build to counter it.
   Your record against each rival is kept in this browser.
 - **Your half:** 10 points to spend on blocks (1) and pads (2). Columns 9 and
@@ -43,26 +73,22 @@ on their own.
 ### Running it
 
 `index.html` is the whole game, with no build step and no dependencies. The one
-extra file is the fight music in `Music/`. Open `index.html` in a browser, or
+extra files are the fight music in `Music/`. Open `index.html` in a browser, or
 serve the folder (`npx serve .`) and open it on your phone. Serving it gives
-smoother music fades and the muffled sound under a KO's slow motion. Opened
-straight from disk, the music still plays, just without those effects.
+the smooth fade-out under a KO's slow motion. Opened straight from disk, the
+music still plays, it just cuts rather than fades.
 
 Fights are deterministic from a seed, so **Replay** runs the same fight again.
 
 ### Music
 
-Fights play *Spirit Call* from the Wildfrost soundtrack, the same file the
-Chess repo uses. Like Wildfrost, each fight opens on a soft version: the track
-plays quieter behind a lowpass filter. The full track sweeps in when the first
-blow lands. It keeps going through replays and rematches, dropping back to soft
-for each new fight, and fades out on the build and rival screens. To use a
-separate song before the first hit, set `MUSIC.calm` to its file; the game then
-crossfades into Spirit Call on the first hit. The speaker
-button in the header mutes it, and that choice is remembered. To change the
-track, drop a file in `Music/` and point `MUSIC.fight` in `index.html` at it.
-The soundtrack isn't ours, so swap it for something licensed before shipping
-the game publicly.
+Each fight plays a random track from the Wildfrost soundtrack, never the same
+one twice in a row. The tracks are in `Music/` and listed in `MUSIC.tracks` in
+`index.html`. A track carries on into a rematch if it's still playing. A KO
+muffles it and fades it out through the slow motion, and it fades out on the
+build and rival screens. The speaker button in the header mutes it, and that
+choice is remembered. The soundtrack isn't ours, so swap it for something
+licensed before shipping the game publicly.
 
 ### Testing the AI and balance
 
@@ -72,14 +98,15 @@ npm run sim
 ```
 
 This runs the default build against every rival, then 1,200 fights with random
-loadouts. It prints the win rate for each weapon and skill and a
+loadouts (random weapon, skill and acrobatics level). It prints the win rate
+for each weapon, each skill and each acrobatics level, and a
 weapon-against-weapon table. Use `-- --fights 3000` for tighter numbers and
 `-- --seed 7` for a different sample. Set `CHROMIUM_PATH` to use an existing
 Chromium.
 
 In the browser console, `window.__homeTurf.fight(seed, blue, red)` runs one fight
 without rendering and returns the result and event log. A build looks like
-`{ weapon: 'spear', skill: 'hook', pieces: [] }`. Pass a fifth argument (for
+`{ weapon: 'spear', skill: 'hook', acro: 3, pieces: [] }`. Pass a fifth argument (for
 example `60`) to sample both fighters' position and AI state every 60 frames.
 `__homeTurf.play(seed, blue, red)` starts a rendered fight and
 `__homeTurf.step(n)` advances it frame by frame.
