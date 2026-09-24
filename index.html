@@ -2138,7 +2138,7 @@ function kill(u) {
   u.rag = makeRag(u); u.hidden = 0; u.skName = null;
   if (world.duel) endDuel();
   world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true; world.koAt = null;
-  if (!headless) music.ko();
+  if (!headless && u.side === 0) music.ko();   // the music only sinks when your fighter goes down
   world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11);
   log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
 }
@@ -2453,7 +2453,6 @@ function mobDie(u) {
   if (!U.some((o) => o.side === 1 && o.state !== 'dead')) {
     world.over = true; world.winner = 0; world.overT = 0; world.ko = true; world.koAt = { x: b.x, y: cy };
     world.slowT = 60; world.impact = 3;
-    if (!headless) music.ko();
     log(`${world.hunt.name}: hunt cleared.`, 0);
   }
 }

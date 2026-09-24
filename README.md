@@ -124,8 +124,9 @@ Fights are deterministic from a seed, so **Replay** runs the same fight again.
 Each fight plays a random track from five picked from the Wildfrost soundtrack
 (Spirit Call, Winter's Wrath, Tundra Heart, March of the Pengoons and Luminice
 Dance), never the same one twice in a row. The tracks are in `Music/` and listed in `MUSIC.tracks` in
-`index.html`. A track carries on into a rematch if it's still playing. A KO
-muffles it and fades it out through the slow motion, and it fades out on the
+`index.html`. A track carries on into a rematch if it's still playing. When your
+fighter is KO'd it muffles and fades out through the slow motion; beating the
+rival or clearing a hunt lets it play on, and it fades out on the
 build and rival screens. The speaker button in the header mutes it, and that
 choice is remembered. The soundtrack isn't ours, so swap it for something
 licensed before shipping the game publicly.
