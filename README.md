@@ -5,8 +5,8 @@ Stick-figure fighting games. The first one is **Home Turf**.
 ## Home Turf
 
 An autobattler prototype built for phones. Each player builds their half of a
-small arena and picks a weapon, a skill and an acrobatics level. Then two stick
-figures fight it out on their own.
+small arena and picks a weapon, a skill, a trinket and an acrobatics level.
+Then two stick figures fight it out on their own.
 
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
@@ -30,6 +30,30 @@ figures fight it out on their own.
   - **Parry:** a short guard that catches a swing, a shot or a hook. Shots
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
+- **Trinkets and statuses:** a trinket puts a status on the rival when a hit
+  lands, more often on heavier hits. Statuses change the fight, never how anyone
+  runs or jumps, and each one reads from a single mark on the figure plus a chip
+  under the HP bar:
+  - **Ember Charm, Burn:** damage every half second that no guard stops.
+    Small flames lick off the figure.
+  - **Viper Fang, Poison:** stacks up to six, each stack ticking, and wears off
+    one stack at a time. A green vein runs down the limbs.
+  - **Barbed Charm, Bleed:** every attack the bleeder starts costs it a cut of
+    that attack's damage. Ink drips on every swing.
+  - **Frost Bell, Chill:** each stack slows wind-ups. Three stacks freeze the
+    fighter in an ice box. The next hit shatters it for extra damage, and a
+    fighter who just thawed can't be chilled again for a moment.
+  - **Static Charm, Shock:** every hit taken lands harder per stack. Five stacks
+    discharge for a burst of damage and a short stun.
+- **Hunts:** the rival page also offers hunts against line-drawn creatures on
+  a hunting ground. They have simple brains instead of the route planner, and
+  their attacks go through the same hit code, so fighters dodge and parry them
+  like any swing. Swings aim low enough to reach something small on the floor.
+  - **Ink Slime:** a blob on springs that squashes, hops at you, and splits
+    into two small slimes when it pops. A big slime can't be knocked out of its
+    leap.
+  - **Paper Bats:** three folded-paper bats circle overhead and take turns to
+    dive, with a "!" before each dive. A frozen bat drops out of the air.
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
@@ -64,8 +88,8 @@ figures fight it out on their own.
   - one fighter wins it, where better acrobats win more often and may vault
     over the top;
   - both fighters are thrown apart.
-- **Rivals:** eight named rivals, each with its own half, weapon, skill and
-  acrobatics level. You
+- **Rivals:** eight named rivals, each with its own half, weapon, skill,
+  trinket and acrobatics level. You
   scout each one before the fight and can change your build to counter it.
   Your record against each rival is kept in this browser.
 - **Your half:** 10 points to spend on blocks (1) and pads (2). Columns 9 and
@@ -113,15 +137,16 @@ npm run sim
 ```
 
 This runs the default build against every rival, then 1,200 fights with random
-loadouts (random weapon, skill and acrobatics level). It prints the win rate
-for each weapon, each skill and each acrobatics level, and a
+loadouts (random weapon, skill, trinket and acrobatics level). It prints the
+win rate for each weapon, skill, trinket and acrobatics level, and a
 weapon-against-weapon table. Use `-- --fights 3000` for tighter numbers and
 `-- --seed 7` for a different sample. Set `CHROMIUM_PATH` to use an existing
 Chromium.
 
 In the browser console, `window.__homeTurf.fight(seed, blue, red)` runs one fight
 without rendering and returns the result and event log. A build looks like
-`{ weapon: 'spear', skill: 'hook', acro: 3, pieces: [] }`. Pass a fifth argument (for
+`{ weapon: 'spear', skill: 'hook', trinket: 'frost', acro: 3, pieces: [] }`. Pass a
+hunt name (`'slime'` or `'bats'`) instead of the red build to run a hunt. Pass a fifth argument (for
 example `60`) to sample both fighters' position and AI state every 60 frames.
 `__homeTurf.play(seed, blue, red)` starts a rendered fight and
 `__homeTurf.step(n)` advances it frame by frame.

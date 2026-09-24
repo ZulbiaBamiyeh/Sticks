@@ -115,9 +115,15 @@ Mobs use simple behaviours (hop, fly, patrol, dive), not the route planner.
 The main engineering cost is that fight code assumes exactly one opponent,
 so the fighter AI needs target choice before mobs can come in groups.
 
-## First prototype slice
+## First prototype slice (built)
 
-1. Burn, Chill and Bleed, applied through three passive trinkets.
-2. The ink slime as the first mob, fought one at a time.
-3. Check that both read cleanly in motion and that `npm run sim` stays in
-   the 45–55% band before adding more.
+1. Five passive trinkets carrying Burn, Poison, Bleed, Chill and Shock. In
+   random-loadout sims each trinket wins 50–56% against a different one, and
+   fighting without one wins 35%, so trinkets play like loot, the way skills do.
+2. Two hunts: the Ink Slime (splits in two) and the Paper Bats (three bats that
+   take turns to dive). Fighters pick the nearest creature as their target.
+3. The PvP numbers from `npm run sim` didn't move when hunts went in.
+
+Still to do: the AI's choices around statuses (pressing a frozen rival,
+avoiding exchanges while Sundered), Sunder itself, skill trinkets, and hunt
+difficulty tiers.

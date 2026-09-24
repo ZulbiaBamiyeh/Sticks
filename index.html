@@ -278,6 +278,8 @@
   .scout p { margin: 0; font-size: 14px; line-height: 1.35; }
   .bring { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
   .bring b { color: var(--blue); font-weight: 700; }
+  .hunts { display: grid; grid-template-columns: auto 1fr 1fr; align-items: center; gap: 8px; }
+  .hunts .ghost { min-height: 40px; }
   .panel.enter > * { animation: rise 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   .panel.enter > :nth-child(2) { animation-delay: 0.03s; }
   .panel.enter > :nth-child(3) { animation-delay: 0.06s; }
@@ -366,6 +368,7 @@
     <div class="bring"><span class="lbl">Acrobatics</span><span id="rvAcro"></span></div>
     <div class="bring"><span class="lbl">Trinket</span><span id="rvTr"></span></div>
     <div class="bring"><span class="lbl">You bring</span><b id="rvYou">Sword · Blink</b></div>
+    <div class="hunts"><span class="lbl">Or hunt</span><button class="ghost" data-hunt="slime">Ink Slime</button><button class="ghost" data-hunt="bats">Paper Bats</button></div>
     <div class="actions">
       <button class="ghost" id="rvEdit">Edit build</button>
       <button class="go" id="rvFight">Fight</button>
@@ -797,6 +800,10 @@ const ATK = {
   athrow2: { w: 4, a: 1, r: 10, shot: 'star', air: 1, back: 1, cd: 14 },
   plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
   aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
+  // creatures: an ink slime's leap and a paper bat's dive
+  hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
+  hop1: { w: 14, a: 40, r: 12, dmg: 8, kb: [4, -5], stun: 16, hs: 3, box: [-0.38, -0.62, 0.38, 0.05], melee: 1, mob: 1 },
+  dive: { w: 24, a: 30, r: 22, dmg: 10, kb: [4, -3], stun: 16, hs: 3, box: [-0.34, -0.46, 0.34, 0.06], melee: 1, air: 1, mob: 1 },
   dash: { w: 7, a: 6, r: 18, dmg: 9, kb: [7, -5], stun: 22, hs: 6, box: [0.1, -1.5, 1.45, -0.15], lunge: 12.5, melee: 1, trail: 1 },
 };
 
@@ -918,7 +925,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null) {
   return u;
 }
 
-function hurtbox(u) { const b = u.b; return [b.x - W / 2, b.y - H, b.x + W / 2, b.y]; }
+function hurtbox(u, m = 0) { const b = u.b, hw = (u.bw || W) / 2 + m, h = u.bh || H; return [b.x - hw, b.y - h - m, b.x + hw, b.y]; }
 function worldBox(x, y, f, box) { return f > 0 ? [x + box[0], y + box[1], x + box[2], y + box[3]] : [x - box[2], y + box[1], x - box[0], y + box[3]]; }
 function overlap(a, b, m = 0) { return a[0] < b[2] + m && a[2] > b[0] - m && a[1] < b[3] + m && a[3] > b[1] - m; }
 function inBox(ax, ay, f, box, tx, ty, m) { return overlap(worldBox(ax, ay, f, box), [tx - W / 2, ty - H, tx + W / 2, ty], m); }
@@ -929,7 +936,7 @@ function lineClear(x0, y0, x1, y1) {
 }
 const knownHit = (u, r) => !!(r.spikes && r.spikes.some((s) => u.known.has(s)));
 const inZone = (x) => x < world.zone || x > COLS - world.zone;
-const isRanged = (u) => !!WEAP[u.w].range;
+const isRanged = (u) => !!(WEAP[u.w] && WEAP[u.w].range);
 const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 function startAtk(u, name) {
@@ -978,10 +985,22 @@ function perceive(u) {
   return g;
 }
 const targetOf = (u) => (world.demo ? null : perceive(u));
-const foe = (u) => (world.demo ? null : U[1 - u.side]);
+const foe = (u) => {
+  if (world.demo) return null;
+  if (!world.hunt) return U[1 - u.side];
+  if (u.side) return U[0];
+  let best = u.tgt && u.tgt.state !== 'dead' ? u.tgt : null, bd = best ? Math.hypot(best.b.x - u.b.x, best.b.y - u.b.y) - 1.5 : 1e9;
+  for (const e of U) {
+    if (!e.side || e.state === 'dead' || e === best) continue;
+    const d = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y);
+    if (d < bd) { bd = d; best = e; }
+  }
+  return (u.tgt = best || U[U.length - 1]);
+};
 
 // ---------------------------------------------------------------- AI
 function think(u) {
+  if (u.mob) { mobThink(u); return; }
   const e = perceive(u), b = u.b, ai = u.ai, inp = u.in;
   inp.dir = 0; inp.press = false; inp.hold = false;
   if (world.intro > 0 || world.over) return;
@@ -1596,7 +1615,7 @@ const facingPoint = (u, x) => Math.abs(x - u.b.x) < 0.25 || Math.sign(x - u.b.x)
 
 // ---- Blink
 function aiBlink(u, e, air) {
-  const ranged = isRanged(u), eRanged = !!WEAP[e.w].range, b = u.b;
+  const ranged = isRanged(u), eRanged = isRanged(e), b = u.b;
   const t = meleeThreat(u, e);
   if (t >= 1 && t <= 9 && u.skTried !== e.atkId) {
     u.skTried = e.atkId;
@@ -1729,7 +1748,7 @@ function aiDarkSight(u, e) {
   if (e.ghost || lying(e)) return false;
   const t = meleeThreat(u, e), st = shotThreat(u, 10);
   if (((t >= 1 && t <= 6) || (st >= 1 && st <= 6)) && rng() < 0.35) return startSkill(u, 'cast');
-  const dist = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y), eRanged = !!WEAP[e.w].range;
+  const dist = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y), eRanged = isRanged(e);
   if (!isRanged(u)) return eRanged && dist > 3 && dist < 8 && shotThreat(u, 24) < 0 && startSkill(u, 'cast');   // close in on a shooter unseen
   return !eRanged && dist < 2.4 && startSkill(u, 'cast');   // lose a blade that got too close
 }
@@ -1776,7 +1795,7 @@ function stepHook(u) {
       if (solidAt(Math.floor(h.x), Math.floor(h.y))) { h.phase = 'back'; sparks(h.x, h.y, -Math.sign(h.vx), 5, 'spark'); break; }
       if (h.dist > HOOK.range) { h.phase = 'back'; break; }
       if (!e || e.state === 'dead' || lying(e) || e.iT > 0) continue;
-      if (h.x > e.b.x - W / 2 - 0.08 && h.x < e.b.x + W / 2 + 0.08 && h.y > e.b.y - H && h.y < e.b.y) {
+      if (overlap(hurtbox(e, 0.08), [h.x, h.y, h.x, h.y])) {
         if (parrying(e) && facingPoint(e, h.x)) { h.phase = 'back'; parrySuccess(e, null, h.x, h.y, 'hook'); break; }
         latch(u, e, h);
       }
@@ -1832,7 +1851,7 @@ function aimAt(u, e) {
   const kind = ATK[WEAP[u.w].atk].shot, K = SHOT[kind];
   const f = e ? Math.sign(e.b.x - u.b.x) || u.face : u.face, o = shotOrigin(u, f, kind);
   if (!e) return solveArc(o.x, o.y, o.x + f * 5, o.y - 0.3, false, K);
-  const tx0 = e.b.x, ty0 = e.b.y - 0.85, t = Math.hypot(tx0 - o.x, ty0 - o.y) / K.v;
+  const tx0 = e.b.x, ty0 = e.b.y - (e.bh ? e.bh * 0.55 : 0.85), t = Math.hypot(tx0 - o.x, ty0 - o.y) / K.v;
   const tx = tx0 + e.b.vx * t * 0.55, ty = ty0 + Math.min(0, e.b.vy) * t * 0.2;
   for (const hi of (kind === 'arrow' ? [false, true] : [false])) {
     const v = solveArc(o.x, o.y, tx, ty, hi, K);
@@ -1890,7 +1909,7 @@ const DUEL_EXTRA = {
   shove: { w: { lean: -0.1, ffx: -0.05, ffy: 0.4, fx: 0.2, fy: 0.1, wa: -1.2 }, a: { lean: -0.3, ffx: 0.75, ffy: 0.15, fx: 0.15, fy: 0.05, wa: -1.3 } },
 };
 const jitter = (o, k) => { const r = {}; for (const key in o) r[key] = o[key] + (key === 'wa' || key === 'wb' ? (vr() - 0.5) * 0.5 : (vr() - 0.5) * 0.1) * k; return r; };
-const isBlade = (u) => !isRanged(u);
+const isBlade = (u) => !!WEAP[u.w] && !isRanged(u);
 function canDuel(a, b) {
   return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) &&
     Math.abs(a.b.y - b.b.y) < 0.9 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
@@ -2113,11 +2132,12 @@ function hurt(u, d, src, by, c) {
   if (u.hp <= 0) kill(u);
 }
 function kill(u) {
+  if (u.mob) { mobDie(u); return; }
   u.state = 'dead';
   u.b.vx *= 1.3; u.b.vy = Math.min(u.b.vy, 0) - 4;
   u.rag = makeRag(u); u.hidden = 0; u.skName = null;
   if (world.duel) endDuel();
-  world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true;
+  world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true; world.koAt = null;
   if (!headless) music.ko();
   world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11);
   log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
@@ -2155,7 +2175,7 @@ function applyHit(att, def, d, dirX, crit) {
   }
   att.hitLanded = true;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
-  const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
+  const armor = (def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5) || (def.mob === 'slime' && def.size > 1 && def.state === 'atk');   // a big slime can't be knocked out of its leap
   const s = def.st, shattered = s.frozen > 0;
   if (shattered) shatter(def);
   if (!armor) {
@@ -2256,12 +2276,12 @@ function statusStep(u) {
   if (s.burn > 0) {
     s.burn--;
     if (half) hurt(u, STATUS.burn.tick, 'status', s.by, 'burn');
-    if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - H * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
+    if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - (u.bh || H) * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
   }
   if (s.poison > 0) {
     if (half) hurt(u, STATUS.poison.tick * s.poison, 'status', s.by, 'poison');
     if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
-    if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - H * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
+    if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - (u.bh || H) * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
   }
   if (s.bleed > 0) s.bleed--;
   if (s.chill > 0 && --s.chillT <= 0) s.chill = 0;
@@ -2269,6 +2289,221 @@ function statusStep(u) {
   if (s.thaw > 0) s.thaw--;
   if (s.shock > 0 && --s.shockT <= 0) s.shock = 0;
   if (u.zap > 0) u.zap--;
+}
+// ---------------------------------------------------------------- creatures (hunts)
+// Line-drawn creatures with small brains: no route planner, just hopping, flying and diving.
+// Their attacks live in ATK, so fighters read, dodge, parry and get hit by them like any other swing.
+const MOB = {
+  slime: { name: 'Ink Slime', hp: [0, 24, 46], bw: [0, 0.62, 0.96], bh: [0, 0.5, 0.8], hop: [0, 5.6, 4.8] },
+  bat: { name: 'Paper Bat', hp: 20, bw: 0.62, bh: 0.52 },
+};
+const HUNTS = {
+  slime: { name: 'Ink Slime', max: 46 + 2 * 24, tip: 'Hops at you, and splits in two when it pops.',
+    spawn: () => [makeMob('slime', 15.5, 2)] },
+  bats: { name: 'Paper Bats', max: 3 * 20, tip: 'Three bats circle overhead and take turns diving at you.',
+    spawn: () => [makeMob('bat', 14.5, 1, 0), makeMob('bat', 16, 1, 1), makeMob('bat', 17.5, 1, 2)] },
+};
+const HUNT_KEYS = Object.keys(HUNTS);
+function makeMob(kind, x, size = 1, slot = 0) {
+  const M = MOB[kind], big = kind === 'slime';
+  const hp = big ? M.hp[size] : M.hp, bw = big ? M.bw[size] : M.bw, bh = big ? M.bh[size] : M.bh;
+  const y = big ? SPAWN_R + 1 : 5 + slot * 0.4;
+  return {
+    mob: kind, name: M.name, size, slot, side: 1, w: 'mob', skill: null, trinket: null, acro: 0, hp, hpShow: hp, bw, bh,
+    b: { x, y, vx: 0, vy: 0, gr: big, speed: 0 },
+    face: -1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0, hitDone: false, hitLanded: false,
+    stunT: 0, juggle: 0, guardT: 0, react: 30 + Math.floor(rng() * 30), cd: 40 + Math.floor(rng() * 50), iT: 0, flash: 0, tumble: false, spin: 0, rot: 0,
+    st: { by: -1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0, zap: 0,
+    hidden: 0, fade: 0, hook: null, ghosts: [], trail: [], skName: null, in: { dir: 0, press: false, hold: false },
+    ai: { path: [], macro: null, blocked: new Set() }, known: new Set(), t: Math.floor(rng() * 200), squash: 0, sqV: 0, hopT: 20,
+  };
+}
+// Gravity and tile collisions for a creature's own box. Bats fly, unless they're frozen.
+function mobPhys(u) {
+  const b = u.b, hw = u.bw / 2, h = u.bh, fly = u.mob === 'bat' && !u.st.frozen;
+  let ev = 0;
+  if (!fly) {
+    b.vy = Math.min(b.vy + P.g * DT, P.maxFall);
+    if (b.gr && u.state !== 'atk') b.vx = approach(b.vx, 0, P.fric * 0.7 * DT);
+  }
+  const dx = b.vx * DT;
+  b.x += dx;
+  if (dx !== 0 && boxSolid(b.x - hw, b.y - h, b.x + hw, b.y)) {
+    if (dx > 0) b.x = Math.floor(b.x + hw - 1e-6) - hw - 1e-4; else b.x = Math.floor(b.x - hw) + 1 + hw + 1e-4;
+    b.vx = fly ? -b.vx * 0.4 : 0; ev |= EV_WALL;
+  }
+  const dy = b.vy * DT, wasGr = b.gr;
+  b.y += dy; b.gr = false;
+  if (boxSolid(b.x - hw, b.y - h, b.x + hw, b.y)) {
+    if (dy > 0) { b.y = Math.floor(b.y - 1e-6); b.landV = b.vy; b.vy = fly ? -b.vy * 0.3 : 0; b.gr = !fly; if (!wasGr) ev |= EV_LAND; }
+    else { b.y = Math.floor(b.y - h) + 1 + h + 1e-4; b.vy = fly ? -b.vy * 0.3 : 0; ev |= EV_WALL; }
+  }
+  return ev;
+}
+function startMobAtk(u, name) {
+  u.state = 'atk'; u.atkName = name; u.atkDef = ATK[name]; u.af = 0; u.phase = 'w'; u.hitDone = false; u.hitLanded = false; u.atkId = ++world.atkSeq;
+  if (name === 'dive') popText(u.b.x, u.b.y - u.bh - 0.2, '!', 'red', 0.55);   // a tell before every dive
+  bleedOnAttack(u, name);
+}
+function mobThink(u) {
+  if (u.state !== 'free' || world.intro > 0 || world.over) return;
+  const e = U[0], b = u.b;
+  if (u.react > 0) u.react--;
+  // a hidden fighter is hunted where it was last seen
+  const tx = e.hidden ? (u.lastX ?? e.b.x) : e.b.x, ty = e.b.y;
+  if (!e.hidden) u.lastX = e.b.x;
+  const dx = tx - b.x, dy = ty - b.y;
+  if (u.mob === 'slime') {
+    if (!b.gr) return;
+    u.face = Math.sign(dx) || u.face;
+    if (u.cd <= 0 && u.react <= 0 && !e.hidden && Math.abs(dx) < 3 && dy > -2 && dy < 1.5 && e.state !== 'dead') { startMobAtk(u, u.size > 1 ? 'hop2' : 'hop1'); return; }
+    if (--u.hopT <= 0 && Math.abs(dx) > 1.2) {
+      // travel hops: short and bouncy, higher when there's a step in the way
+      const dir = Math.sign(dx), wall = boxSolid(b.x + dir * (u.bw / 2 + 0.3) - 0.05, b.y - 0.9, b.x + dir * (u.bw / 2 + 0.3) + 0.05, b.y - 0.1);
+      b.vx = dir * MOB.slime.hop[u.size]; b.vy = wall ? -17 : -8.5; b.gr = false; u.squash = -0.35;
+      u.hopT = 18 + Math.floor(rng() * 16);
+    }
+  } else {
+    const diving = U.some((o) => o.mob === 'bat' && o !== u && o.state === 'atk');
+    if (u.cd <= 0 && u.react <= 0 && !diving && !e.hidden && e.state !== 'dead' && Math.abs(dx) < 4.5 && rng() < 0.04) {
+      startMobAtk(u, 'dive'); u.face = Math.sign(dx) || u.face; return;
+    }
+    // circle overhead: each bat keeps its own station above the fighter, bobbing
+    u.t++;
+    const hx = Math.max(1.5, Math.min(COLS - 1.5, tx + (u.slot - 1) * 1.7 + Math.sin(u.t * 0.03 + u.slot * 2) * 0.9));
+    const hy = Math.max(1.4, ty - 3.1 + Math.sin(u.t * 0.08 + u.slot) * 0.35);
+    b.vx = approach(b.vx, Math.max(-6, Math.min(6, (hx - b.x) * 2.4)), 22 * DT);
+    b.vy = approach(b.vy, Math.max(-6, Math.min(6, (hy - b.y) * 2.4)), 22 * DT);
+    u.face = Math.abs(b.vx) > 0.3 ? Math.sign(b.vx) : u.face;
+  }
+}
+function mobAtkStep(u, ev) {
+  const d = u.atkDef, b = u.b, e = U[0];
+  if (u.st.chill && u.phase === 'w') {
+    u.slowAcc += STATUS.chill.slow * u.st.chill;
+    if (u.slowAcc >= 1) { u.slowAcc -= 1; return; }
+  }
+  u.af++;
+  if (u.mob === 'slime') {
+    if (u.phase === 'w') u.squash = -0.42 * Math.min(1, u.af / d.w);
+    if (u.af === d.w) {
+      u.phase = 'a';
+      const dx = e.b.x - b.x;
+      b.vx = Math.max(-7.5, Math.min(7.5, dx * 2.3)); b.vy = -11; b.gr = false; u.squash = 0.3; u.face = Math.sign(dx) || u.face;
+    }
+    if (u.phase === 'a' && ((ev & EV_LAND) || u.af >= d.w + d.a)) {
+      u.phase = 'r'; u.af = Math.max(u.af, d.w + d.a); u.squash = -0.5; dust(b.x, b.y, 6, u.bw); sfxShake(u.size > 1 ? 3 : 1);
+    }
+  } else {
+    if (u.phase === 'w') {   // rear back and shiver before the dive
+      b.vx = approach(b.vx, -u.face * 1.2, 20 * DT); b.vy = approach(b.vy, -1.6, 20 * DT);
+      if (u.af === d.w) {
+        u.phase = 'a';
+        const dx = e.b.x - b.x, dy = (e.b.y - 0.55) - (b.y - u.bh / 2), l = Math.hypot(dx, dy) || 1;
+        b.vx = dx / l * 14; b.vy = dy / l * 14; u.face = Math.sign(dx) || u.face;
+        streak(b.x, b.y - u.bh / 2, Math.atan2(dy, dx), 0.9, 'spark');
+      }
+    } else if (u.phase === 'a') {
+      if ((ev & (EV_WALL | EV_LAND)) || u.af >= d.w + d.a || u.hitDone) { u.phase = 'r'; u.af = Math.max(u.af, d.w + d.a); }
+    } else { b.vx = approach(b.vx, 0, 14 * DT); b.vy = approach(b.vy, -3.5, 14 * DT); }
+  }
+  if (u.phase === 'r' && u.af >= d.w + d.a + d.r) {
+    u.state = 'free'; u.phase = null;
+    u.cd = (u.mob === 'slime' ? 30 : 70) + Math.floor(rng() * 40); u.react = 6;
+  }
+}
+function mobAct(u) {
+  if (u.state === 'dead') return;
+  const b = u.b;
+  if (u.iT > 0) u.iT--;
+  if (u.flash > 0) u.flash--;
+  if (u.cd > 0) u.cd--;
+  statusStep(u);
+  if (u.state === 'dead') return;
+  if (u.state === 'stun') {
+    // knocked about: bats flutter back to height when it wears off
+    if (u.mob === 'bat' && !u.st.frozen) { b.vx = approach(b.vx, 0, 16 * DT); b.vy = approach(b.vy, 0, 16 * DT); }
+    if (--u.stunT <= 0 && !u.st.frozen) { u.state = 'free'; u.tumble = false; u.react = 10; u.juggle = 0; }
+  }
+  const pre = b.vy, ev = mobPhys(u);
+  if (u.state === 'atk') mobAtkStep(u, ev);
+  if (ev & EV_LAND) { u.squash = -Math.min(0.5, pre / 30); if (pre > 9) dust(b.x, b.y, 3, u.bw); }
+  u.sqV = u.sqV * 0.72 + (-u.squash) * 0.22; u.squash += u.sqV;
+  if (u.state === 'free' && u.mob === 'slime' && !b.gr) u.squash = approach(u.squash, 0.18, 0.04);
+  if (inZone(b.x)) hurt(u, 0.3, 'zone', 0);
+}
+// A popped creature bursts into ink. A big slime splits into two small ones first.
+function mobDie(u) {
+  u.state = 'dead'; u.hook = null;
+  const b = u.b, cy = b.y - u.bh / 2;
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * 6.283, sp = 3 + Math.random() * 7;
+    parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.2, y: cy + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 50 + Math.random() * 30, c: u.mob === 'bat' ? 'far' : 'ink' });
+  }
+  if (u.mob === 'bat') for (let i = 0; i < 6; i++) parts.push({ k: 'q', x: b.x, y: cy, vx: (Math.random() - 0.5) * 9, vy: -Math.random() * 6, s: 0.12 + Math.random() * 0.1, c: 'steel', life: 0, max: 30 + Math.random() * 20 });
+  ring(b.x, cy, 1, 'spark'); sfxShake(4); world.hs = Math.max(world.hs, 5);
+  if (u.mob === 'slime' && u.size > 1) {
+    for (const s of [-1, 1]) {
+      const k = makeMob('slime', b.x + s * 0.25, u.size - 1);
+      k.b.y = b.y; k.b.vx = s * 4.5; k.b.vy = -8; k.b.gr = false; k.iT = 24; k.react = 30; k.cd = 50; k.face = s; k.squash = 0.4;
+      U.push(k);
+    }
+    if (!world.stats[0].split++) log('The ink slime burst and split in two.', 0);
+  }
+  if (!U.some((o) => o.side === 1 && o.state !== 'dead')) {
+    world.over = true; world.winner = 0; world.overT = 0; world.ko = true; world.koAt = { x: b.x, y: cy };
+    world.slowT = 60; world.impact = 3;
+    if (!headless) music.ko();
+    log(`${world.hunt.name}: hunt cleared.`, 0);
+  }
+}
+function drawMob(u, pal) {
+  const b = u.b, flash = u.flash > 0 && u.flash % 2 === 0, ink = flash ? pal.red : pal.ink;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (u.mob === 'slime') {
+    // one closed curve on a spring: squashes on the wind-up, stretches in the air, wobbles as it goes
+    const q = Math.max(-0.5, Math.min(0.45, u.squash)), h = u.bh * (1 + q), w = u.bw * (1 - q * 0.75), cx = b.x, base = b.y, cy = base - h / 2;
+    const t = world.t, pts = [];
+    for (let i = 0; i < 24; i++) {
+      const a = i / 24 * 6.283, wob = 1 + 0.045 * Math.sin(3 * a + t * 0.18 + u.size);
+      let x = cx + Math.cos(a) * w / 2 * wob, y = cy + Math.sin(a) * h / 2 * wob;
+      if (Math.sin(a) > 0) y = Math.min(y, base);   // flat underside
+      if (Math.sin(a) < 0) y += Math.sin(a) * Math.abs(Math.cos(a)) * h * -0.12;   // a slightly domed top
+      pts.push({ x, y });
+    }
+    ctx.fillStyle = ink; ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], n = pts[(i + 1) % pts.length];
+      if (!i) ctx.moveTo((p.x + pts[pts.length - 1].x) / 2, (p.y + pts[pts.length - 1].y) / 2);
+      ctx.quadraticCurveTo(p.x, p.y, (p.x + n.x) / 2, (p.y + n.y) / 2);
+    }
+    ctx.closePath(); ctx.fill();
+    // a shine and two eyes, looking where it's going
+    ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.035;
+    ctx.beginPath(); ctx.arc(cx - w * 0.14, cy - h * 0.02, Math.min(w, h) * 0.3, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
+    const ex = cx + u.face * w * 0.14, ey = cy - h * 0.06, blink = (world.t + u.size * 37) % 140 < 5;
+    ctx.lineWidth = 0.05;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(ex + s * w * 0.1, ey - (blink ? 0 : 0.05)); ctx.lineTo(ex + s * w * 0.1, ey + 0.04); ctx.stroke(); }
+    if (u.st.poison > 0) { ctx.globalAlpha = 0.5 + 0.08 * u.st.poison; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(cx, cy + h * 0.05, w * 0.32, h * 0.28, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+  } else {
+    // a folded-paper bat: an ink body and two paper wings that flap, and fold back on the dive
+    const cy = b.y - u.bh / 2, diving = u.state === 'atk' && u.phase === 'a', t = world.t + u.slot * 11;
+    ctx.save(); ctx.translate(b.x, cy); ctx.scale(1.25, 1.25); ctx.translate(-b.x, -cy);
+    const f = u.st.frozen ? 0.2 : diving ? -0.9 : Math.sin(t * (u.state === 'atk' ? 0.9 : 0.42));
+    for (const s of [-1, 1]) {
+      const sh = { x: b.x + s * 0.07, y: cy - 0.02 }, el = { x: b.x + s * 0.24, y: cy - 0.12 - f * 0.14 }, tip = { x: b.x + s * (diving ? 0.3 : 0.44), y: cy + f * 0.2 - 0.04 }, tr = { x: b.x + s * 0.2, y: cy + 0.1 };
+      ctx.fillStyle = flash ? pal.red : pal.steel; ctx.strokeStyle = ink; ctx.lineWidth = 0.04;
+      ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(el.x, el.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(tr.x, tr.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = pal.far; ctx.lineWidth = 0.02; ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(tip.x, tip.y); ctx.stroke();   // the fold
+    }
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(b.x, cy, 0.1, 0.13, 0, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(b.x - 0.08, cy - 0.08); ctx.lineTo(b.x - 0.05, cy - 0.21); ctx.lineTo(b.x - 0.01, cy - 0.1); ctx.moveTo(b.x + 0.08, cy - 0.08); ctx.lineTo(b.x + 0.05, cy - 0.21); ctx.lineTo(b.x + 0.01, cy - 0.1); ctx.fill();
+    ctx.fillStyle = pal.steel;
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(b.x + u.face * 0.03 + s * 0.035, cy - 0.03, 0.018, 0, 6.283); ctx.fill(); }
+    ctx.restore();
+    if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.ellipse(b.x, cy, 0.06, 0.08, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+  }
+  drawMarks(u, null, pal);
 }
 function spikeHit(u, i) {
   const owner = A.spikes[i], c = i % COLS, b = u.b;
@@ -2329,6 +2564,7 @@ function atkStep(u) {
 
 function act(u) {
   const b = u.b;
+  if (u.mob) { mobAct(u); return; }
   if (u.state === 'dead') return;
   if (u.iT > 0) u.iT--;
   if (u.cd > 0) u.cd--;
@@ -2447,7 +2683,7 @@ function resolveHits() {
     if (u.state !== 'atk' || u.phase !== 'a' || u.hitDone) continue;
     const d = u.atkDef;
     if (!d.box) continue;
-    const e = U[1 - u.side], hb = worldBox(u.b.x, u.b.y, u.face, d.box);
+    const hb = worldBox(u.b.x, u.b.y, u.face, d.box);
     if (d.melee) {
       for (const a of shots) {
         if (a.owner === u.side || a.stuck || a.dead) continue;
@@ -2461,8 +2697,13 @@ function resolveHits() {
         }
       }
     }
-    if (e.state === 'dead') continue;
-    if (overlap(hb, hurtbox(e))) { u.hitDone = true; applyHit(u, e, d, u.face); }
+    for (const e of U) {
+      // against something small on the floor, a swing is aimed low enough to reach it
+      const box = e.mob && hb[3] < e.b.y && hb[3] > e.b.y - 1.2 ? [hb[0], hb[1], hb[2], e.b.y] : hb;
+      if (e.side === u.side || e.state === 'dead' || !overlap(box, hurtbox(e))) continue;
+      u.hitDone = true; applyHit(u, e, d, u.face);
+      if (u.state !== 'atk') break;
+    }
   }
 }
 
@@ -2479,9 +2720,9 @@ function stepShots() {
         sparks(a.x, a.y, -Math.sign(a.vx), 3, 'ink');
         break;
       }
-      const t = world.demo ? null : U[1 - a.owner];
-      if (!t || t.state === 'dead' || t.iT > 0 || lying(t)) continue;
-      if (a.x > t.b.x - W / 2 - 0.06 && a.x < t.b.x + W / 2 + 0.06 && a.y > t.b.y - H - 0.05 && a.y < t.b.y) {
+      if (world.demo) continue;
+      const t = U.find((x) => x.side !== a.owner && x.state !== 'dead' && !(x.iT > 0) && !lying(x) && overlap(hurtbox(x, 0.06), [a.x, a.y, a.x, a.y]));
+      if (t) {
         if (parrying(t) && facingPoint(t, a.x)) {
           // Parried shots go back where they came from.
           a.owner = t.side; a.vx = -a.vx * 1.15; a.vy = -Math.abs(a.vy) * 0.4 - 2; a.rolled = [1, 1]; a.crit = false;
@@ -2748,7 +2989,7 @@ function newWorld(seed) {
   return {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -2771,6 +3012,7 @@ function simStep() {
   stepShots();
   for (const u of U) stepHook(u);
   for (const u of U) {
+    if (u.mob) continue;
     if (u.state === 'dead') { ragStep(u.rag); continue; }
     poseStep(u); fxStep(u);
     const S = skel(u);
@@ -2785,7 +3027,7 @@ function simStep() {
   } else if (w.t >= TIME_CAP * 60) {
     w.over = true; w.ko = false; w.overT = 0;
     if (!headless) music.ko();
-    w.winner = U[0].hp === U[1].hp ? -1 : U[0].hp > U[1].hp ? 0 : 1;
+    w.winner = w.hunt ? 1 : U[0].hp === U[1].hp ? -1 : U[0].hp > U[1].hp ? 0 : 1;
     log('Time.', -1);
   }
   for (const u of U) { if (u.hpShow > u.hp) u.hpShow = Math.max(u.hp, u.hpShow - (w.t % 2 ? 0.6 : 0)); }
@@ -2817,8 +3059,8 @@ const RIVALS = [
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
-let rivalIx = 0;
-const rivalName = () => (builds[1] && builds[1].name) || 'The rival';
+let rivalIx = 0, huntKind = null;
+const rivalName = () => (world && world.hunt ? world.hunt.name : (builds[1] && builds[1].name) || 'The rival');
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
   const r = RIVALS[rivalIx];
@@ -2845,10 +3087,11 @@ function camTarget() {
     const vw = CW / z;
     return { z, x: vw >= COLS ? COLS / 2 : mode === 'build' ? vw / 2 : COLS - vw / 2, y: ROWS / 2 };
   }
-  const pts = U.map((u) => (u.state === 'dead' ? u.rag.P[2] : { x: u.b.x, y: u.b.y - 0.8 }));
+  const pts = U.filter((u) => !(u.mob && u.state === 'dead')).map((u) => (u.state === 'dead' ? u.rag.P[2] : { x: u.b.x, y: u.b.y - 0.8 }));
+  if (!pts.length) pts.push({ x: U[0].b.x, y: U[0].b.y - 0.8 });
   let x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
   let y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
-  if (world.ko && world.slowT > 0) { const l = U.find((u) => u.state === 'dead').rag.P[2]; x0 = x1 = l.x; y0 = y1 = l.y; }
+  if (world.ko && world.slowT > 0) { const d = U.find((u) => u.state === 'dead' && u.rag), l = world.koAt || (d && d.rag.P[2]); if (l) { x0 = x1 = l.x; y0 = y1 = l.y; } }
   const zFit = Math.min(CW / COLS, CH / ROWS), zMax = Math.min(CW / 6.5, CH / 5.5) * (world.duel ? 1.2 : 1);
   let z = world.duel ? Math.min(CW / (x1 - x0 + 4), CH / (y1 - y0 + 4)) : Math.min(CW / (x1 - x0 + 6), CH / (y1 - y0 + 5));
   z = Math.max(zFit, Math.min(zMax, z));
@@ -3034,6 +3277,7 @@ function drawArrowShape(x0, y0, x1, y1, pal, side, ink) {
   stroke([{ x: x0 + ux * 0.02, y: y0 + uy * 0.02 }, { x: x0 + ux * 0.16, y: y0 + uy * 0.16 }], pal[TEAM[side]], 0.08);
 }
 function drawTrail(u, pal) {
+  if (u.mob) return;
   const t = u.trail;
   if (t.length < 2) return;
   const c = pal[TEAM[u.side]];
@@ -3134,6 +3378,7 @@ function screenText(txt, x, y, size, fill, strokeC, align = 'center', alpha = 1)
 let flashCell = null;
 const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue('--display');
 function drawUnit(u, pal) {
+  if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
   if (u.state === 'dead') { drawFig(ragSkel(u.rag), u.side, pal, false); return; }
   const S = skel(u); S.scarf = u.scarf;
   for (const g of u.ghosts) {
@@ -3153,19 +3398,19 @@ function drawUnit(u, pal) {
 // One mark per status: a green vein for Poison, frost ticks for Chill, an ice box when frozen, a crackle for Shock.
 function drawMarks(u, S, pal) {
   const s = u.st, b = u.b;
-  if (s.poison > 0) {   // a green vein down the middle of each near limb, stronger with each stack
+  if (s.poison > 0 && S) {   // a green vein down the middle of each near limb, stronger with each stack
     ctx.globalAlpha = 0.45 + 0.09 * s.poison; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const pts of [[S.hip, S.neck], [S.hip, S.kf, S.ff], [S.sh, S.ef, S.hf]]) stroke(pts, pal.poison, 0.034);
     ctx.globalAlpha = 1;
   }
-  if (s.chill > 0 && !s.frozen) {
+  if (s.chill > 0 && !s.frozen && S) {
     ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.04; ctx.lineCap = 'round';
     for (const [p, n] of [[S.hf, s.chill], [S.hb, s.chill - 1], [S.ff, s.chill], [S.bf, s.chill - 1]]) {
       for (let i = 0; i < n; i++) { const a = i * 1.9 + 0.4; ctx.beginPath(); ctx.moveTo(p.x + Math.cos(a) * 0.05, p.y + Math.sin(a) * 0.05); ctx.lineTo(p.x + Math.cos(a) * 0.15, p.y + Math.sin(a) * 0.15); ctx.stroke(); }
     }
   }
   if (s.frozen > 0) {
-    const x0 = b.x - W / 2 - 0.12, y0 = b.y - H - 0.22, w = W + 0.24, h = H + 0.22, k = Math.min(1, s.frozen / 8);
+    const hb = hurtbox(u), x0 = hb[0] - 0.12, y0 = hb[1] - 0.22, w = hb[2] - hb[0] + 0.24, h = hb[3] - hb[1] + 0.22, k = Math.min(1, s.frozen / 8);
     ctx.globalAlpha = k; ctx.fillStyle = pal.ice; ctx.fillRect(x0, y0, w, h);
     ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.045; ctx.strokeRect(x0, y0, w, h);
     ctx.lineWidth = 0.03; ctx.beginPath(); ctx.moveTo(x0 + w * 0.2, y0 + 0.12); ctx.lineTo(x0 + w * 0.55, y0 + 0.12 + w * 0.35); ctx.moveTo(x0 + w * 0.45, y0 + 0.12); ctx.lineTo(x0 + w * 0.62, y0 + 0.12 + w * 0.17); ctx.stroke();
@@ -3176,7 +3421,7 @@ function drawMarks(u, S, pal) {
     ctx.strokeStyle = pal.shock; ctx.lineWidth = u.zap > 0 ? 0.05 : 0.03; ctx.lineJoin = 'round';
     for (let i = 0; i < n; i++) {
       if (!u.zap && Math.random() < 0.55) continue;
-      const a = Math.random() * 6.283, cx = b.x + Math.cos(a) * 0.4, cy = b.y - H * 0.55 + Math.sin(a) * 0.65;
+      const bh = u.bh || H, a = Math.random() * 6.283, cx = b.x + Math.cos(a) * Math.max(0.3, (u.bw || 0.8) / 2), cy = b.y - bh * 0.55 + Math.sin(a) * bh * 0.45;
       ctx.beginPath(); ctx.moveTo(cx, cy);
       for (let j = 1; j <= 3; j++) ctx.lineTo(cx + Math.cos(a) * 0.09 * j + (j % 2 ? 0.07 : -0.07), cy + Math.sin(a) * 0.09 * j);
       ctx.stroke();
@@ -3241,7 +3486,7 @@ function render() {
     const a = Math.min(1, (240 - world.t) / 60);
     const s1 = toScreen(5, 1.7), s2 = toScreen(15, 1.7);
     screenText('YOUR HALF', s1.x, s1.y, lblSize, pal.label, null, 'center', a);
-    screenText(`${rivalName().toUpperCase()}'S HALF`, s2.x, s2.y, lblSize, pal.label, null, 'center', a);
+    screenText(world && world.hunt ? 'HUNTING GROUND' : `${rivalName().toUpperCase()}'S HALF`, s2.x, s2.y, lblSize, pal.label, null, 'center', a);
   }
   if (mode === 'fight') {
     if (world.intro > 0) {
@@ -3340,7 +3585,7 @@ const ui = {
   sk: [$('#skB'), $('#skR')], st: [$('#stB'), $('#stR')],
   toast: $('#toast'), result: $('#result'), resK: $('#resKicker'), resT: $('#resTitle'), resS: $('#resStats'),
   buildPanel: $('#buildPanel'), fightPanel: $('#fightPanel'), rivalPanel: $('#rivalPanel'), ticker: $('#ticker'), budget: $('#budget'),
-  live: $('#liveActions'), end: $('#endActions'), speed: $('#speedBtn'), seed: $('#seedLbl'), hint: $('#loadHint'), fight: $('#fightBtn'),
+  live: $('#liveActions'), end: $('#endActions'), next: $('#nextBtn'), speed: $('#speedBtn'), seed: $('#seedLbl'), hint: $('#loadHint'), fight: $('#fightBtn'),
 };
 const SKILL_ICON = {
   blink: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="4.5" width="8" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 1.8"/><rect x="12" y="4.5" width="8" height="13" fill="currentColor"/><path d="M8 11 H15" stroke="#2358d6" stroke-width="2"/></svg>',
@@ -3425,10 +3670,16 @@ function updateHud() {
   if (mode !== 'fight') return;
   const [b, r] = U;
   ui.fillB.style.width = `${b.hp}%`; ui.chipB.style.width = `${b.hpShow}%`;
-  ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`;
+  if (world.hunt) {
+    const h = world.hunt, left = U.reduce((s, u) => s + (u.side && u.state !== 'dead' ? u.hp : 0), 0), unborn = U.some((u) => u.mob === 'slime' && u.size > 1 && u.state !== 'dead') ? 2 * MOB.slime.hp[1] : 0;
+    const pct = 100 * (left + unborn) / h.max;
+    h.show = Math.max(pct, h.show - 0.6);
+    ui.fillR.style.width = `${pct}%`; ui.chipR.style.width = `${h.show}%`;
+  } else { ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`; }
   ui.clock.textContent = clockStr(world.over ? world.t - world.overT : world.t);
   ui.clock.classList.toggle('sq', world.zone > 1.001 && !world.over);
-  for (const u of U) {
+  for (const side of [0, 1]) {
+    const u = U.find((x) => x.side === side && x.state !== 'dead') || U.find((x) => x.side === side);
     const chips = statusChips(u), sig = chips.map((c) => c.join('')).join(' ');
     if (sig !== stShown[u.side]) {
       stShown[u.side] = sig;
@@ -3460,9 +3711,10 @@ function saveRecord(name, won) {
 
 function showResult() {
   const w = world.winner, st = world.stats, name = rivalName();
-  ui.resT.textContent = w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
+  ui.resT.textContent = world.hunt ? (w === 0 ? 'Hunt cleared' : `The ${name.toLowerCase()} won`) : w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
-  ui.resK.textContent = world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
+  ui.resK.textContent = world.hunt ? `${world.ko ? 'Cleared' : 'Out of time'} · ${clockStr(world.t - world.overT)}` : world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
+  if (world.hunt && w === 0) ui.resK.textContent = `Cleared · ${clockStr(world.t - world.overT)} · ${Math.round(U[0].hp)} HP left`;
   const mySpikes = A.spikes.filter((o) => o === 0).length, theirSpikes = A.spikes.filter((o) => o === 1).length;
   const rows = [];
   if (st[0].trap + st[1].trap) rows.push(['Traps dealt', `you ${Math.round(st[0].trap)} · ${name} ${Math.round(st[1].trap)}`]);
@@ -3632,24 +3884,30 @@ function startFight(seed, replay = false) {
   mode = 'fight';
   fightSeed = seed;
   if (!builds[1]) setRival(rivalIx);
-  A = makeArena(builds);
+  const hunt = huntKind && HUNTS[huntKind];
+  A = makeArena(hunt ? [builds[0], null] : builds);
   world = newWorld(seed);
-  world.recorded = replay;   // a replay is the same fight again, so it doesn't count toward the record
-  U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket));
+  world.recorded = replay || !!hunt;   // replays and hunts don't count toward the record
+  if (hunt) {
+    world.hunt = { kind: huntKind, name: hunt.name, max: hunt.max, show: hunt.max };
+    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket), ...hunt.spawn()];
+  } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket));
   for (const u of U) {
+    if (u.mob) continue;
     u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
     const mid = u.nav.idx[10 * COLS + (u.side ? 10 : 9)];
     u.navOk = reach(u.nav, mid, true);
     u.react = 8 + Math.floor(rng() * 10);
   }
   shots = []; parts = [];
-  ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
+  ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = hunt ? 'Hunt' : WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
   skShown[0] = {}; skShown[1] = {}; stShown[0] = stShown[1] = '-';
   for (const u of U) { const el = ui.sk[u.side]; el.classList.remove('fired', 'ready'); if (u.skill) el.querySelector('.skn').textContent = SKILL[u.skill].name; }
   ui.hud.hidden = false; ui.result.hidden = true;
   showPanel('fight');
   ui.live.hidden = false; ui.end.hidden = true;
-  ui.phase.textContent = `vs ${rivalName()}`;
+  ui.phase.textContent = hunt ? 'Hunt' : `vs ${rivalName()}`;
+  ui.next.textContent = hunt ? 'Rivals' : 'Next rival';
   ui.seed.textContent = `Seed ${seed}`;
   renderTicker(); updateHud();
   if (!headless) music.begin();
@@ -3745,17 +4003,18 @@ $('#acro').addEventListener('click', (ev) => {
 });
 $('#tools').addEventListener('click', (ev) => { const b = ev.target.closest('.opt'); if (!b) return; tool = b.dataset.t; refreshBuildUI(); });
 $('#clearBtn').addEventListener('click', () => { builds[0].pieces = []; A = makeArena([builds[0], null]); const u = U[0]; u.nav = buildNav(0, u.b.speed, COLS, u.acro); u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true); refreshBuildUI(); });
-$('#fightBtn').addEventListener('click', () => startFight(newSeed()));
+$('#fightBtn').addEventListener('click', () => { huntKind = null; startFight(newSeed()); });
 $('#scoutBtn').addEventListener('click', enterRival);
 $('#rvEdit').addEventListener('click', enterBuild);
-$('#rvFight').addEventListener('click', () => startFight(newSeed()));
+$('#rvFight').addEventListener('click', () => { huntKind = null; startFight(newSeed()); });
+for (const b of document.querySelectorAll('[data-hunt]')) b.addEventListener('click', () => { huntKind = b.dataset.hunt; startFight(newSeed()); });
 $('#rvPrev').addEventListener('click', () => { setRival(rivalIx - 1); enterRival(); });
 $('#rvNext').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
 $('#editBtn').addEventListener('click', enterBuild);
 $('#edit2Btn').addEventListener('click', enterBuild);
 $('#replayBtn').addEventListener('click', () => startFight(fightSeed, true));
 $('#rematchBtn').addEventListener('click', () => startFight(newSeed()));
-$('#nextBtn').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
+$('#nextBtn').addEventListener('click', () => { if (!huntKind) setRival(rivalIx + 1); huntKind = null; enterRival(); });
 $('#speedBtn').addEventListener('click', () => { speedMul = speedMul === 1 ? 2 : 1; ui.speed.textContent = `Speed ${speedMul}×`; });
 
 // ---------------------------------------------------------------- loop
@@ -3789,8 +4048,9 @@ function frame(now) {
 // Headless hook: run a whole fight without rendering (used for testing balance and AI).
 window.__homeTurf = {
   fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
-    const saved = [builds[0], builds[1]];
-    builds[0] = blue; builds[1] = red;
+    const saved = [builds[0], builds[1]], savedHunt = huntKind;
+    builds[0] = blue;
+    if (typeof red === 'string') huntKind = red; else { builds[1] = red; huntKind = null; }
     headless = true; startFight(seed);
     let f = 0;
     while (f++ < maxFrames && !(world.over && world.overT > 5)) {
@@ -3799,13 +4059,13 @@ window.__homeTurf = {
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
     const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
-    builds[0] = saved[0]; builds[1] = saved[1]; headless = false;
+    builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; headless = false;
     return res;
   },
   // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).
-  play(seed, blue, red) { if (blue) builds[0] = blue; if (red) builds[1] = red; startFight(seed); },
+  play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') huntKind = red; else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
-  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, validate, get world() { return world; }, get units() { return U; },
+  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
