@@ -51,33 +51,34 @@ Then two stick figures fight it out on their own.
   walls and traps (teal). Tap or hover a slice or legend row to read it out in the
   middle. Each type keeps one colour, and statuses use the same colour on the
   figure, on the HUD chip and in the chart.
-- **Hunts:** the rival page also offers hunts against line-drawn creatures on
-  a hunting ground. They have simple brains instead of the route planner, and
-  their attacks go through the same hit code, so fighters dodge and parry them
-  like any swing. Swings aim low enough to reach something small on the floor.
-  - **Ink Slime:** a blob on springs that squashes, hops at you, and splits
-    into two small slimes when it pops. A big slime can't be knocked out of its
-    leap.
-  - **Paper Bats:** three folded-paper bats circle overhead and take turns to
-    dive, with a "!" before each dive. A frozen bat drops out of the air.
-  - **Ink Serpent:** a chain of points that follows its head along the floor,
-    with humps rolling down its back. It rears up, then lunges a long way. It
-    shrugs off hits quickly and strikes back, and it can't be knocked out of a
-    lunge.
-  - **Ink Spiders:** two spiders hang from the ceiling on silk threads, slide
-    along to line up over you, and drop. On the floor they walk on eight legs
-    that plant one step at a time, pounce, and climb back up after a while.
-  - **Ink Jellies:** two see-through paper bells with ink markings, trailing
-    tentacles and two frilled paper arms. They swim above you in pulses and dive
-    to sting. The tentacles turn green before a sting, and the sting poisons.
-  - **Scribble:** a living ball of pencil scrawl whose lines redraw themselves
-    every few frames, like hand-drawn animation, with a pencil stuck in the top.
-    It rolls at you, watches you with two eyes, and whips out a scrawled line.
-  - **Paper Golem:** a hunched body of crumpled paper, ink-blot eyes, stubby
-    legs and long brush-stroke arms ending in paper fists. Hits barely move it and
-    never interrupt it. Up close it raises both fists and slams a shockwave along
-    the floor, which fighters jump. From range it lobs a wad of itself, and a new
-    fist balls up. It falls apart into paper scraps.
+- **Hunts:** the rival page also offers hunts against creatures on a hunting
+  ground, at Easy, Normal or Elite. They have simple brains instead of the route
+  planner, and their attacks go through the same hit code, so fighters dodge and
+  parry them like any swing. Swings aim low enough to reach something small on
+  the floor. Normal and Elite creatures have more HP, hit harder and attack
+  sooner, and Elite hunts bring bigger packs or a boss form. Elites have red eyes.
+  - **Slime:** a blob on springs that squashes, hops at you, and splits into two
+    small slimes when it pops. A big slime can't be knocked out of its leap. The
+    Elite is a Slime King that splits twice, into seven slimes.
+  - **Bats:** bats with folded wings circle overhead and take turns to dive,
+    with a "!" before each dive. A frozen bat drops out of the air. The Elite
+    swarm dives two at a time.
+  - **Serpent:** a chain of points that follows its head along the floor, with
+    humps rolling down its back. It rears up, then lunges a long way, shrugs off
+    hits quickly and strikes back. Normal and Elite hunts are a pair.
+  - **Spiders:** hang from the ceiling on silk threads, slide along to line up
+    over you, and drop. On the floor they walk on eight legs that plant one step
+    at a time, pounce, and climb back up after a while.
+  - **Jellyfish:** see-through bells with trailing tentacles and frilled arms.
+    They swim above you in pulses and dive to sting. The tentacles turn green
+    before a sting, and the sting poisons.
+  - **Brute:** a hulking knuckle-walker with a shine along its back and ink
+    dripping off it. Hits barely move it and never interrupt it. Up close it rears
+    up and slams a shockwave along the floor, which fighters jump; past Easy it
+    slams twice. From range it scoops ink off its back and lobs it.
+
+  With random builds, Easy hunts are won about 95% of the time, Normal about
+  55–90% and Elite about 15–45%.
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
@@ -179,7 +180,8 @@ Chromium.
 In the browser console, `window.__homeTurf.fight(seed, blue, red)` runs one fight
 without rendering and returns the result and event log. A build looks like
 `{ weapon: 'spear', skill: 'hook', trinket: 'frost', acro: 3, pieces: [] }`. Pass a
-hunt name (`'slime'` or `'bats'`) instead of the red build to run a hunt. Pass a fifth argument (for
+hunt name instead of the red build to run a hunt, with a tier after a colon
+(`'bats'`, `'brute:elite'`). Pass a fifth argument (for
 example `60`) to sample both fighters' position and AI state every 60 frames.
 `__homeTurf.play(seed, blue, red)` starts a rendered fight and
 `__homeTurf.step(n)` advances it frame by frame.

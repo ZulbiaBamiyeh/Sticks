@@ -108,15 +108,15 @@ which is cheaper than drawn frames and keeps the clean stroke:
 - **Ink slime:** one closed curve on springs; squashes, hops, splits in two.
 - **Paper bats:** two wing strokes on a sine path; dive at the fighter.
 - **Serpent:** a chain of points.
-- **Spider:** hangs on a thread, drops; eight IK legs that plant their steps.
-- **Jellyfish:** a paper bell with tentacles that trail as it swims in pulses.
-- **Scribble:** a ball of pencil scrawl that redraws itself, like line boil.
-- **Paper golem:** crumpled sheets and brush-stroke arms; a slam shockwave.
+- **Spiders:** hang on a thread and drop; eight IK legs that plant their steps.
+- **Jellyfish:** a bell with tentacles that trail as it swims in pulses.
+- **Brute:** a solid knuckle-walking silhouette; a slam shockwave and a lobbed glob.
 
-The art rule that makes them fit: solid ink bodies, paper (a light fill with an
-ink outline and creases) for anything folded or crumpled, small light
-highlights for eyes and shine, and at most one accent colour. A first golem
-built from slate blocks broke that rule and looked out of place.
+What makes them look finished: solid bodies with smooth silhouettes, small
+light highlights for eyes and shine, and at most one accent colour. Two early
+tries (a scribble ball and a crumpled-paper golem) read as goofy and were cut.
+Elites are marked by red eyes. The plan for growing the roster is in
+`docs/bestiary.md`.
 
 Mobs use simple behaviours (hop, fly, patrol, dive), not the route planner.
 The main engineering cost is that fight code assumes exactly one opponent,
@@ -127,12 +127,11 @@ so the fighter AI needs target choice before mobs can come in groups.
 1. Five passive trinkets carrying Burn, Poison, Bleed, Chill and Shock. In
    random-loadout sims each trinket wins 50–56% against a different one, and
    fighting without one wins 35%, so trinkets play like loot, the way skills do.
-2. Seven hunts: the Ink Slime (splits in two), the Paper Bats (take turns to
-   dive), the Ink Serpent (rears and lunges), the Ink Spiders (drop from the
-   ceiling), the Ink Jellies (poison stings), the Scribble (a whip of scrawl)
-   and the Paper Golem (slams a shockwave, lobs paper). Fighters pick the
-   nearest creature as their target. Each creature is one entry in `MOB` with
-   its own think, attack, step and draw.
+2. Six hunts at three tiers each: Slime (the Elite is a Slime King that splits
+   twice), Bats (the Elite swarm dives two at a time), Serpent, Spiders,
+   Jellyfish (poison stings) and Brute (slams twice past Easy). Fighters pick
+   the nearest creature as their target. Each creature is one entry in `MOB`
+   with its own think, attack, step and draw.
 3. The PvP numbers from `npm run sim` didn't move when hunts went in.
 
 Still to do: the AI's choices around statuses (pressing a frozen rival,

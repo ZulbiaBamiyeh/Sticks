@@ -328,6 +328,7 @@
   .bring b { color: var(--blue); font-weight: 700; }
   .hunts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .hunts .lbl { grid-column: 1 / -1; }
+  .hunts .tiers { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); }
   .hunts .ghost { min-height: 42px; font-size: 12px; padding: 0 6px; }
   .panel.enter > * { animation: rise 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
   .panel.enter > :nth-child(2) { animation-delay: 0.03s; }
@@ -541,7 +542,7 @@ const TRINKETS = Object.keys(TRINKET);
 const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
   star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
-  wad: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Paper Golem's thrown wad
+  glob: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Brute's lobbed glob
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
 const CRIT = 1.6;
@@ -863,15 +864,15 @@ const ATK = {
   aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
+  hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
   hop1: { w: 14, a: 40, r: 12, dmg: 8, kb: [4, -5], stun: 16, hs: 3, box: [-0.38, -0.62, 0.38, 0.05], melee: 1, mob: 1 },
-  lunge: { w: 22, a: 12, r: 26, dmg: 10, kb: [7, -4], stun: 20, hs: 5, box: [-0.1, -0.75, 1.15, 0.05], melee: 1, mob: 1 },
+  lunge: { w: 22, a: 12, r: 26, dmg: 13, kb: [7, -4], stun: 20, hs: 5, box: [-0.1, -0.75, 1.15, 0.05], melee: 1, mob: 1 },
   toss: { w: 26, a: 1, r: 34, mob: 1 },
   drop: { w: 16, a: 60, r: 18, dmg: 9, kb: [3, -5], stun: 20, hs: 5, box: [-0.5, -0.6, 0.5, 0.15], melee: 1, air: 1, mob: 1 },
   pounce: { w: 12, a: 40, r: 16, dmg: 7, kb: [5, -5], stun: 18, hs: 4, box: [-0.45, -0.6, 0.6, 0.05], melee: 1, mob: 1 },
   sting: { w: 24, a: 26, r: 30, dmg: 7, kb: [3, -3], stun: 16, hs: 4, box: [-0.5, -0.2, 0.5, 1.1], melee: 1, air: 1, mob: 1 },
-  lash: { w: 14, a: 10, r: 18, dmg: 12, kb: [6, -4], stun: 20, hs: 5, box: [0.2, -0.75, 2.8, -0.05], melee: 1, mob: 1 },
-  slam: { w: 32, a: 6, r: 32, dmg: 15, kb: [8, -8], stun: 26, hs: 8, box: [0.1, -1.6, 1.7, 0.05], melee: 1, mob: 1, big: 1, tumble: 1,
-    shock: { r: 3.3, dmg: 7, kb: [6, -7], stun: 20, hs: 5, tumble: 1 } },
+  slam: { w: 30, a: 6, r: 28, dmg: 18, kb: [8, -8], stun: 26, hs: 8, box: [0.1, -1.6, 1.7, 0.05], melee: 1, mob: 1, big: 1, tumble: 1,
+    shock: { r: 3.5, dmg: 10, kb: [6, -7], stun: 20, hs: 5, tumble: 1 } },
   dive: { w: 24, a: 30, r: 22, dmg: 10, kb: [4, -3], stun: 16, hs: 3, box: [-0.34, -0.46, 0.34, 0.06], melee: 1, air: 1, mob: 1 },
   dash: { w: 7, a: 6, r: 18, dmg: 9, kb: [7, -5], stun: 22, hs: 6, box: [0.1, -1.5, 1.45, -0.15], lunge: 12.5, melee: 1, trail: 1 },
 };
@@ -2293,7 +2294,7 @@ function applyHit(att, def, d, dirX, crit) {
   const flying = def.state === 'stun' && def.tumble, j = flying ? def.juggle : 0;
   if (flying) def.juggle++;
   if (j >= 2) def.iT = Math.max(def.iT, 30);
-  const zap = s.shock * STATUS.shock.per, dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + zap + (shattered ? STATUS.chill.shatter : 0);
+  const zap = s.shock * STATUS.shock.per, dmg = d.dmg * (att.dmgMul || 1) * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + zap + (shattered ? STATUS.chill.shatter : 0);
   const kind = crit ? 'crits' : 'hits';
   if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
     log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
@@ -2408,27 +2409,6 @@ function walkAt(u, dx, speed, jumpV) {
   b.vx = approach(b.vx, dir * speed, 30 * DT);
   if (dir && b.gr && boxSolid(b.x + dir * (u.bw / 2 + 0.15) - 0.03, b.y - 0.9, b.x + dir * (u.bw / 2 + 0.15) + 0.03, b.y - 0.1)) { b.vy = jumpV; b.gr = false; }
 }
-// A crumpled sheet: a jagged outline plus a few crease lines, made once per creature (it's only for looks).
-function crumple(r, n, rough = 0.28) {
-  const pts = [], creases = [];
-  for (let i = 0; i < n; i++) {
-    const a = i / n * 6.283 + (Math.random() - 0.5) * 0.35, k = 1 - rough / 2 + Math.random() * rough;
-    pts.push({ x: Math.cos(a) * r * k, y: Math.sin(a) * r * k });
-  }
-  for (let i = 0; i < 3; i++) {
-    const a = pts[Math.floor(Math.random() * n)], m = { x: (Math.random() - 0.5) * r * 0.5, y: (Math.random() - 0.5) * r * 0.5 };
-    creases.push([{ x: a.x * 0.8, y: a.y * 0.8 }, m, { x: -a.x * 0.3 + m.x * 0.4, y: -a.y * 0.3 + m.y * 0.4 }]);
-  }
-  return { pts, creases };
-}
-function drawCrumple(cr, x, y, sx, sy, pal, fill, ang = 0) {
-  ctx.save(); ctx.translate(x, y); ctx.rotate(ang); ctx.scale(sx, sy);
-  ctx.fillStyle = fill; ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.05 / Math.max(sx, sy); ctx.lineJoin = 'round';
-  ctx.beginPath(); cr.pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.fill(); ctx.stroke();
-  ctx.strokeStyle = pal.far; ctx.lineWidth = 0.022 / Math.max(sx, sy);
-  for (const c of cr.creases) { ctx.beginPath(); ctx.moveTo(c[0].x, c[0].y); ctx.lineTo(c[1].x, c[1].y); ctx.lineTo(c[2].x, c[2].y); ctx.stroke(); }
-  ctx.restore();
-}
 // a tapered ink stroke through a curve: a brush line
 function brush(a, c, b, w0, w1, color) {
   const n = 6;
@@ -2443,13 +2423,13 @@ function brush(a, c, b, w0, w1, color) {
 const MOB = {
   // ---- Ink Slime: one closed curve on a spring. Hops at you and splits in two when it pops.
   slime: {
-    name: 'Ink Slime', hp: [0, 24, 46], bw: [0, 0.62, 0.96], bh: [0, 0.5, 0.8], hop: [0, 5.6, 4.8], cd: 30,
+    name: 'Slime', hp: [0, 24, 46, 62], bw: [0, 0.62, 0.96, 1.36], bh: [0, 0.5, 0.8, 1.14], hop: [0, 5.6, 4.8, 4.2], cd: 30,
     armor: (u) => u.size > 1,   // a big slime can't be knocked out of its leap
     think(u, e, dx, dy) {
       const b = u.b;
       if (!b.gr) return;
       u.face = Math.sign(dx) || u.face;
-      if (u.cd <= 0 && u.react <= 0 && !e.hidden && Math.abs(dx) < 3 && dy > -2 && dy < 1.5 && e.state !== 'dead') { startMobAtk(u, u.size > 1 ? 'hop2' : 'hop1'); return; }
+      if (u.cd <= 0 && u.react <= 0 && !e.hidden && Math.abs(dx) < 3 && dy > -2 && dy < 1.5 && e.state !== 'dead') { startMobAtk(u, ['', 'hop1', 'hop2', 'hop3'][u.size]); return; }
       if (--u.hopT <= 0 && Math.abs(dx) > 1.2) {
         // travel hops: short and bouncy, higher when there's a step in the way
         const dir = Math.sign(dx), wall = boxSolid(b.x + dir * (u.bw / 2 + 0.3) - 0.05, b.y - 0.9, b.x + dir * (u.bw / 2 + 0.3) + 0.05, b.y - 0.1);
@@ -2474,11 +2454,11 @@ const MOB = {
       const b = u.b;
       if (u.size < 2) return;
       for (const s of [-1, 1]) {
-        const k = makeMob('slime', b.x + s * 0.25, u.size - 1);
+        const k = makeMob('slime', b.x + s * 0.25, u.size - 1, 0, broodTier(u));
         k.b.y = b.y; k.b.vx = s * 4.5; k.b.vy = -8; k.b.gr = false; k.iT = 24; k.react = 30; k.cd = 50; k.face = s; k.squash = 0.4;
         U.push(k);
       }
-      if (!world.stats[0].split++) log('The ink slime burst and split in two.', 0);
+      if (!world.stats[0].split++) log('The slime burst and split in two.', 0);
     },
     draw(u, pal, ink) {
       const b = u.b, q = Math.max(-0.5, Math.min(0.45, u.squash)), h = u.bh * (1 + q), w = u.bw * (1 - q * 0.75), cx = b.x, base = b.y, cy = base - h / 2;
@@ -2502,7 +2482,7 @@ const MOB = {
       ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.035;
       ctx.beginPath(); ctx.arc(cx - w * 0.14, cy - h * 0.02, Math.min(w, h) * 0.3, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
       const ex = cx + u.face * w * 0.14, ey = cy - h * 0.06, blink = (world.t + u.size * 37) % 140 < 5;
-      ctx.lineWidth = 0.05;
+      ctx.strokeStyle = eyeC(u, pal); ctx.lineWidth = u.size > 2 ? 0.07 : 0.05;
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(ex + s * w * 0.1, ey - (blink ? 0 : 0.05)); ctx.lineTo(ex + s * w * 0.1, ey + 0.04); ctx.stroke(); }
       if (u.st.poison > 0) { ctx.globalAlpha = 0.5 + 0.08 * u.st.poison; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(cx, cy + h * 0.05, w * 0.32, h * 0.28, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
     },
@@ -2510,18 +2490,18 @@ const MOB = {
 
   // ---- Paper Bat: an ink body and two folded-paper wings. Bats circle overhead and take turns to dive.
   bat: {
-    name: 'Paper Bat', hp: 20, bw: 0.62, bh: 0.52, cd: 70, scraps: 6,
+    name: 'Bat', hp: 20, bw: 0.62, bh: 0.52, cd: 70, scraps: 6,
     fly: (u) => !u.st.frozen,
-    spawnY: (slot) => 5 + slot * 0.4,
+    spawnY: (slot) => 4.6 + (slot % 4) * 0.35 + Math.floor(slot / 4) * 0.9,
     think(u, e, dx, dy, tx, ty) {
-      const b = u.b, diving = U.some((o) => o.mob === 'bat' && o !== u && o.state === 'atk');
+      const b = u.b, diving = U.filter((o) => o.mob === 'bat' && o !== u && o.state === 'atk').length >= (u.elite ? 2 : 1);
       if (u.cd <= 0 && u.react <= 0 && !diving && !e.hidden && e.state !== 'dead' && Math.abs(dx) < 4.5 && rng() < 0.04) {
         startMobAtk(u, 'dive'); u.face = Math.sign(dx) || u.face; return;
       }
       // circle overhead: each bat keeps its own station above the fighter, bobbing
       u.t++;
-      const hx = Math.max(1.5, Math.min(COLS - 1.5, tx + (u.slot - 1) * 1.7 + Math.sin(u.t * 0.03 + u.slot * 2) * 0.9));
-      const hy = Math.max(1.4, ty - 3.1 + Math.sin(u.t * 0.08 + u.slot) * 0.35);
+      const hx = Math.max(1.5, Math.min(COLS - 1.5, tx + ((u.slot % 4) - 1.5) * 1.35 + Math.sin(u.t * 0.03 + u.slot * 2) * 0.9));
+      const hy = Math.max(1.4, ty - 3.1 - Math.floor(u.slot / 4) * 0.9 + Math.sin(u.t * 0.08 + u.slot) * 0.35);
       b.vx = approach(b.vx, clampV((hx - b.x) * 2.4, 6), 22 * DT);
       b.vy = approach(b.vy, clampV((hy - b.y) * 2.4, 6), 22 * DT);
       u.face = Math.abs(b.vx) > 0.3 ? Math.sign(b.vx) : u.face;
@@ -2552,7 +2532,7 @@ const MOB = {
       }
       ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(b.x, cy, 0.1, 0.13, 0, 0, 6.283); ctx.fill();
       ctx.beginPath(); ctx.moveTo(b.x - 0.08, cy - 0.08); ctx.lineTo(b.x - 0.05, cy - 0.21); ctx.lineTo(b.x - 0.01, cy - 0.1); ctx.moveTo(b.x + 0.08, cy - 0.08); ctx.lineTo(b.x + 0.05, cy - 0.21); ctx.lineTo(b.x + 0.01, cy - 0.1); ctx.fill();
-      ctx.fillStyle = pal.steel;
+      ctx.fillStyle = eyeC(u, pal);
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(b.x + u.face * 0.03 + s * 0.035, cy - 0.03, 0.018, 0, 6.283); ctx.fill(); }
       ctx.restore();
       if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.ellipse(b.x, cy, 0.06, 0.08, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -2561,7 +2541,7 @@ const MOB = {
 
   // ---- Ink Serpent: a follow-the-leader chain that thins to the tail. Rears up, lunges a long way.
   serpent: {
-    name: 'Ink Serpent', hp: 70, bw: 0.8, bh: 0.5, speed: 3.6, cd: 70, walker: 1, recover: 1,
+    name: 'Serpent', hp: 70, bw: 0.8, bh: 0.5, speed: 3.6, cd: 70, walker: 1, recover: 1,
     armor: (u) => u.phase !== 'r',   // it can't be knocked out of a lunge
     onHit(u) { u.stunT = Math.min(u.stunT, 12); u.tumble = false; u.cd = 0; },   // and it strikes straight back
     init(u) { u.body = Array.from({ length: 13 }, (_, i) => ({ x: u.b.x + i * 0.24, y: u.b.y })); u.rear = 0; },
@@ -2609,7 +2589,7 @@ const MOB = {
       ctx.save(); ctx.translate(hx, h.y); ctx.rotate(ang * 0.6);
       ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(0, 0, 0.28, 0.16, 0, 0, 6.283); ctx.fill();
       ctx.restore();
-      ctx.fillStyle = pal.steel; ctx.beginPath(); ctx.arc(hx + u.face * 0.1, h.y - 0.05, 0.032, 0, 6.283); ctx.fill();
+      ctx.fillStyle = eyeC(u, pal); ctx.beginPath(); ctx.arc(hx + u.face * 0.1, h.y - 0.05, 0.032, 0, 6.283); ctx.fill();
       if ((world.t + 13) % 70 < 12 || (u.state === 'atk' && u.phase === 'w')) {   // the tongue flicks
         const tx = hx + u.face * 0.27, ty = h.y + 0.02;
         ctx.strokeStyle = pal.red; ctx.lineWidth = 0.02;
@@ -2619,103 +2599,154 @@ const MOB = {
     },
   },
 
-  // ---- Paper Golem: a hunched body of crumpled sheets, ink-blot eyes, and long brush-stroke arms
-  // ending in paper fists. Heavy: hits barely move it and never interrupt it. Up close it raises both
-  // fists and slams a shockwave along the floor; from range it tears off a wad of itself and lobs it.
-  golem: {
-    name: 'Paper Golem', hp: 120, bw: 1.0, bh: 1.95, speed: 1.5, heavy: 1, walker: 1, plant: 1, cd: 70, scraps: 14,
+  // ---- Ink Brute: a hulking knuckle-walker, all solid ink, with a shine along its back, slit eyes under
+  // a low brow and ink dripping off it. Heavy: hits barely move it and never interrupt it. Up close it rears
+  // up and slams both fists down, sending a shockwave along the floor; from range it scoops ink off its
+  // back and lobs it.
+  brute: {
+    name: 'Brute', hp: 120, bw: 1.05, bh: 1.9, speed: 1.8, heavy: 1, walker: 1, plant: 1, cd: 45,
     armor: () => true,
-    init(u) {
-      u.torso = crumple(0.6, 13); u.head = crumple(0.34, 10, 0.22); u.fists = [crumple(0.2, 8, 0.3), crumple(0.2, 8, 0.3)];
-      u.lift = 0; u.stepT = 0; u.gait = 0;
-    },
+    init(u) { u.lift = 0; u.stepT = 0; u.gait = 0; u.throwT = 0; u.drip = 0; },
     think(u, e, dx, dy) {
       const b = u.b;
       u.face = Math.abs(dx) > 0.2 ? Math.sign(dx) : u.face;
       if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead' && b.gr && Math.abs(dx) < 2.2 && dy > -1.6 && dy < 1.2) { startMobAtk(u, 'slam'); b.vx = 0; return; }
       if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead' && b.gr && Math.abs(dx) > 3.4 && Math.abs(dx) < 10 && rng() < 0.03) { startMobAtk(u, 'toss'); b.vx = 0; return; }
-      if (b.gr) walkAt(u, dx, MOB.golem.speed, -13);
+      if (b.gr) walkAt(u, dx, MOB.brute.speed, -13);
     },
     atk(u, d, e) {
       const b = u.b;
       if (u.atkName === 'toss') {
-        // the front fist goes up and back, then flies as a wad on a lob; a new one balls up on the recovery
+        // the near hand reaches back over the hump for a scoop of ink, then flings it on a lob
         if (u.phase === 'w') u.lift = Math.min(1, u.af / (d.w * 0.7));
         if (u.af === d.w) {
           u.phase = 'a';
-          const K = SHOT.wad, ox = b.x - u.face * 0.2, oy = b.y - 2.5, tx = e.b.x + e.b.vx * 0.35, ty = e.b.y - 0.5;
+          const K = SHOT.glob, ox = b.x + u.face * 0.3, oy = b.y - 2.2, tx = e.b.x + e.b.vx * 0.35, ty = e.b.y - 0.5;
           const v = solveArc(ox, oy, tx, ty, false, K) || solveArc(ox, oy, tx, ty, true, K);
-          if (v) {
-            shots.push({ kind: 'wad', x: ox, y: oy, vx: v.vx, vy: v.vy, owner: u.side, stuck: 0, ttl: 0, rolled: [0, 0], ang: Math.atan2(v.vy, v.vx), spin: 0, dead: false, crit: false, cr: crumple(0.22, 8, 0.3) });
-            u.noFist = d.r; u.lift = 0; bleedOnAttack(u, 'slam');
-          }
+          if (v) { shots.push({ kind: 'glob', src: u, x: ox, y: oy, vx: v.vx, vy: v.vy, owner: u.side, stuck: 0, ttl: 0, rolled: [0, 0], ang: Math.atan2(v.vy, v.vx), spin: 0, dead: false, crit: false }); bleedOnAttack(u, 'slam'); }
+          u.lift = 0; u.throwT = 12;
         }
         if (u.af === d.w + d.a) u.phase = 'r';
         return;
       }
-      // both fists rise overhead, hang, then come down together in front with a shockwave
+      // rear back with both fists high, hang there, then bring them down together in front
       if (u.phase === 'w') u.lift = Math.min(1, u.af / (d.w * 0.75));
       if (u.af === d.w) { u.phase = 'a'; u.lift = -1; }
       if (u.af === d.w + 2 && b.gr) {
         const x = b.x + u.face * 1.1;
-        dust(x, b.y, 12, 2.4); sfxShake(8); shockwave(u, d.shock, x);
-        for (let i = 0; i < 5; i++) scrap(x + (Math.random() - 0.5) * 0.8, b.y - 0.2, (Math.random() - 0.5) * 6, -3 - Math.random() * 4);
+        dust(x, b.y, 10, 2.4); sfxShake(8); shockwave(u, d.shock, x);
+        for (let i = 0; i < 12; i++) {   // an ink splash thrown up where the fists land
+          const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, sp = 4 + Math.random() * 7;
+          parts.push({ k: 'p', x: x + (Math.random() - 0.5) * 0.5, y: b.y - 0.1, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 40 + Math.random() * 20, c: 'ink' });
+        }
       }
-      if (u.af === d.w + d.a) u.phase = 'r';
+      if (u.af === d.w + d.a) {
+        // past Easy, the brute heaves its fists straight back up for a second slam
+        if (u.tier !== 'easy' && !u.again) { u.again = true; u.phase = 'w'; u.af = Math.floor(d.w * 0.5); u.lift = 0.5; u.hitDone = false; u.atkId = ++world.atkSeq; return; }
+        u.again = false; u.phase = 'r';
+      }
     },
     step(u) {
       const b = u.b;
       if (u.state !== 'atk' || u.phase === 'r') u.lift = approach(u.lift, 0, u.lift < 0 ? 0.03 : 0.06);
+      if (u.throwT > 0) u.throwT--;
       if (Math.abs(b.vx) > 0.2 && b.gr) {
-        u.gait += Math.abs(b.vx) * DT * 3.6;
-        if ((u.stepT += Math.abs(b.vx) * DT) > 0.45) { u.stepT = 0; dust(b.x - u.face * 0.3, b.y, 2, 0.3); sfxShake(1); }
+        u.gait += Math.abs(b.vx) * DT * 3.4;
+        if ((u.stepT += Math.abs(b.vx) * DT) > 0.5) { u.stepT = 0; dust(b.x + u.face * 0.6, b.y, 2, 0.3); sfxShake(1); }
       }
-      if (u.noFist > 0 && --u.noFist === 0) for (let i = 0; i < 4; i++) scrap(b.x + u.face * 0.5, b.y - 1.2, (Math.random() - 0.5) * 3, -2);
+      // a drip swells under the belly, stretches and lets go
+      if ((u.drip += 1 / 70) >= 1) {
+        u.drip = 0;
+        parts.push({ k: 'p', x: b.x + u.face * 0.05, y: b.y - 0.62, vx: 0, vy: 0.5, life: 0, max: 40, c: 'ink' });
+      }
     },
-    draw(u, pal, ink, flash) {
-      const b = u.b, f = u.face, walk = Math.abs(b.vx) > 0.2 ? 1 : 0, g = u.gait, bob = Math.abs(Math.sin(g)) * 0.05 * walk;
-      const paper = flash ? pal.red : pal.steel, L = u.lift;
-      // stubby ink legs, stepping
-      for (const s of [-1, 1]) {
-        const hip = { x: b.x + s * 0.22, y: b.y - 0.62 + bob }, st = Math.sin(g + (s > 0 ? 0 : Math.PI)) * 0.16 * walk;
-        const foot = { x: b.x + s * 0.28 + st, y: b.y - Math.max(0, Math.sin(g + (s > 0 ? 0 : Math.PI))) * 0.08 * walk };
-        brush(hip, { x: (hip.x + foot.x) / 2 + s * 0.05, y: (hip.y + foot.y) / 2 }, foot, 0.17, 0.14, ink);
-        ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(foot.x + f * 0.05, foot.y - 0.03, 0.13, 0.05, 0, 0, 6.283); ctx.fill();
+    die(u) {
+      const b = u.b;
+      for (let i = 0; i < 20; i++) {
+        const a = Math.random() * 6.283, sp = 4 + Math.random() * 8;
+        parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.4, y: b.y - 1 + Math.sin(a) * 0.5, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 60 + Math.random() * 30, c: 'ink' });
       }
-      // arms: shoulders at the torso's sides; fists hang, rise overhead for a slam, then land in front
-      const arm = (s) => {
-        const sh = { x: b.x + s * 0.44, y: b.y - 1.34 + bob }, swing = Math.sin(g + (s > 0 ? Math.PI : 0)) * 0.1 * walk;
-        const idle = { x: b.x + s * 0.66 + swing, y: b.y - 0.5 };
-        const front = s === f;
-        let fist;
-        if (u.atkName === 'toss' && u.state === 'atk' && front && L > 0) fist = lerpP(idle, { x: b.x - f * 0.35, y: b.y - 2.45 }, L);
-        else if (L > 0 && u.atkName !== 'toss') fist = lerpP(idle, { x: b.x + s * 0.2 - f * 0.1, y: b.y - 2.55 }, L);
-        else if (L < 0) fist = lerpP(idle, { x: b.x + f * 1.05 + s * 0.22, y: b.y - 0.22 }, -L);
-        else fist = idle;
-        const el = { x: (sh.x + fist.x) / 2 + s * 0.22, y: (sh.y + fist.y) / 2 + 0.05 };
-        brush(sh, el, fist, 0.19, 0.12, ink);
-        if (!(front && u.noFist > 0)) drawCrumple(u.fists[s > 0 ? 1 : 0], fist.x, fist.y, 1, 1, pal, paper, g * 0.1 * s);
+    },
+    draw(u, pal, ink) {
+      const b = u.b, f = u.face, g = u.gait, walk = Math.abs(b.vx) > 0.2 ? 1 : 0, L = u.lift;
+      const breath = Math.sin(world.t * 0.06) * 0.025, rear = u.atkName === 'slam' && L > 0 ? L : 0, lunge = L < 0 ? -L : 0;
+      const tilt = -rear * 0.18 + lunge * 0.2 + walk * 0.05;   // leans back to rear up, forward to slam
+      ctx.save(); ctx.translate(b.x, b.y); ctx.scale(f, 1);
+      // local space: feet at the origin, facing +x; the torso turns about the hips
+      const hip = { x: -0.2, y: -0.65 };
+      const rot = (p) => { const c = Math.cos(tilt), s = Math.sin(tilt), x = p.x - hip.x, y = p.y - hip.y; return { x: hip.x + x * c - y * s, y: hip.y + x * s + y * c }; };
+      const P = (x, y) => rot({ x, y: y + (y < -1.2 ? breath : 0) });
+      // hands: knuckle-walking, reared up overhead, slammed down in front, or reaching back for a scoop
+      const plant = (ph) => ({ x: 0.72 + 0.18 * Math.sin(ph) * walk, y: -Math.max(0, Math.cos(ph)) * 0.16 * walk });
+      let hn = plant(g), hf = plant(g + Math.PI);
+      hf.x -= 0.22;
+      if (rear) { hn = lerpP(hn, { x: 0.5, y: -2.62 }, rear); hf = lerpP(hf, { x: 0.3, y: -2.66 }, rear); }
+      if (lunge) { hn = lerpP(hn, { x: 1.12, y: -0.08 }, lunge); hf = lerpP(hf, { x: 0.98, y: -0.08 }, lunge); }
+      if (u.atkName === 'toss' && u.state === 'atk' && L > 0) hn = lerpP(hn, { x: -0.55, y: -2.05 }, L);
+      if (u.throwT > 0) hn = lerpP(hn, { x: 1.0, y: -1.6 }, u.throwT / 12);
+      const shN = P(0.3, -1.6), shF = P(0.06, -1.68);
+      const arm = (sh, hand, color, w) => {
+        const a = ik(sh, hand, 0.72, 0.8, 1), c = ik(sh, hand, 0.72, 0.8, -1);
+        const el = hand.y > sh.y ? (a.j.x < c.j.x ? a.j : c.j) : (a.j.x > c.j.x ? a.j : c.j);   // elbows back when low, forward when raised
+        const e = a.e;
+        brush(sh, lerpP(sh, el, 0.5), el, 0.34 * w, 0.24 * w, color);
+        brush(el, lerpP(el, e, 0.5), e, 0.22 * w, 0.32 * w, color);   // forearms thicken toward the fist
+        ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(e.x + 0.03, e.y - 0.07, 0.18 * w, 0.15 * w, 0, 0, 6.283); ctx.fill();
+        return { el, e };
       };
-      arm(-f);
-      // the body: one big crumpled sheet, and a smaller wad for a head
-      drawCrumple(u.torso, b.x, b.y - 1.12 + bob, 1, 0.88, pal, paper);
-      const hx = b.x + f * 0.12, hy = b.y - 1.8 + bob;
-      drawCrumple(u.head, hx, hy, 1, 1, pal, paper);
-      const angry = u.state === 'atk' && u.phase === 'w';
+      arm(shF, hf, pal.far, 0.92);   // the far arm sits behind, in the far colour, as fighters' far limbs do
+      const leg = (x, ph, color) => {
+        const top = rot({ x, y: -0.7 }), foot = { x: x + 0.06 + Math.sin(ph) * 0.13 * walk, y: -Math.max(0, Math.sin(ph)) * 0.07 * walk };
+        const k = ik(top, foot, 0.4, 0.36, -1);
+        brush(top, lerpP(top, k.j, 0.5), k.j, 0.3, 0.22, color); brush(k.j, lerpP(k.j, foot, 0.5), foot, 0.22, 0.18, color);
+        ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(foot.x + 0.08, foot.y - 0.05, 0.17, 0.07, 0, 0, 6.283); ctx.fill();
+      };
+      leg(-0.34, g + Math.PI, pal.far);
+      // the body: a massive hump over the shoulders, the back sloping down to small hips
+      const A = P(-0.52, -0.72), B = P(-0.06, -2.0), C = P(0.56, -1.62), D = P(0.34, -0.86), E = P(-0.3, -0.6);
+      const c1 = P(-0.66, -1.3), c2 = P(-0.48, -1.86), c3 = P(0.26, -2.12), c4 = P(0.54, -1.92), c5 = P(0.64, -1.36), c6 = P(0.54, -1.02), c7 = P(0.18, -0.64), c8 = P(-0.06, -0.56), c9 = P(-0.42, -0.62), c10 = P(-0.5, -0.66);
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(A.x, A.y);
+      ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, B.x, B.y); ctx.bezierCurveTo(c3.x, c3.y, c4.x, c4.y, C.x, C.y);
+      ctx.bezierCurveTo(c5.x, c5.y, c6.x, c6.y, D.x, D.y); ctx.bezierCurveTo(c7.x, c7.y, c8.x, c8.y, E.x, E.y);
+      ctx.bezierCurveTo(c9.x, c9.y, c10.x, c10.y, A.x, A.y); ctx.fill();
+      leg(-0.06, g, ink);
+      // the head juts forward and low: a skull, a heavy jaw, a brow ridge over slit eyes
+      const hd = P(0.62, -1.66);
+      ctx.save(); ctx.translate(hd.x, hd.y); ctx.rotate(tilt);
       ctx.fillStyle = ink;
-      for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(hx + f * 0.07 + s * 0.11, hy - 0.01, 0.06, angry ? 0.035 : 0.08, angry ? s * f * -0.5 : 0, 0, 6.283); ctx.fill(); }
-      ctx.fillStyle = pal.steel; for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(hx + f * 0.09 + s * 0.11, hy - 0.035, 0.018, 0, 6.283); ctx.fill(); }   // a glint in each blot
-      arm(f);
-      if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.moveTo(b.x - 0.2, b.y - 1.35 + bob); ctx.lineTo(b.x + 0.1, b.y - 1.0 + bob); ctx.lineTo(b.x - 0.05, b.y - 0.75 + bob); ctx.stroke(); ctx.globalAlpha = 1; }
+      ctx.beginPath(); ctx.ellipse(0, 0, 0.2, 0.18, 0, 0, 6.283); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(0.08, 0.1, 0.15, 0.11, 0.2, 0, 6.283); ctx.fill();   // jaw
+      const angry = u.state === 'atk' && u.phase === 'w';
+      ctx.strokeStyle = pal.steel; ctx.lineCap = 'round';
+      ctx.lineWidth = 0.028; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(-0.02, -0.1); ctx.quadraticCurveTo(0.1, -0.13, 0.19, -0.06); ctx.stroke(); ctx.globalAlpha = 1;   // the brow's shine
+      ctx.lineWidth = 0.034; ctx.strokeStyle = eyeC(u, pal);
+      for (const ex of [0.13, 0.03]) { const a = angry ? 0.45 : 0.2; ctx.beginPath(); ctx.moveTo(ex - Math.cos(a) * 0.035, -0.035 - Math.sin(a) * 0.035); ctx.lineTo(ex + Math.cos(a) * 0.035, -0.035 + Math.sin(a) * 0.035); ctx.stroke(); }
+      ctx.restore();
+      // shine along the hump
+      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.038; ctx.globalAlpha = 0.9;
+      const s0 = P(-0.46, -1.42), s1 = P(-0.34, -1.86), s2 = P(0.08, -1.94);
+      ctx.beginPath(); ctx.moveTo(s0.x, s0.y); ctx.quadraticCurveTo(s1.x, s1.y, s2.x, s2.y); ctx.stroke();
+      ctx.globalAlpha = 1;
+      const near = arm(shN, hn, ink, 1);
+      // a shine down the near arm's outer edge
+      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.03; ctx.globalAlpha = 0.85;
+      const m = lerpP(shN, near.el, 0.25), m2 = lerpP(shN, near.el, 0.75), nx = -(near.el.y - shN.y), ny = near.el.x - shN.x, nl = Math.hypot(nx, ny) || 1, sg = nx > 0 ? -1 : 1;
+      ctx.beginPath(); ctx.moveTo(m.x + sg * nx / nl * 0.12, m.y + sg * ny / nl * 0.12); ctx.lineTo(m2.x + sg * nx / nl * 0.1, m2.y + sg * ny / nl * 0.1); ctx.stroke();
+      ctx.globalAlpha = 1;
+      // the swelling drip under the belly
+      const dl = 0.04 + u.drip * 0.16, d0 = P(0.12, -0.66);
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(d0.x - 0.05, d0.y); ctx.quadraticCurveTo(d0.x - 0.04, d0.y + dl, d0.x, d0.y + dl + 0.03); ctx.quadraticCurveTo(d0.x + 0.04, d0.y + dl, d0.x + 0.05, d0.y); ctx.fill();
+      ctx.restore();
+      if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(b.x - f * 0.05, b.y - 1.2, 0.3, 0.4, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
     },
   },
 
   // ---- Ink Spider: hangs from the ceiling on a silk thread, slides along to line up over you, and
   // drops. On the floor it walks on eight legs that plant one step at a time, and pounces.
   spider: {
-    name: 'Ink Spider', hp: 36, bw: 1.05, bh: 0.72, speed: 3.4, cd: 45, walker: 1, S: 1.35,
+    name: 'Spider', hp: 36, bw: 1.05, bh: 0.72, speed: 3.4, cd: 45, walker: 1, S: 1.35,
     fly: (u) => u.hang && !u.st.frozen,
-    spawnY: (slot) => 4.2 + slot * 0.9,
+    spawnY: (slot) => 4.2 + (slot % 2) * 0.9,
     init(u) {
       u.hang = true; u.ax = u.b.x; u.ceil = ceilingAbove(u.b.x, u.b.y); u.b.gr = false; u.groundT = 0;
       // leg rest spots along the body, near side then far side
@@ -2803,6 +2834,7 @@ const MOB = {
       ctx.beginPath(); ctx.moveTo(ax - 0.06, ay - 0.08); ctx.lineTo(ax + 0.06, ay - 0.08); ctx.lineTo(ax, ay); ctx.lineTo(ax + 0.06, ay + 0.08); ctx.lineTo(ax - 0.06, ay + 0.08); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill();
       // a cluster of eyes: two big, two small
       const ex = b.x + f * 0.22, ey = cy - 0.02;
+      ctx.fillStyle = eyeC(u, pal);
       for (const [dx, dy, r] of [[0, -0.03, 0.03], [-0.07, -0.05, 0.03], [0.04, 0.03, 0.017], [-0.04, 0.03, 0.017]]) { ctx.beginPath(); ctx.arc(ex + f * dx, ey + dy, r, 0, 6.283); ctx.fill(); }
       for (const l of u.legs) if (!l.far) leg(l, ink, 0.055);
       if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(b.x - f * 0.22, cy - 0.06, 0.16, 0.12, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
@@ -2813,9 +2845,9 @@ const MOB = {
   // ---- Ink Jellyfish: a see-through paper bell with ink markings, and tentacles that trail behind it.
   // It swims in pulses above the fighter and dives to sting, and the sting poisons.
   jelly: {
-    name: 'Ink Jellyfish', hp: 30, bw: 1.2, bh: 0.82, cd: 80, S: 1.4, sting: { name: 'sting', status: 'poison' }, scraps: 5,
+    name: 'Jellyfish', hp: 30, bw: 1.2, bh: 0.82, cd: 80, S: 1.4, sting: { name: 'sting', status: 'poison' }, scraps: 5,
     fly: (u) => !u.st.frozen,
-    spawnY: (slot) => 4.5 + slot * 0.6,
+    spawnY: (slot) => 4.5 + (slot % 2) * 0.6,
     init(u) {
       u.pulse = 0; u.pt = 20 + u.slot * 25; u.charge = 0;
       u.tent = [];
@@ -2823,10 +2855,10 @@ const MOB = {
     },
     think(u, e, dx, dy, tx, ty) {
       const b = u.b;
-      const other = U.some((o) => o.mob === 'jelly' && o !== u && o.state === 'atk');
+      const other = U.filter((o) => o.mob === 'jelly' && o !== u && o.state === 'atk').length >= (u.elite ? 2 : 1);
       if (u.cd <= 0 && u.react <= 0 && !other && !e.hidden && e.state !== 'dead' && Math.abs(dx) < 1.3 && dy > 0.8) { startMobAtk(u, 'sting'); return; }
       // drift toward a spot above the fighter; sink slowly, and swim up in pulses
-      const hx = Math.max(1.5, Math.min(COLS - 1.5, tx + (u.slot ? 1.1 : -1.1) + Math.sin(world.t * 0.02 + u.slot * 3) * 0.8)), hy = Math.max(1.8, ty - 2.35);
+      const hx = Math.max(1.5, Math.min(COLS - 1.5, tx + ((u.slot % 3) - 1) * 1.3 + Math.sin(world.t * 0.02 + u.slot * 3) * 0.8)), hy = Math.max(1.8, ty - 2.35);
       b.vx = approach(b.vx, clampV((hx - b.x) * 1.3, 3), 5 * DT);
       b.vy = approach(b.vy, 1.1, 3 * DT);
       if (--u.pt <= 0 && b.y > hy - 0.3) { b.vy = -4.6; u.pulse = 1; u.pt = 46 + Math.floor(rng() * 20); }
@@ -2888,117 +2920,57 @@ const MOB = {
       // four rings set in a ring around the crown, like a moon jelly's; they glow green before a sting
       ctx.strokeStyle = u.charge > 0.2 ? pal.poison : pal.far; ctx.lineWidth = 0.022;
       for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + 0.785; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * rx * 0.3, by - ry * 0.52 + Math.sin(a) * ry * 0.16, 0.055, 0.04, a, 0, 6.283); ctx.stroke(); }
-      ctx.fillStyle = ink;
+      ctx.fillStyle = u.elite ? pal.red : ink;
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + u.face * 0.06 + s * 0.085, by - 0.1, 0.026, 0, 6.283); ctx.fill(); }
       if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(cx, by - ry * 0.5, rx * 0.5, ry * 0.3, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
       ctx.restore();
     },
   },
 
-  // ---- Scribble: a living ball of pencil scrawl whose lines boil like hand-drawn animation, with a
-  // pencil stuck in the top. It rolls at you and whips out a scrawled line.
-  scribble: {
-    name: 'Scribble', hp: 80, bw: 1.2, bh: 1.2, speed: 4.6, cd: 22, walker: 1, recover: 1, S: 1.45,
-    armor: (u) => u.phase === 'a',
-    onHit(u) { u.stunT = Math.min(u.stunT, 14); u.tumble = false; },
-    init(u) { u.roll = 0; u.scr = []; u.lash = 0; u.tight = 0; boil(u); },
-    think(u, e, dx, dy) {
-      const b = u.b;
-      u.face = Math.abs(dx) > 0.2 ? Math.sign(dx) : u.face;
-      if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead' && b.gr && Math.abs(dx) < 3 && Math.abs(dy) < 1) { startMobAtk(u, 'lash'); b.vx = 0; return; }
-      if (!b.gr) return;
-      walkAt(u, dx, MOB.scribble.speed, -12);
-      if (Math.abs(dx) > 3 && rng() < 0.012) { b.vy = -8; b.gr = false; }   // a bounce now and then
-    },
-    atk(u, d) {
-      if (u.phase === 'w') { u.tight = Math.min(1, u.af / d.w); u.b.vx = approach(u.b.vx, 0, 30 * DT); }
-      if (u.af === d.w) u.phase = 'a';
-      if (u.phase === 'a') u.lash = Math.min(1, (u.af - d.w) / (d.a * 0.6));
-      if (u.af === d.w + d.a) u.phase = 'r';
-      if (u.phase === 'r') { u.lash = approach(u.lash, 0, 0.07); u.tight = approach(u.tight, 0, 0.08); }
-    },
-    step(u) {
-      u.roll += u.b.vx * DT / 0.42;
-      if (world.t % 4 === 0) boil(u);   // the lines redraw themselves, like a hand-drawn frame
-    },
-    draw(u, pal, ink, flash) {
-      const b = u.b, r = 0.42 * (1 - u.tight * 0.12), cx = b.x, cy = b.y - 0.42, f = u.face, S = MOB.scribble.S;
-      ctx.save(); ctx.translate(b.x, b.y); ctx.scale(S, S); ctx.translate(-b.x, -b.y);
-      // the lash: a scrawled line whipping out along the floor
-      if (u.lash > 0.01) {
-        const n = 16, L = 2.5 / S * u.lash;
-        for (const [c, w, off] of [[pal.far, 0.03, 0.03], [ink, 0.035, 0]]) {
-          ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath();
-          for (let i = 0; i <= n; i++) {
-            const t = i / n, x = cx + f * (r * 0.8 + L * t), y = cy + 0.1 + Math.sin(t * 9 + world.t * 0.6) * 0.11 * (1 - t * 0.4) + off;
-            i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-          }
-          ctx.stroke();
-        }
-      }
-      // the ball: a loopy scrawl, turning as it rolls
-      ctx.save(); ctx.translate(cx, cy); ctx.rotate(u.roll);
-      ctx.strokeStyle = pal.far; ctx.lineWidth = 0.022; ctx.lineJoin = 'round';   // a faint under-sketch, then the ink over it
-      ctx.beginPath(); ctx.arc(0, 0, r * 0.93, 0, 6.283); ctx.stroke();
-      ctx.strokeStyle = flash ? pal.red : ink; ctx.lineWidth = 0.034;
-      ctx.beginPath();
-      u.scr.forEach((p, i) => { const q = u.scr[i + 1]; if (!i) ctx.moveTo(p.x * r, p.y * r); else if (q) ctx.quadraticCurveTo(p.x * r, p.y * r, (p.x + q.x) / 2 * r, (p.y + q.y) / 2 * r); });
-      ctx.stroke();
-      ctx.rotate(-u.roll + Math.sin(u.roll) * 0.35 - u.face * 0.25);
-      // a pencil stuck in the top, wobbling as the scrawl turns under it
-      const px0 = 0, py0 = -r * 0.35, px1 = 0, py1 = -r * 1.32;
-      ctx.lineCap = 'butt';
-      ctx.strokeStyle = pal.shock; ctx.lineWidth = 0.1; ctx.beginPath(); ctx.moveTo(px0, py0); ctx.lineTo(px1, py1 + 0.1); ctx.stroke();
-      ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.02; ctx.strokeRect(-0.05, py1 + 0.1, 0.1, py0 - py1 - 0.1);
-      ctx.fillStyle = pal.red; ctx.fillRect(-0.05, py1 + 0.02, 0.1, 0.08); ctx.strokeRect(-0.05, py1 + 0.02, 0.1, 0.08);
-      ctx.fillStyle = pal.steel; ctx.beginPath(); ctx.moveTo(-0.05, py0); ctx.lineTo(0.05, py0); ctx.lineTo(0, py0 + 0.12); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.restore(); ctx.lineCap = 'round';
-      // two eyes that stay upright and watch the fighter; they squint on the wind-up
-      const e = U[0], lx = clampV(e.b.x - cx, 1) * 0.025;
-      for (const s of [-1, 1]) {
-        const ex = cx + f * 0.06 + s * 0.12, ey = cy - 0.04;
-        ctx.fillStyle = pal.steel; ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.025;
-        if (u.tight > 0.3) { ctx.beginPath(); ctx.moveTo(ex - 0.07, ey - s * f * 0.02); ctx.lineTo(ex + 0.07, ey + s * f * 0.02); ctx.stroke(); continue; }
-        ctx.beginPath(); ctx.arc(ex, ey, 0.085, 0, 6.283); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = pal.ink; ctx.beginPath(); ctx.arc(ex + lx, ey + 0.01, 0.036, 0, 6.283); ctx.fill();
-      }
-      if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.arc(cx, cy, r * 0.8, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
-      ctx.restore();
-    },
-  },
 };
-// a new scrawl for the scribble: a loopy path wandering around the inside of a circle
-function boil(u) {
-  const pts = [], turns = 46, s1 = Math.random() * 6, s2 = Math.random() * 6;
-  for (let i = 0; i < turns; i++) {
-    const a = i * 0.83 + s2, rad = 0.45 + 0.5 * Math.abs(Math.sin(i * 1.7 + s1)) + (Math.random() - 0.5) * 0.12;
-    pts.push({ x: Math.cos(a) * rad, y: Math.sin(a) * rad });
-  }
-  u.scr = pts;
-}
+const eyeC = (u, pal) => (u.elite ? pal.red : pal.steel);   // elites are marked by red eyes
 // a scrap of paper: a little folded triangle that tumbles and flutters down
 function scrap(x, y, vx, vy) {
   parts.push({ k: 'sc', x, y, vx, vy, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, s: 0.08 + Math.random() * 0.08, life: 0, max: 60 + Math.random() * 30 });
 }
-const HUNTS = {
-  slime: { name: 'Ink Slime', max: 46 + 2 * 24, tip: 'Hops at you, and splits in two when it pops.', spawn: () => [makeMob('slime', 15.5, 2)] },
-  bats: { name: 'Paper Bats', max: 3 * 20, tip: 'Three bats circle overhead and take turns diving at you.',
-    spawn: () => [makeMob('bat', 14.5, 1, 0), makeMob('bat', 16, 1, 1), makeMob('bat', 17.5, 1, 2)] },
-  serpent: { name: 'Ink Serpent', max: 70, tip: 'Slithers along the floor, rears up, and lunges a long way.', spawn: () => [makeMob('serpent', 16)] },
-  spiders: { name: 'Ink Spiders', max: 2 * 36, tip: 'Hang from the ceiling, line up over you and drop. On the floor they pounce.',
-    spawn: () => [makeMob('spider', 13.5, 1, 0), makeMob('spider', 17, 1, 1)] },
-  jellies: { name: 'Ink Jellies', max: 2 * 30, tip: 'Swim above you in pulses and dive to sting. The sting poisons.',
-    spawn: () => [makeMob('jelly', 14.5, 1, 0), makeMob('jelly', 17, 1, 1)] },
-  scribble: { name: 'Scribble', max: 80, tip: 'A living ball of pencil scrawl. Rolls at you and whips out a line.', spawn: () => [makeMob('scribble', 16)] },
-  golem: { name: 'Paper Golem', max: 120, tip: 'Slow and heavy. Slams a shockwave along the floor, and lobs wads of paper at anyone keeping away.',
-    spawn: () => [makeMob('golem', 16)] },
+// Hunt tiers: Normal and Elite creatures are tougher, hit harder and attack sooner, and Elite hunts
+// bring bigger packs or a boss form.
+const TIER = {
+  easy: { label: 'Easy', hp: 1, dmg: 1, cd: 1 },
+  normal: { label: 'Normal', hp: 1.5, dmg: 1.3, cd: 0.8 },
+  elite: { label: 'Elite', hp: 2.1, dmg: 1.6, cd: 0.6 },
 };
+const TIERS = Object.keys(TIER);
+const pack = (kind, n, xs, tier) => Array.from({ length: n }, (_, i) => makeMob(kind, xs[i % xs.length] + Math.floor(i / xs.length) * 0.4, 1, i, tier));
+const HUNTS = {
+  slime: { name: 'Slime', eliteName: 'Slime King', tip: 'Hops at you, and splits in two when it pops. The Elite is a Slime King that splits twice.',
+    spawn: (t) => (t === 'elite' ? [makeMob('slime', 15.5, 3, 0, t)] : t === 'normal' ? [makeMob('slime', 14.5, 2, 0, t), makeMob('slime', 17.2, 2, 1, t)] : [makeMob('slime', 15.5, 2, 0, t)]) },
+  bats: { name: 'Bats', tip: 'Circle overhead and take turns diving at you. The Elite swarm dives two at a time.',
+    spawn: (t) => pack('bat', { easy: 3, normal: 4, elite: 4 }[t], [14.5, 16, 17.5, 13], t) },
+  serpent: { name: 'Serpent', tip: 'Slithers along the floor, rears up, and lunges a long way. Normal and Elite hunts are a pair.',
+    spawn: (t) => (t === 'easy' ? [makeMob('serpent', 16, 1, 0, t)] : [makeMob('serpent', 15, 1, 0, t), makeMob('serpent', 17.5, 1, 1, t)]) },
+  spiders: { name: 'Spiders', tip: 'Hang from the ceiling, line up over you and drop. On the floor they pounce.',
+    spawn: (t) => pack('spider', { easy: 2, normal: 5, elite: 5 }[t], [13.5, 17, 15.2, 18.2, 11.8], t) },
+  jellies: { name: 'Jellyfish', tip: 'Swim above you in pulses and dive to sting. The sting poisons.',
+    spawn: (t) => pack('jelly', { easy: 2, normal: 2, elite: 3 }[t], [14.5, 17, 15.7, 18], t) },
+  brute: { name: 'Brute', tip: 'Slow and heavy. Slams a shockwave along the floor, and lobs globs at anyone keeping away. Past Easy it slams twice.',
+    spawn: (t) => [makeMob('brute', 16, 1, 0, t)] },
+};
+// The Slime King's brood is ordinary slimes; any other slime's brood matches it.
+const broodTier = (u) => (u.size > 2 ? 'easy' : u.tier);
+// Everything a creature is worth, counting the slimes it will still split into.
+function mobWorth(u) {
+  if (u.mob !== 'slime') return u.hp;
+  let w = u.hp, n = 2;
+  for (let s = u.size - 1; s >= 1; s--, n *= 2) w += n * Math.round(MOB.slime.hp[s] * TIER[broodTier(u)].hp);
+  return w;
+}
 const HUNT_KEYS = Object.keys(HUNTS);
-function makeMob(kind, x, size = 1, slot = 0) {
-  const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v);
-  const hp = at(K.hp), bw = at(K.bw), bh = at(K.bh), y = K.spawnY ? K.spawnY(slot) : SPAWN_R + 1;
+function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
+  const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v), T = TIER[tier];
+  const hp = Math.round(at(K.hp) * T.hp), bw = at(K.bw), bh = at(K.bh), y = K.spawnY ? K.spawnY(slot) : SPAWN_R + 1;
   const u = {
-    mob: kind, name: K.name, size, slot, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpShow: hp, bw, bh,
+    mob: kind, name: K.name, size, slot, tier, elite: tier === 'elite', dmgMul: T.dmg, cdMul: T.cd, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpShow: hp, bw, bh,
     b: { x, y, vx: 0, vy: 0, gr: !K.spawnY, speed: 0 },
     face: -1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0, hitDone: false, hitLanded: false,
     stunT: 0, juggle: 0, guardT: 0, react: 30 + Math.floor(rng() * 30), cd: 40 + Math.floor(rng() * 50), iT: 0, flash: 0, tumble: false, spin: 0, rot: 0,
@@ -3056,7 +3028,7 @@ function mobAtkStep(u, ev) {
   MOB[u.mob].atk(u, d, U[0], ev);
   if (u.phase === 'r' && u.af >= d.w + d.a + d.r) {
     u.state = 'free'; u.phase = null;
-    u.cd = MOB[u.mob].cd + Math.floor(rng() * 40); u.react = 6;
+    u.cd = Math.round((MOB[u.mob].cd + Math.floor(rng() * 40)) * u.cdMul); u.react = 6;
   }
 }
 function mobAct(u) {
@@ -3095,7 +3067,6 @@ function mobDie(u) {
     parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.2, y: cy + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 50 + Math.random() * 30, c: 'ink' });
   }
   for (let i = 0; i < (K.scraps || 0); i++) scrap(b.x + (Math.random() - 0.5) * u.bw, cy + (Math.random() - 0.5) * u.bh, (Math.random() - 0.5) * 9, -2 - Math.random() * 6);
-  if (u.mob === 'scribble') for (let i = 0; i < 10; i++) streak(b.x + (Math.random() - 0.5) * 0.6, cy + (Math.random() - 0.5) * 0.6, Math.random() * 6.283, 0.6, 'far');
   ring(b.x, cy, 1, 'spark'); sfxShake(4); world.hs = Math.max(world.hs, 5);
   if (K.die) K.die(u);
   if (!U.some((o) => o.side === 1 && o.state !== 'dead')) {
@@ -3334,7 +3305,7 @@ function stepShots() {
           parrySuccess(t, null, a.x, a.y);
           break;
         }
-        applyHit(U[a.owner], t, K.hit, Math.sign(a.vx) || 1, a.crit);
+        applyHit(a.src || U[a.owner], t, K.hit, Math.sign(a.vx) || 1, a.crit);
         a.dead = true;
       }
     }
@@ -3665,7 +3636,7 @@ const RIVALS = [
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
-let rivalIx = 0, huntKind = null;
+let rivalIx = 0, huntKind = null, huntTier = 'easy';
 const rivalName = () => (world && world.hunt ? world.hunt.name : (builds[1] && builds[1].name) || 'The rival');
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
@@ -3880,9 +3851,22 @@ function drawWeapon(S, side, pal, ink) {
     if (w.a1) drawArrowShape(w.a1.x, w.a1.y, w.a2.x, w.a2.y, pal, side, ink);
   }
 }
-function drawWad(a, pal) {
-  const cr = a.cr || (a.cr = crumple(0.22, 8, 0.3));
-  drawCrumple(cr, a.x, a.y, 1, 1, pal, pal.steel, a.stuck ? 0.3 : a.spin * 0.4);
+// A glob in flight is a drop stretched along its path with a shine and a couple of droplets trailing;
+// once it lands it's a splat that fades.
+function drawGlob(a, pal) {
+  if (a.stuck) {
+    ctx.globalAlpha = Math.max(0, 1 - a.ttl / 150); ctx.fillStyle = pal.ink;
+    ctx.beginPath(); ctx.ellipse(a.x, a.y + 0.08, 0.3, 0.07, 0, 0, 6.283); ctx.fill();
+    for (const [dx, r] of [[-0.42, 0.04], [0.38, 0.05], [0.5, 0.025]]) { ctx.beginPath(); ctx.arc(a.x + dx, a.y + 0.1, r, 0, 6.283); ctx.fill(); }
+    ctx.globalAlpha = 1; return;
+  }
+  const ang = Math.atan2(a.vy, a.vx), ux = Math.cos(ang), uy = Math.sin(ang);
+  ctx.fillStyle = pal.ink;
+  for (const [k, r] of [[0.42, 0.05], [0.62, 0.03]]) { ctx.beginPath(); ctx.arc(a.x - ux * k, a.y - uy * k, r, 0, 6.283); ctx.fill(); }
+  ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(ang);
+  ctx.beginPath(); ctx.ellipse(-0.04, 0, 0.24, 0.17, 0, 0, 6.283); ctx.fill();
+  ctx.restore();
+  ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.arc(a.x - 0.03, a.y - 0.02, 0.1, Math.PI * 1.1, Math.PI * 1.5); ctx.stroke();
 }
 function drawArrowShape(x0, y0, x1, y1, pal, side, ink) {
   const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
@@ -4066,7 +4050,7 @@ function render() {
   }
   for (const a of shots) if (a.stuck) {
     if (a.kind === 'star') drawStar(a.x, a.y, 0.14, a.spin, pal.ink, pal[TEAM[a.owner]]);
-    else if (a.kind === 'wad') drawWad(a, pal);
+    else if (a.kind === 'glob') drawGlob(a, pal);
     else drawArrowShape(a.x - Math.cos(a.ang) * 0.62, a.y - Math.sin(a.ang) * 0.62, a.x, a.y, pal, a.owner, pal.ink);
   }
   for (const u of U) drawTrail(u, pal);
@@ -4077,7 +4061,7 @@ function render() {
     ctx.globalAlpha = 0.25; stroke([{ x: a.x - ux * 1.4, y: a.y - uy * 1.4 }, { x: a.x - ux * (a.kind === 'star' ? 0.2 : 0.5), y: a.y - uy * (a.kind === 'star' ? 0.2 : 0.5) }], pal[TEAM[a.owner]], 0.05); ctx.globalAlpha = 1;
     if (a.crit) { ctx.globalAlpha = 0.5; ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.05; ctx.beginPath(); ctx.arc(a.x, a.y, 0.22, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
     if (a.kind === 'star') drawStar(a.x, a.y, 0.16, a.spin, pal.ink, pal[TEAM[a.owner]]);
-    else if (a.kind === 'wad') drawWad(a, pal);
+    else if (a.kind === 'glob') drawGlob(a, pal);
     else drawArrowShape(a.x - ux * 0.62, a.y - uy * 0.62, a.x, a.y, pal, a.owner, pal.ink);
   }
   drawParts(pal);
@@ -4363,8 +4347,8 @@ function updateHud() {
   const [b, r] = U;
   ui.fillB.style.width = `${b.hp}%`; ui.chipB.style.width = `${b.hpShow}%`;
   if (world.hunt) {
-    const h = world.hunt, left = U.reduce((s, u) => s + (u.side && u.state !== 'dead' ? u.hp : 0), 0), unborn = U.some((u) => u.mob === 'slime' && u.size > 1 && u.state !== 'dead') ? 2 * MOB.slime.hp[1] : 0;
-    const pct = 100 * (left + unborn) / h.max;
+    const h = world.hunt, left = U.reduce((s, u) => s + (u.side && u.state !== 'dead' ? mobWorth(u) : 0), 0);
+    const pct = 100 * left / h.max;
     h.show = Math.max(pct, h.show - 0.6);
     ui.fillR.style.width = `${pct}%`; ui.chipR.style.width = `${h.show}%`;
   } else { ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`; }
@@ -4620,8 +4604,9 @@ function startFight(seed, replay = false) {
   world = newWorld(seed);
   world.recorded = replay || !!hunt;   // replays and hunts don't count toward the record
   if (hunt) {
-    world.hunt = { kind: huntKind, name: hunt.name, max: hunt.max, show: hunt.max };
-    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket), ...hunt.spawn()];
+    const mobs = hunt.spawn(huntTier), max = mobs.reduce((s, m) => s + mobWorth(m), 0);
+    world.hunt = { kind: huntKind, tier: huntTier, name: huntTier === 'elite' && hunt.eliteName ? hunt.eliteName : `${huntTier === 'easy' ? '' : TIER[huntTier].label + ' '}${hunt.name}`, max, show: 100 };
+    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket), ...mobs];
   } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket));
   for (const u of U) {
     if (u.mob) continue;
@@ -4740,7 +4725,12 @@ $('#fightBtn').addEventListener('click', () => { huntKind = null; startFight(new
 $('#scoutBtn').addEventListener('click', enterRival);
 $('#rvEdit').addEventListener('click', enterBuild);
 $('#rvFight').addEventListener('click', () => { huntKind = null; startFight(newSeed()); });
+$('#hunts').insertAdjacentHTML('beforeend', `<div class="seg tiers" role="radiogroup" aria-label="Hunt difficulty">${TIERS.map((t) => `<button data-tier="${t}" role="radio" aria-checked="${t === huntTier}" class="${t === huntTier ? 'on' : ''}">${TIER[t].label}</button>`).join('')}</div>`);
 $('#hunts').insertAdjacentHTML('beforeend', HUNT_KEYS.map((k) => `<button class="ghost" data-hunt="${k}" title="${HUNTS[k].tip}">${HUNTS[k].name}</button>`).join(''));
+for (const b of document.querySelectorAll('[data-tier]')) b.addEventListener('click', () => {
+  huntTier = b.dataset.tier;
+  for (const x of document.querySelectorAll('[data-tier]')) { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }
+});
 for (const b of document.querySelectorAll('[data-hunt]')) b.addEventListener('click', () => { huntKind = b.dataset.hunt; startFight(newSeed()); });
 $('#rvPrev').addEventListener('click', () => { setRival(rivalIx - 1); enterRival(); });
 $('#rvNext').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
@@ -4784,7 +4774,8 @@ window.__homeTurf = {
   fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
     const saved = [builds[0], builds[1]], savedHunt = huntKind;
     builds[0] = blue;
-    if (typeof red === 'string') huntKind = red; else { builds[1] = red; huntKind = null; }
+    const savedTier = huntTier;
+    if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { builds[1] = red; huntKind = null; }
     headless = true; startFight(seed);
     let f = 0;
     while (f++ < maxFrames && !(world.over && world.overT > 5)) {
@@ -4793,11 +4784,11 @@ window.__homeTurf = {
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
     const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
-    builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; headless = false;
+    builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; headless = false;
     return res;
   },
   // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).
-  play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') huntKind = red; else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
+  play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS, validate, get world() { return world; }, get units() { return U; },
 };
