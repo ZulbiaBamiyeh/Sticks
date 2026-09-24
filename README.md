@@ -105,6 +105,13 @@ Then two stick figures fight it out on their own.
   trinket and acrobatics level. You
   scout each one before the fight and can change your build to counter it.
   Your record against each rival is kept in this browser.
+- **Equip screen:** the build screen opens on a paper doll, like ZereshkStory's.
+  The camera zooms in on your fighter, with three slots down each side: Head,
+  Core and Feet (acrobatics) on the left, and Weapon, Skill and Trinket on the
+  right. Head and Core are locked until the roguelike adds gear for them. Tap a
+  slot to pick for it below. A stat sheet shows speed, frames to the first hit,
+  reach, skill cooldown, the status your hits carry, and acrobatic moves. The
+  **Your half** tab is where you build.
 - **Your half:** 10 points to spend on blocks (1) and pads (2). Columns 9 and
   10 are no-man's-land and stay open.
 - **Home advantage:** pads launch only the fighter who built them, so they're

@@ -269,6 +269,31 @@
 
   /* acrobatics: a stat bar where each step unlocks a move */
   .acro { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .acro[hidden], .chips[hidden], .tools[hidden] { display: none; }
+  /* equip screen: three slots down each side of the fighter, as on a paper doll */
+  #doll { position: absolute; inset: 10px; display: flex; justify-content: space-between; pointer-events: none; }
+  #doll[hidden] { display: none; }
+  #doll .col { display: flex; flex-direction: column; justify-content: center; gap: 8px; pointer-events: auto; }
+  .slot { position: relative; width: var(--slot, 62px); height: var(--slot, 62px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: rgba(243, 244, 240, 0.92); border: 2px solid var(--line); border-radius: 6px; color: var(--ink); cursor: pointer; padding: 0; font: inherit; }
+  .slot svg { width: 26px; height: 26px; display: block; }
+  .slot small { font-size: 10px; font-weight: 800; letter-spacing: 0.04em; max-width: 100%; padding: 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slot .sl-k { position: absolute; top: -8px; left: 5px; font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); background: var(--stage); padding: 0 3px; border-radius: 2px; }
+  .slot.on { border-color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+  .slot.locked { border-style: dashed; color: var(--ink-2); background: rgba(236, 238, 233, 0.96); }
+  .slot.empty svg { opacity: 0.4; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  .tabs button { font: 800 13px/1 inherit; font-family: inherit; letter-spacing: 0.12em; text-transform: uppercase; min-height: 40px; background: none; border: 0; color: var(--ink); cursor: pointer; }
+  .tabs button + button { border-left: 2px solid var(--ink); }
+  .tabs button[aria-selected="true"] { background: var(--ink); color: var(--on-ink); }
+  #gearTab, #turfTab { display: flex; flex-direction: column; gap: 10px; }
+  #gearTab[hidden], #turfTab[hidden] { display: none; }
+  .gstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .gstats div { border: 2px solid var(--line); border-radius: 6px; padding: 6px 8px; display: flex; flex-direction: column; gap: 1px; }
+  .gstats b { font: 900 20px/1 var(--display); font-variant-numeric: tabular-nums; display: flex; align-items: center; gap: 4px; }
+  .gstats b svg { width: 15px; height: 15px; }
+  .gstats span { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .gstats .off b { color: var(--ink-2); font-weight: 700; }
   .acro button { border: 1.5px solid var(--line); background: var(--panel); padding: 7px 2px 6px; font-size: 12px; font-weight: 700;
     letter-spacing: 0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0; }
   .acro button:first-child { border-radius: 6px 0 0 6px; }
@@ -336,6 +361,10 @@
 
   <div id="stage">
     <canvas id="cv" aria-label="Arena"></canvas>
+    <div id="doll" hidden>
+      <div class="col" id="dollL"></div>
+      <div class="col" id="dollR"></div>
+    </div>
     <div id="hud" hidden>
       <div class="hp" id="hpB">
         <div class="who"><b>You</b><span id="wB">Sword</span></div>
@@ -399,16 +428,21 @@
   </section>
 
   <section class="panel" id="buildPanel" hidden>
-    <div class="row-h"><span class="lbl">Weapon</span><span class="lbl">Frames to hit</span></div>
-    <div class="chips" id="weapons"></div>
-    <div class="row-h"><span class="lbl">Skill</span><span class="lbl">Cooldown</span></div>
-    <div class="tools" id="skills"></div>
-    <div class="row-h"><span class="lbl">Trinket</span><span class="lbl">Status on hit</span></div>
-    <div class="tools three" id="trinkets"></div>
-    <div class="row-h"><span class="lbl">Acrobatics</span><span class="lbl" id="acroLbl">Level 2</span></div>
-    <div class="acro" id="acro"></div>
-    <p class="hint" id="loadHint"></p>
-    <div class="row-h"><span class="lbl">Your half · tap to build</span><span class="budget" id="budget">9 / 10 pts</span></div>
+    <div class="tabs" role="tablist" aria-label="Build">
+      <button role="tab" data-tab="gear" aria-selected="true">Gear</button>
+      <button role="tab" data-tab="turf" aria-selected="false">Your half</button>
+    </div>
+    <div id="gearTab">
+      <div class="gstats" id="gearStats"></div>
+      <div class="row-h"><span class="lbl" id="slotLbl">Weapon</span><span class="lbl" id="slotSub"></span></div>
+      <div class="chips" id="weapons" data-slot="weapon"></div>
+      <div class="tools" id="skills" data-slot="skill" hidden></div>
+      <div class="tools three" id="trinkets" data-slot="trinket" hidden></div>
+      <div class="acro" id="acro" data-slot="feet" hidden></div>
+      <p class="hint" id="loadHint"></p>
+    </div>
+    <div id="turfTab" hidden>
+      <div class="row-h"><span class="lbl">Your half · tap to build</span><span class="budget" id="budget">9 / 10 pts</span></div>
     <div class="tools" id="tools">
       <button class="opt tool" data-t="block" aria-pressed="true">
         <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="#3b4a68"/><rect x="2" y="2" width="18" height="3" fill="#2358d6"/></svg><small>1 pt</small></span>
@@ -426,6 +460,8 @@
         <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 5 L17 17 M17 5 L5 17" stroke="#16191d" stroke-width="2.6" stroke-linecap="round"/></svg><small></small></span>
         <b>Erase</b>
       </button>
+    </div>
+      <p class="hint" id="turfHint"></p>
     </div>
     <div class="actions three">
       <button class="ghost" id="clearBtn">Clear</button>
@@ -3249,6 +3285,11 @@ new ResizeObserver(resize).observe(stage);
 resize();
 
 function camTarget() {
+  if (mode === 'build' && buildTab === 'gear' && U[0]) {
+    // the paper doll: the fighter large in the middle, slots down both sides
+    const u = U[0], z = Math.min(CH / 4.4, CW / 5.2), hw = CW / z / 2, hh = CH / z / 2;
+    return { z, x: Math.max(hw, Math.min(COLS - hw, u.b.x)), y: Math.max(hh, Math.min(ROWS - hh, u.b.y - 1.2)) };
+  }
   if (mode === 'build' || mode === 'rival') {
     const z = Math.min(CW / 11.6, CH / ROWS);
     const vw = CW / z;
@@ -3649,15 +3690,17 @@ function render() {
   }
   drawCallouts(pal);
   const lblSize = Math.max(10, cam.z * 0.34);
+  // two labels side by side: the no-man's-land one is dropped if the pair wouldn't fit apart
+  const pair = (t1, x1, t2, x2) => {
+    const s = toScreen(x1, 1.7), s2 = toScreen(x2, 1.7);
+    ctx.font = `900 ${lblSize}px ${DISPLAY_FONT}`;
+    if (Math.abs(s2.x - s.x) > (ctx.measureText(t1).width + ctx.measureText(t2).width) / 2 + lblSize) screenText(t1, s.x, s.y, lblSize, pal.label, null);
+    screenText(t2, s2.x, s2.y, lblSize, pal.label, null);
+  };
   if (mode === 'build') {
-    const s = toScreen(10, 1.7);
-    screenText('NO-MAN\'S-LAND', s.x, s.y, lblSize, pal.label, null);
-    const s2 = toScreen(5, 1.7);
-    screenText('YOUR HALF', s2.x, s2.y, lblSize, pal.label, null);
+    if (buildTab === 'turf') pair('NO-MAN\'S-LAND', 10, 'YOUR HALF', 5);
   } else if (mode === 'rival') {
-    const s = toScreen(10, 1.7), s2 = toScreen(15, 1.7);
-    screenText('NO-MAN\'S-LAND', s.x, s.y, lblSize, pal.label, null);
-    screenText(`${rivalName().toUpperCase()}'S HALF`, s2.x, s2.y, lblSize, pal.label, null);
+    pair('NO-MAN\'S-LAND', 10, `${rivalName().toUpperCase()}'S HALF`, 15);
   } else if (world.t < 240) {
     const a = Math.min(1, (240 - world.t) / 60);
     const s1 = toScreen(5, 1.7), s2 = toScreen(15, 1.7);
@@ -3780,6 +3823,20 @@ const ST_ICON = {
 };
 const ST_COL = { burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#d49000', frozen: '#3d9cc4' };
 const stSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true" style="color:${ST_COL[k]}">${ST_ICON[k]}</svg>`;
+// Slot icons: one line drawing each, in the same stroke as the skill icons.
+const GEAR_ICON = {
+  sword: '<path d="M4 18 L16.5 5.5 L18 3.5 L18.5 4 L16.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M4.5 13.5 L8.5 17.5" stroke="#2358d6" stroke-width="2.2" stroke-linecap="round"/><path d="M3 19 L5 17" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  daggers: '<path d="M4 18 L12 10 M18 18 L10 10" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M4.5 14.5 L7.5 17.5 M17.5 14.5 L14.5 17.5" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/>',
+  spear: '<path d="M3.5 19.5 L15 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M13.5 6 L19.5 2.5 L16 8.5 Z" fill="currentColor"/><path d="M12 11 L10.5 9.5" stroke="#2358d6" stroke-width="2.4" stroke-linecap="round"/>',
+  hammer: '<path d="M5 19 L13 11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M10.5 6.5 L14.5 2.5 L20 8 L16 12 Z" fill="currentColor"/><path d="M11.5 9.5 L13.5 11.5" stroke="#2358d6" stroke-width="2.2"/>',
+  bow: '<path d="M6 3 C 15 5 15 17 6 19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6 3 V19" stroke="currentColor" stroke-width="1.2"/><path d="M4 11 H18 M15.5 8.5 L18 11 L15.5 13.5" fill="none" stroke="#2358d6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+  stars: '<path d="M11 2.5 L13 9 L19.5 11 L13 13 L11 19.5 L9 13 L2.5 11 L9 9 Z" fill="currentColor"/><circle cx="11" cy="11" r="1.8" fill="#2358d6"/>',
+  feet: '<path d="M4 16 C 4 12 6 11 8 10 L9 6 H12.5 L13 11 C 16 12 19 13 19 16 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M2 8 H6 M1.5 11.5 H5" stroke="#2358d6" stroke-width="1.8" stroke-linecap="round"/>',
+  head: '<circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5 H17.5 M17.5 9.5 L20.5 7.5 M17.5 9.5 L20.5 12" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/>',
+  core: '<path d="M11 3 V13 M11 13 L7 20 M11 13 L15 20 M11 6.5 L6 11 M11 6.5 L16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 5.5 C 5 5 3 7 2 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/>',
+  none: '<circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/>',
+};
+const gearSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true">${GEAR_ICON[k]}</svg>`;
 const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
 const ACRO_DESC = [
   'Runs and jumps, nothing fancy.',
@@ -3806,6 +3863,64 @@ const HOME_HINT = SPIKES_ON
   ? 'Your fighter knows where your spikes are. The rival finds them by stepping on them. Pads launch only the fighter who built them.'
   : 'Blocks shape the routes both fighters take. Pads launch only the fighter who built them, so they\'re shortcuts only you can use.';
 if (!SPIKES_ON) { document.querySelector('#tools [data-t="spikes"]').remove(); document.getElementById('tools').classList.add('three'); }
+// ---- the equip screen: tap a slot beside the fighter, pick for it below
+let buildTab = 'gear', gearSlot = 'weapon';
+const SLOTS = {
+  head: { side: 'L', label: 'Head', locked: 'Head gear comes with the roguelike: it upgrades how your fighter thinks.' },
+  core: { side: 'L', label: 'Core', locked: 'Core gear comes with the roguelike: HP and poise.' },
+  feet: { side: 'L', label: 'Feet', pick: '#acro', sub: 'Acrobatics' },
+  weapon: { side: 'R', label: 'Weapon', pick: '#weapons', sub: 'Frames to hit' },
+  skill: { side: 'R', label: 'Skill', pick: '#skills', sub: 'Cooldown' },
+  trinket: { side: 'R', label: 'Trinket', pick: '#trinkets', sub: 'Status on hit' },
+};
+function slotFace(k) {
+  const bd = builds[0];
+  if (k === 'weapon') return [gearSvg(bd.weapon), WEAP[bd.weapon].name];
+  if (k === 'skill') return bd.skill ? [SKILL_ICON[bd.skill], SKILL[bd.skill].name] : [gearSvg('none'), 'None'];
+  if (k === 'trinket') return bd.trinket ? [stSvg(TRINKET[bd.trinket].status), TRINKET[bd.trinket].name.split(' ')[0]] : [gearSvg('none'), 'None'];
+  if (k === 'feet') return [gearSvg('feet'), `Acro ${bd.acro || 0}`];
+  return [gearSvg(k), 'Soon'];
+}
+function renderDoll() {
+  for (const side of ['L', 'R']) {
+    $(`#doll${side}`).innerHTML = Object.entries(SLOTS).filter(([, s]) => s.side === side).map(([k, s]) => {
+      const [ic, name] = slotFace(k), empty = (k === 'skill' && !builds[0].skill) || (k === 'trinket' && !builds[0].trinket);
+      return `<button class="slot ${s.locked ? 'locked' : ''} ${empty ? 'empty' : ''} ${k === gearSlot && buildTab === 'gear' ? 'on' : ''}" data-slot="${k}" aria-label="${s.label}: ${name}"><span class="sl-k">${s.label}</span>${ic}<small>${name}</small></button>`;
+    }).join('');
+  }
+  const doll = $('#doll');
+  doll.style.setProperty('--slot', `${Math.max(48, Math.min(64, Math.floor((doll.clientHeight - 16) / 3) - 8))}px`);
+}
+// The headline numbers for this loadout, like a stat sheet.
+function renderGearStats() {
+  const bd = builds[0], wp = WEAP[bd.weapon], a = ATK[wp.atk], reach = wp.range || a.box[2];
+  const cells = [
+    ['Speed', wp.speed.toFixed(1), false], ['Hit in', `${a.w}f`, false], ['Reach', reach.toFixed(1), false],
+    ['Skill', bd.skill ? SKILL[bd.skill].stat : '—', !bd.skill], ['On hit', bd.trinket ? `${stSvg(TRINKET[bd.trinket].status)}${STATUS[TRINKET[bd.trinket].status].name}` : '—', !bd.trinket],
+    ['Moves', `${bd.acro || 0} / 4`, !bd.acro],
+  ];
+  $('#gearStats').innerHTML = cells.map(([k, v, off]) => `<div class="${off ? 'off' : ''}"><b>${v}</b><span>${k}</span></div>`).join('');
+}
+function setBuildTab(t) {
+  buildTab = t;
+  for (const b of document.querySelectorAll('.tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === t));
+  $('#gearTab').hidden = t !== 'gear'; $('#turfTab').hidden = t !== 'turf';
+  $('#doll').hidden = t !== 'gear' || mode !== 'build';
+  $('#clearBtn').hidden = t !== 'turf'; $('#clearBtn').parentElement.classList.toggle('three', t === 'turf');   // clearing the half belongs to the half's own tab
+  ui.phase.textContent = t === 'gear' ? 'Gear' : 'Build your half';
+  refreshBuildUI();
+}
+function pickSlot(k) {
+  const s = SLOTS[k];
+  if (s.locked) { toast(s.locked); return; }
+  gearSlot = k;
+  for (const el of document.querySelectorAll('#gearTab [data-slot]')) el.hidden = el.dataset.slot !== k;
+  $('#slotLbl').textContent = s.label; $('#slotSub').textContent = k === 'feet' ? `Level ${builds[0].acro || 0} of 4` : s.sub;
+  const bd = builds[0];
+  ui.hint.textContent = k === 'weapon' ? `${WEAP[bd.weapon].name}: ${WEAP[bd.weapon].desc}` : k === 'skill' ? (bd.skill ? `${SKILL[bd.skill].name}: ${SKILL[bd.skill].desc}` : '')
+    : k === 'trinket' ? (bd.trinket ? `${TRINKET[bd.trinket].name}: ${TRINKET[bd.trinket].desc}` : 'No trinket: nothing extra rides on your hits.') : ACRO_DESC[bd.acro || 0];
+  renderDoll();
+}
 function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
@@ -3813,11 +3928,12 @@ function refreshBuildUI() {
   for (const b of document.querySelectorAll('#tools .opt')) b.setAttribute('aria-pressed', String(b.dataset.t === tool));
   const lv = builds[0].acro || 0;
   for (const b of document.querySelectorAll('#acro button')) { const i = +b.dataset.a; b.classList.toggle('on', i >= 1 && i <= lv); b.setAttribute('aria-pressed', String(i === lv)); }
-  $('#acroLbl').textContent = `Level ${lv} of 4`;
+  if (gearSlot === 'feet') $('#slotSub').textContent = `Level ${lv} of 4`;
   const s = spent(builds[0].pieces);
   ui.budget.textContent = `${s} / ${BUDGET} pts`;
   ui.budget.classList.toggle('full', s >= BUDGET);
   ui.fight.textContent = `Fight ${rivalName()}`;
+  if (mode === 'build') { renderDoll(); renderGearStats(); }
 }
 function renderTicker() {
   if (!world || !world.log.length) { ui.ticker.innerHTML = '<li class="empty">Nothing yet.</li>'; return; }
@@ -3956,7 +4072,7 @@ function demoWorld() {
   shots = []; parts = [];
 }
 function demoUnit(side, bd) {
-  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0);
+  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0, bd.trinket);
   u.nav = buildNav(side, u.b.speed, COLS, u.acro);
   const mid = u.nav.idx[10 * COLS + (side ? 10 : 9)];
   u.navOk = mid >= 0 ? reach(u.nav, mid, true) : new Uint8Array(u.nav.nodes.length).fill(1);
@@ -4051,6 +4167,7 @@ function demoStep() {
 
 // ---- screens
 function showPanel(which) {
+  $('#doll').hidden = which !== 'build' || buildTab !== 'gear';
   for (const [k, el] of [['build', ui.buildPanel], ['fight', ui.fightPanel], ['rival', ui.rivalPanel]]) el.hidden = k !== which;
   const el = { build: ui.buildPanel, fight: ui.fightPanel, rival: ui.rivalPanel }[which];
   el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
@@ -4090,9 +4207,9 @@ function enterBuild() {
   U = [demoUnit(0, builds[0])];
   ui.hud.hidden = true; ui.result.hidden = true;
   showPanel('build');
-  ui.phase.textContent = 'Build your half';
-  ui.hint.textContent = HOME_HINT;
-  refreshBuildUI();
+  $('#turfHint').textContent = HOME_HINT;
+  setBuildTab(buildTab);
+  pickSlot(gearSlot);
 }
 function startFight(seed, replay = false) {
   mode = 'fight';
@@ -4166,7 +4283,7 @@ function cellAt(ev) {
   return { c: Math.floor(x), r: Math.floor(y) };
 }
 cv.addEventListener('pointerdown', (ev) => {
-  if (mode !== 'build') return;
+  if (mode !== 'build' || buildTab !== 'turf') return;
   painting = true; cv.setPointerCapture(ev.pointerId);
   const { c, r } = cellAt(ev); lastCell = `${c},${r}`; applyTool(c, r);
 });
@@ -4199,6 +4316,8 @@ $('#skills').addEventListener('click', (ev) => {
   ui.hint.textContent = `${SKILL[k].name}: ${SKILL[k].desc}`;
   refreshBuildUI();
 });
+for (const b of document.querySelectorAll('.tabs [data-tab]')) b.addEventListener('click', () => setBuildTab(b.dataset.tab));
+$('#doll').addEventListener('click', (ev) => { const b = ev.target.closest('.slot'); if (b) pickSlot(b.dataset.slot); });
 $('#trinkets').addEventListener('click', (ev) => {
   const b = ev.target.closest('.opt'); if (!b) return;
   const k = b.dataset.tr || null;
