@@ -1045,18 +1045,24 @@ const SK_POSE = {
 };
 
 // ---------------------------------------------------------------- fighters
-// Gear stats: hp (flat), atk (+damage), crit (chance), armor (damage taken off), speed (+run speed),
-// haste (skill cooldowns off), proc (+status chance), ls (lifesteal), regen (HP a second), onHit (extra statuses).
-const NO_STATS = { hp: 0, atk: 0, crit: 0, armor: 0, speed: 0, haste: 0, proc: 0, ls: 0, regen: 0, onHit: [] };
+// Gear stats, as in ZereshkStory: hp, atk (flat damage per hit), def (armour: damage × 26/(26+def)), crit and
+// critDmg, haste (attack speed), evasion (dodge a hit), resist (shrug off statuses), ls (lifesteal), regen
+// (HP a second), thorns (damage back when hit up close), pen (ignores that much def), plus run speed and skill
+// haste. wpn is the weapon's damage range. onHit: [{chance, apply, stacks}]; trig: trinket triggers; flags:
+// the rule changes keystones, relics and 4-piece sets bring. A fighter with no gear fights exactly as before.
+const NO_STATS = { hp: 0, atk: 0, def: 0, crit: 0, critDmg: 0, haste: 0, evasion: 0, resist: 0, ls: 0, regen: 0, thorns: 0, pen: 0, speed: 0, skillHaste: 0, statusMult: 1, onHit: [], trig: [], flags: {}, wpn: null };
+// how often a weapon's hits land, relative to a sword: fast weapons roll their status chances at less per hit
+const STATUS_W = { sword: 1, daggers: 0.6, spear: 1.1, hammer: 1.8, bow: 1.3, stars: 0.55 };
 function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
   const gs = { ...NO_STATS, ...(stats || {}) }, hpMax = Math.round(100 + gs.hp);
+  gs.trig = gs.trig.map((t) => ({ ...t }));   // each fighter keeps its own once-only trigger state
   const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
   const pose = { p: {}, v: {} };
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
-    dmgMul: 1 + gs.atk, critCh: gs.crit, armor: Math.min(0.6, gs.armor), skMul: Math.max(0.4, 1 - gs.haste),
-    onHit: [...(trinket ? [TRINKET[trinket]] : []), ...gs.onHit.map((k) => ({ name: STATUS[k].name.toLowerCase(), status: k }))],
+    dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
+    onHit: trinket ? [TRINKET[trinket]] : [],
     b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
@@ -1091,6 +1097,7 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 function startAtk(u, name) {
   bleedOnAttack(u, name);
+  if (u.gs && u.gs.flags.selfCost && !world.demo) hurt(u, u.hpMax * u.gs.flags.selfCost, 'status', -1, 'burn');
   if (u.state === 'dead') return;
   u.state = 'atk'; u.atkName = name; u.atkDef = ATK[name]; u.af = 0; u.phase = 'w';
   u.hitDone = false; u.hitLanded = false; u.atkId = ++world.atkSeq; u.ai.macro = null;
@@ -2289,6 +2296,12 @@ function log(txt, side) {
 // Every point of damage is booked by type, for the breakdown after the fight. `split` divides one hit between types.
 function hurt(u, d, src, by, c, split) {
   if (u.state === 'dead' || world.over || world.demo) return;
+  if (u.shield > 0 && src !== 'zone') {   // a shield soaks damage before HP does
+    const a = Math.min(u.shield, d);
+    u.shield -= a; d -= a;
+    if (a >= 1) ring(u.b.x, u.b.y - (u.bh || H) / 2, 0.8, 'steel');
+    if (d <= 0) return;
+  }
   const before = u.hp;
   u.hp = Math.max(0, u.hp - d);
   const real = before - u.hp, kind = src === 'status' ? c : src === 'hit' ? 'hits' : 'arena';
@@ -2304,10 +2317,56 @@ function hurt(u, d, src, by, c, split) {
   else if (src === 'zone') st[u.side].zone += d;
   if (d >= 1) popText(u.b.x + (c ? (Math.random() - 0.5) * 0.5 : 0), u.b.y - H - 0.35, String(Math.round(d)), c || TEAM[u.side], c ? 0.38 : 0.5);
   if (u.hidden && d >= 1) reveal(u);
+  if (u.gs && u.gs.trig.length && u.hp > 0) fire(u, 'hpBelow');
   if (u.hp <= 0) kill(u);
+}
+// Heals, through one door, so Bloodpact Chalice and Royal Jelly can turn them into damage.
+function heal(u, amt) {
+  if (!(amt > 0) || u.state === 'dead' || world.over) return;
+  u.hp = Math.min(u.hpMax, u.hp + amt);
+  const hd = u.gs && u.gs.flags.healDamage, f = hd && foeOf(u);
+  if (f && f.state !== 'dead') hurt(f, amt * hd, 'hit', u.side, null, [['hits', 1]]);
+}
+const foeOf = (u) => (u.mob ? U[0] : foe(u));
+// Triggers: a trinket's "when" and "what", fired from the fight at the matching moment.
+function fire(u, type, other) {
+  const g = u.gs;
+  if (!g || !g.trig.length || u.state === 'dead' || world.over || world.demo) return;
+  for (const t of g.trig) {
+    if (t.type !== type) continue;
+    if ((type === 'onHit' || type === 'onHitTaken') && t.chance && rng() >= t.chance) continue;
+    if (type === 'nth' && u.hits % t.n !== 0) continue;
+    if (type === 'hpBelow') { if (t.used || u.hp / u.hpMax >= t.pct) continue; t.used = true; }
+    if (type === 'every' && world.t % Math.round(t.s * 60) !== 0) continue;
+    triggerEffect(u, t, other || foeOf(u));
+  }
+}
+function triggerEffect(u, t, target) {
+  const e = t.effect;
+  if (e.apply === 'frenzy') { u.frenzyT = Math.round(e.duration * 60); callout(u, 'FRENZY'); }
+  else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
+  if (e.shield) { u.shield += e.shield; ring(u.b.x, u.b.y - H / 2, 1, 'steel'); }
+  if (e.heal) heal(u, e.heal);
+  if (e.damage && target) hurt(target, e.damage, 'hit', u.side, null, [['hits', 1]]);
+  if (e.detonate && target && target.st.poison > 0) {   // Sunstone Idol: all the Poison at once
+    const n = target.st.poison; target.st.poison = 0;
+    hurt(target, n * 4, 'status', u.side, 'poison'); ring(target.b.x, target.b.y - H / 2, 1.2, 'poison');
+  }
+  if (e.stasis) {   // Gilded Hourglass: gold, untouchable and frozen for a moment
+    u.stasis = Math.round(e.stasis * 60); u.iT = Math.max(u.iT, u.stasis);
+    u.state = 'stun'; u.stunT = u.stasis; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0;
+    callout(u, 'GILDED');
+  }
 }
 function kill(u) {
   if (u.mob) { mobDie(u); return; }
+  if (u.gs && u.gs.flags.revive && !u.revived) {   // Phoenix Feather: rise once, cleansed, and burn the foe
+    u.revived = true; u.hp = u.hpMax * u.gs.flags.revive; u.iT = Math.max(u.iT, 60);
+    Object.assign(u.st, { burn: 0, poison: 0, bleed: 0, chill: 0, shock: 0, frozen: 0 });
+    callout(u, 'REVIVE'); ring(u.b.x, u.b.y - H / 2, 1.8, 'burn'); sfxShake(6);
+    const f = foeOf(u); if (f) applyStatus(u, f, 'burn');
+    return;
+  }
   u.state = 'dead';
   u.b.vx *= 1.3; u.b.vy = Math.min(u.b.vy, 0) - 4;
   u.rag = makeRag(u); u.hidden = 0; u.skName = null;
@@ -2348,8 +2407,18 @@ function applyHit(att, def, d, dirX, crit) {
       return;
     }
   }
+  // Evasion: the hit whiffs past a fighter who reads it
+  if (def.gs && def.gs.evasion > 0 && d.dmg && rng() < def.gs.evasion) {
+    att.hitDone = true; def.iT = Math.max(def.iT, 8);
+    popText(def.b.x, def.b.y - H - 0.35, 'dodge', 'steel', 0.4); streak(def.b.x, def.b.y - 0.9, dirX > 0 ? 0 : Math.PI, 0.8, 'steel');
+    if (def.gs.flags.dodgeRage) def.rage += def.gs.flags.dodgeRage;   // Dervish Slippers
+    fire(def, 'onDodge', att);
+    return;
+  }
   att.hitLanded = true;
-  if (!crit && att.critCh > 0 && d.dmg && rng() < att.critCh) crit = true;   // gear crit chance
+  const ag = att.gs, dg = def.gs;
+  const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
+  if (!crit && critCh > 0 && d.dmg && rng() < critCh) crit = true;   // gear crit chance
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = (def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5) || (def.state === 'atk' && def.mob && !!MOB[def.mob].armor && MOB[def.mob].armor(def));   // a big slime can't be knocked out of its leap
   const s = def.st, shattered = s.frozen > 0;
@@ -2375,7 +2444,13 @@ function applyHit(att, def, d, dirX, crit) {
   const flying = def.state === 'stun' && def.tumble, j = flying ? def.juggle : 0;
   if (flying) def.juggle++;
   if (j >= 2) def.iT = Math.max(def.iT, 30);
-  const zap = s.shock * STATUS.shock.per, dmg = d.dmg * (att.dmgMul || 1) * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + zap + (shattered ? STATUS.chill.shatter : 0);
+  // the weapon's own damage range scales every move it makes; flat Atk, Juggernaut and Dervish rage add on top
+  const wr = ag && ag.wpn && d.dmg ? (ag.wpn.min + rng() * (ag.wpn.max - ag.wpn.min)) / ag.wpn.base : 1;
+  const flat = ag && d.dmg ? ag.atk + (ag.flags.juggernaut ? ag.def * ag.flags.juggernaut : 0) + att.rage + (ag.flags.shieldBash ? att.shield * ag.flags.shieldBash : 0) : 0;
+  const nSt = (def.st.burn > 0) + (def.st.poison > 0) + (def.st.bleed > 0) + (def.st.chill > 0) + (def.st.shock > 0);
+  const mods = (ag && ag.flags.statusCount ? 1 + ag.flags.statusCount * nSt : 1) * (ag && ag.flags.glass ? 1.5 : 1) * (dg && dg.flags.glass ? 1.25 : 1);
+  const armour = dg ? 26 / (26 + Math.max(0, dg.def - (ag ? ag.pen : 0))) : 1;
+  const zap = s.shock * STATUS.shock.per, dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter : 0)) * armour;
   const kind = crit ? 'crits' : 'hits';
   if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
     log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
@@ -2385,21 +2460,46 @@ function applyHit(att, def, d, dirX, crit) {
     world.stats[att.side].crit += dmg;
     if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
   }
-  const taken = dmg * (1 - (def.armor || 0));
-  hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap / dmg], ['shock', zap / dmg]] : [[kind, 1]]);
-  if (att.gs && att.gs.ls > 0 && att.state !== 'dead') att.hp = Math.min(att.hpMax, att.hp + taken * att.gs.ls);
+  const taken = dmg;
+  hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap * armour / dmg], ['shock', zap * armour / dmg]] : [[kind, 1]]);
+  if (ag && ag.ls > 0 && att.state !== 'dead') heal(att, taken * ag.ls);
   proc(att, def, d.dmg);
+  if (ag) {
+    att.hits++;
+    fire(att, 'onHit', def); if (crit) fire(att, 'onCrit', def); fire(att, 'nth', def);
+    if (crit && ag.flags.critSpread) for (const k of ['burn', 'poison', 'bleed', 'chill', 'shock']) if (def.st[k] > 0) applyStatus(att, def, k, 1, null, true);   // Star Splitter
+  }
+  if (dg) {
+    fire(def, 'onHitTaken', att);
+    if (d.melee && dg.thorns > 0 && att.state !== 'dead' && def.state !== 'dead') {   // Thorns: hits up close cut the hitter
+      hurt(att, dg.thorns, 'hit', def.side, null, [['hits', 1]]);
+      if (dg.flags.thornsProc) for (const o of dg.onHit) if (rng() < o.chance) applyStatus(def, att, o.apply, o.stacks || 1, o);   // Briar Crown
+    }
+  }
 }
 
 // ---------------------------------------------------------------- statuses
+const resistOf = (u) => Math.min(0.7, (u.gs && u.gs.resist) || 0);
 function proc(att, def, base) {
   const all = att.onHit && att.onHit.length ? att.onHit : att.sting ? [att.sting] : null;
-  if (!all) return;
-  for (const t of all) procOne(att, def, base, t);
+  if (all) for (const t of all) procOne(att, def, base, t);
+  // gear: each on-hit status rolls its own chance, weighted by how often this weapon lands
+  if (att.gs && att.gs.onHit.length && def.state !== 'duel') {
+    const w = (STATUS_W[att.w] || 1) * att.gs.statusMult * (1 - resistOf(def));
+    for (const o of att.gs.onHit) if (rng() < o.chance * w) applyStatus(att, def, o.apply, o.stacks || 1, o);
+  }
 }
 function procOne(att, def, base, t) {
-  if (def.state === 'dead' || def.state === 'duel' || world.demo || !(base > 0) || rng() >= Math.min(1, base / 9 * (1 + ((att.gs && att.gs.proc) || 0)))) return;
-  const s = def.st, k = t.status, K = STATUS[k], x = def.b.x, y = def.b.y - H * 0.6;
+  if (def.state === 'dead' || def.state === 'duel' || world.demo || !(base > 0) || rng() >= Math.min(1, base / 9) * (1 - resistOf(def))) return;
+  applyStatus(att, def, t.status, 1, t);
+}
+function applyStatus(att, def, k, stacks = 1, t = null, echoed = false) {
+  if (def.state === 'dead' || world.demo || !k) return;
+  if (k === 'stun') {
+    if (def.state === 'free' || def.state === 'atk') { def.state = 'stun'; def.stunT = Math.round(((t && t.duration) || 0.5) * 60); def.tumble = false; def.ai.macro = null; def.ai.path.length = 0; callout(def, 'STUN', att.side); }
+    return;
+  }
+  const s = def.st, K = STATUS[k], x = def.b.x, y = def.b.y - H * 0.6, af = (att.gs && att.gs.flags) || {};
   if (k === 'chill' && (s.frozen > 0 || s.thaw > 0)) return;
   s.by = att.side;
   const st = world.stats[att.side];
@@ -2407,16 +2507,23 @@ function procOne(att, def, base, t) {
     const verb = { burn: 'set {} alight', poison: 'poisoned {}', bleed: 'cut {} open', chill: 'chilled {}', shock: 'shocked {}' }[k];
     log(`${att.side ? rivalName() + '\'s' : 'Your'} ${t.name} ${verb.replace('{}', att.side ? 'your fighter' : rivalName())}.`, att.side);
   }
-  if (k === 'burn') { s.burn = K.dur; ring(x, y, 0.6, 'burn'); }
-  else if (k === 'poison') { s.poison = Math.min(K.max, s.poison + 1); s.pT = K.decay; ring(x, y, 0.5, 'poison'); }
-  else if (k === 'bleed') { s.bleed = K.dur; drips(def, 3); }
-  else if (k === 'chill') {
-    s.chill++; s.chillT = K.dur; ring(x, y, 0.5, 'chill');
-    if (s.chill >= K.freeze) freeze(def);
-  } else if (k === 'shock') {
-    s.shock++; s.shockT = K.dur;
-    if (s.shock >= K.max) discharge(def);
+  for (let i = 0; i < stacks && def.state !== 'dead'; i++) {
+    if (k === 'burn') { s.burn = K.dur; ring(x, y, 0.6, 'burn'); }
+    else if (k === 'poison') { s.poison = Math.min(K.max, s.poison + 1); s.pT = K.decay; ring(x, y, 0.5, 'poison'); }
+    else if (k === 'bleed') { s.bleed = K.dur; drips(def, 3); }
+    else if (k === 'chill') {
+      if (s.frozen > 0 || s.thaw > 0) break;
+      s.chill++; s.chillT = K.dur; ring(x, y, 0.5, 'chill');
+      if (s.chill >= (af.freezeAt || K.freeze)) freeze(def);
+    } else if (k === 'shock') {
+      s.shock++; s.shockT = af.shockKeep ? 1e9 : K.dur;
+      if (s.shock >= K.max + (af.shockMax || 0)) discharge(def, af.overload);
+    }
   }
+  if (echoed) return;
+  if (af.echo && rng() < af.echo) applyStatus(att, def, k, stacks, t, true);   // Echo Conch: lands twice
+  const df = (def.gs && def.gs.flags) || {};
+  if (df.reflect && att !== def && rng() < df.reflect) applyStatus(def, att, k, stacks, t, true);   // Cursed Mirror
 }
 function freeze(u) {
   const s = u.st, K = STATUS.chill;
@@ -2437,10 +2544,10 @@ function shatter(u) {
   }
   ring(b.x, b.y - H / 2, 1.1, 'chill'); world.hs = Math.max(world.hs, 6);
 }
-function discharge(u) {
-  const s = u.st, K = STATUS.shock;
+function discharge(u, overload) {
+  const s = u.st, K = STATUS.shock, n = s.shock;
   s.shock = 0; s.shockT = 0;
-  hurt(u, K.burst, 'status', s.by, 'shock');
+  hurt(u, overload ? overload * n : K.burst, 'status', s.by, 'shock');   // Tesla Coil: the burst grows with every stack
   if (u.state === 'free' || u.state === 'atk') { u.state = 'stun'; u.stunT = 20; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0; }
   u.zap = 14; ring(u.b.x, u.b.y - H / 2, 1.4, 'shock'); world.hs = Math.max(world.hs, 5); sfxShake(5);
   callout(u, 'DISCHARGE', s.by >= 0 ? s.by : 1 - u.side);
@@ -2450,21 +2557,25 @@ function bleedOnAttack(u, name) {
   if (!(u.st.bleed > 0) || world.demo) return;
   const d = ATK[name], base = d.dmg || (d.shot ? SHOT[d.shot].hit.dmg : 0);
   if (!base) return;
-  hurt(u, Math.max(1, base * STATUS.bleed.cut), 'status', u.st.by, 'bleed');
+  const amt = Math.max(1, base * STATUS.bleed.cut);
+  hurt(u, amt, 'status', u.st.by, 'bleed');
+  const by = U.find((x) => x.side === u.st.by && !x.mob);
+  if (by && by.gs && by.gs.flags.bleedHeal) heal(by, amt);
   drips(u, 2);
 }
 function drips(u, n) {
   for (let i = 0; i < n; i++) parts.push({ k: 'p', x: u.b.x + (Math.random() - 0.5) * 0.4, y: u.b.y - 0.9 - Math.random() * 0.4, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 0, max: 40, c: 'bleed' });
 }
 function statusStep(u) {
-  const s = u.st, half = world.t % 30 === 0, b = u.b;
+  const s = u.st, b = u.b, by = s.by >= 0 && U.find((x) => x.side === s.by && !x.mob), bf = (by && by.gs && by.gs.flags) || {};
+  const half = world.t % (bf.dotRate ? 18 : 30) === 0, dotMul = by && by.stasis > 0 ? 2 : 1;
   if (s.burn > 0) {
     s.burn--;
-    if (half) hurt(u, STATUS.burn.tick, 'status', s.by, 'burn');
+    if (half) hurt(u, STATUS.burn.tick * dotMul, 'status', s.by, 'burn');
     if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - (u.bh || H) * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
   }
   if (s.poison > 0) {
-    if (half) hurt(u, STATUS.poison.tick * s.poison, 'status', s.by, 'poison');
+    if (half) hurt(u, STATUS.poison.tick * s.poison * dotMul, 'status', s.by, 'poison');
     if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
     if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - (u.bh || H) * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
   }
@@ -3217,10 +3328,18 @@ function spikeHit(u, i) {
   hurt(u, 10, 'trap', owner);
 }
 
+// Attack speed from gear and Frenzy: an extra step of the attack every so often.
+function hasteStep(u) {
+  const h = Math.max(0, (u.gs && u.gs.haste) || 0) + (u.frenzyT > 0 ? 0.3 : 0);
+  if (!h || u.state !== 'atk') return;
+  u.hasteAcc += h;
+  if (u.hasteAcc >= 1) { u.hasteAcc -= 1; atkStep(u); }
+}
 function atkStep(u) {
   const d = u.atkDef, b = u.b;
-  if (u.st.chill && u.phase === 'w') {   // Chill: the wind-up drags, a frame lost every few
-    u.slowAcc += STATUS.chill.slow * u.st.chill;
+  const slow = (u.st.chill && u.phase === 'w' ? STATUS.chill.slow * u.st.chill : 0) + Math.max(0, -((u.gs && u.gs.haste) || 0));
+  if (slow) {   // Chill, or heavy gear: a frame lost every few
+    u.slowAcc += slow;
     if (u.slowAcc >= 1) { u.slowAcc -= 1; return; }
   }
   u.af++;
@@ -3261,7 +3380,17 @@ function act(u) {
   if (u.flipT > 0) u.flipT--;
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
-  if (u.gs && u.gs.regen > 0 && world.t % 60 === 0 && !world.over) u.hp = Math.min(u.hpMax, u.hp + u.gs.regen);
+  if (u.gs) {
+    const g = u.gs;
+    if (g.regen > 0 && world.t % 60 === 0 && !world.over) {
+      heal(u, g.regen);
+      if (g.flags.regenPoison) { const f = foeOf(u); if (f && f.state !== 'dead') applyStatus(u, f, 'poison'); }   // Mycelial Heart
+    }
+    if (u.frenzyT > 0) u.frenzyT--;
+    if (u.stasis > 0 && --u.stasis === 0) { u.state = 'free'; u.stunT = 0; }
+    if (g.haste > 0 && u.cd > 0) u.cd -= g.haste;
+    if (g.trig.length && world.intro <= 0) fire(u, 'every');
+  }
   if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
   statusStep(u);
   if (u.state === 'dead') return;
@@ -3269,7 +3398,7 @@ function act(u) {
   let ctl = false, dir = 0, press = false, hold = false, fr = 1;
   switch (u.state) {
     case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
-    case 'atk': atkStep(u); if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; } break;
+    case 'atk': atkStep(u); hasteStep(u); if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; } break;
     case 'skill': skillStep(u); break;
     case 'roll':
       // a roll keeps its speed, then scrubs it off at the end; rolling off a ledge just becomes a fall
@@ -3685,7 +3814,7 @@ function fxStep(u) {
 }
 function simStep() {
   const w = world;
-  if (w.intro > 0) w.intro--;
+  if (w.intro > 0 && --w.intro === 0) for (const u of U) fire(u, 'battleStart');
   w.t++;
   if (!w.over) {
     w.zone = Math.min(SQ_MAX, 1 + Math.max(0, w.t / 60 - SQ_START) * SQ_SPEED);
@@ -4411,7 +4540,7 @@ function drawUnit(u, pal) {
   ctx.globalAlpha = 1;
   if (u.hook) drawHook(u, S, pal);
   const f = u.fade;
-  if (f < 0.99) { ctx.globalAlpha = 1 - f; drawFig(S, u.side, pal, u.flash > 0 && u.flash % 2 === 0); }
+  if (f < 0.99) { ctx.globalAlpha = 1 - f; drawFig(S, u.side, pal, u.flash > 0 && u.flash % 2 === 0, u.stasis > 0 ? '#d9a524' : undefined); }
   if (f > 0.01) { ctx.globalAlpha = f * 0.95; drawFig(S, u.side, pal, false, checkerPattern()); }
   ctx.globalAlpha = 1;
   if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
@@ -4420,6 +4549,10 @@ function drawUnit(u, pal) {
 // One mark per status: a green vein for Poison, frost ticks for Chill, an ice box when frozen, a crackle for Shock.
 function drawMarks(u, S, pal) {
   const s = u.st, b = u.b;
+  if (u.shield > 0.5) {   // a shield: a thin bubble in the team colour
+    ctx.globalAlpha = Math.min(0.7, 0.25 + u.shield / 60); ctx.strokeStyle = pal[TEAM[u.side]]; ctx.lineWidth = 0.04;
+    ctx.beginPath(); ctx.ellipse(b.x, b.y - (u.bh || H) / 2, (u.bw || W) * 0.95 + 0.1, (u.bh || H) * 0.62, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1;
+  }
   if (s.poison > 0 && S) {   // a green vein down the middle of each near limb, stronger with each stack
     ctx.globalAlpha = 0.45 + 0.09 * s.poison; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const pts of [[S.hip, S.neck], [S.hip, S.kf, S.ff], [S.sh, S.ef, S.hf]]) stroke(pts, pal.poison, 0.034);
