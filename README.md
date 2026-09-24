@@ -63,10 +63,20 @@ Then two stick figures fight it out on their own.
     with humps rolling down its back. It rears up, then lunges a long way. It
     shrugs off hits quickly and strikes back, and it can't be knocked out of a
     lunge.
-  - **Block Golem:** three stacked slate blocks. Hits barely move it and never
-    interrupt it. Up close it lifts its top block and slams a shockwave along the
-    floor, which fighters jump. From range it throws the block as a lobbed shot,
-    and a new one grows back.
+  - **Ink Spiders:** two spiders hang from the ceiling on silk threads, slide
+    along to line up over you, and drop. On the floor they walk on eight legs
+    that plant one step at a time, pounce, and climb back up after a while.
+  - **Ink Jellies:** two see-through paper bells with ink markings, trailing
+    tentacles and two frilled paper arms. They swim above you in pulses and dive
+    to sting. The tentacles turn green before a sting, and the sting poisons.
+  - **Scribble:** a living ball of pencil scrawl whose lines redraw themselves
+    every few frames, like hand-drawn animation, with a pencil stuck in the top.
+    It rolls at you, watches you with two eyes, and whips out a scrawled line.
+  - **Paper Golem:** a hunched body of crumpled paper, ink-blot eyes, stubby
+    legs and long brush-stroke arms ending in paper fists. Hits barely move it and
+    never interrupt it. Up close it raises both fists and slams a shockwave along
+    the floor, which fighters jump. From range it lobs a wad of itself, and a new
+    fist balls up. It falls apart into paper scraps.
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
