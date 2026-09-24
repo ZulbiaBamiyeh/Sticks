@@ -2434,11 +2434,12 @@ function applyHit(att, def, d, dirX, crit) {
   if (def.iT > 0 || def.state === 'dead' || def.state === 'down' || def.state === 'getup') return;
   const hx = def.b.x - dirX * 0.2, hy = def.b.y - 0.95;
   if (d.box && parrying(def) && facingPoint(def, att.b.x)) { att.hitDone = true; parrySuccess(def, att); return; }
-  if (def.mob && MOB[def.mob].guard && MOB[def.mob].guard(def, att, d, dirX)) {   // the crab's claw: hits from the front clank off
-    att.hitDone = true; sparks(hx, hy, -dirX, 10); ring(hx, hy, 0.7, 'spark'); popText(hx, hy - 0.4, 'clank', 'steel', 0.4);
+  const G = def.mob && MOB[def.mob];
+  if (G && G.guard && G.guard(def, att, d, dirX)) {   // the crab's claw and the mantis's blades turn hits aside
+    att.hitDone = true; sparks(hx, hy, -dirX, 10); ring(hx, hy, 0.7, 'spark'); popText(hx, hy - 0.4, G.guardWord || 'clank', 'steel', 0.4);
     if (d.melee && att.b) att.b.vx = -dirX * 4.5;
     world.hs = Math.max(world.hs, 3); sfxShake(2);
-    if (!world.stats[0].clank++) log('Clank. The claw guards its face. Hit it from above or behind.', 1);
+    if (!world.stats[0].clank++) log(G.guardLog || 'Clank. The claw guards its face. Hit it from above or behind.', 1);
     return;
   }
   if (d.melee && def.state === 'atk' && def.atkDef.melee && def.phase === 'a' && def.face === -att.face && !def.hitDone) {
@@ -3515,6 +3516,248 @@ Object.assign(HUNTS, {
   plaguecrows: { name: 'Plague Crows', eliteName: 'Plague Murder', base: 'crows', variant: 'toxic', tip: 'Poisoned quills from out of reach.', spawn: HUNTS.crows.spawn },
   frostcrab: { name: 'Frost Crab', eliteName: 'Frost King Crab', base: 'crab', variant: 'frost', tip: 'An armoured shell whose snap chills. Hit it from above or behind.', spawn: HUNTS.crab.spawn },
 });
+// ---- three more: a mantis that parries and ripostes, a wraith that fades out and reappears behind you,
+// and a toad whose tongue yanks you across the floor.
+Object.assign(ATK, {
+  scythe: { w: 14, a: 8, r: 22, dmg: 13, kb: [6, -4], stun: 18, hs: 5, box: [0.05, -1.55, 1.45, -0.15], melee: 1, mob: 1 },
+  reap: { w: 18, a: 14, r: 24, dmg: 10, kb: [5, -3], stun: 16, hs: 4, box: [-0.2, -1.05, 1.0, 0.0], melee: 1, mob: 1 },
+  tongue: { w: 20, a: 16, r: 26, mob: 1 },
+  tonguehit: { dmg: 5, kb: [-11, -6], stun: 30, hs: 5, mob: 1 },
+  gulp: { w: 12, a: 30, r: 16, dmg: 14, kb: [6, -6], stun: 20, hs: 5, box: [-0.5, -0.8, 0.65, 0.05], melee: 1, mob: 1 },
+});
+Object.assign(MOB, {
+  // ---- Mantis: stands tall, rocks gently, and reads your swings. Now and then it parries one on its
+  // blades and answers straight away with a double scythe.
+  mantis: {
+    name: 'Mantis', hp: 62, bw: 0.7, bh: 1.55, speed: 2.8, cd: 40, walker: 1, plant: 1,
+    recover: 1, armor: (u) => u.state === 'atk',   // shrugs off hits quickly, and can't be knocked out of a swing
+    guardWord: 'parried', guardLog: 'Parried on its blades. It answers at once.',
+    init(u) { u.riposte = false; u.second = false; u.gait = 0; },
+    guard(u, att, d, dirX) {
+      if (u.state !== 'free' || u.st.frozen || dirX !== -u.face || !d.melee || d.plunge || rng() >= (u.elite ? 0.5 : 0.35)) return false;
+      u.riposte = true; return true;
+    },
+    think(u, e, dx, dy) {
+      const b = u.b;
+      u.face = Math.abs(dx) > 0.2 ? Math.sign(dx) : u.face;
+      if (u.riposte) { u.riposte = false; startMobAtk(u, 'scythe'); u.af = 9; b.vx = 0; return; }
+      if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead' && b.gr && Math.abs(dx) < 1.9 && dy > -1.8 && dy < 1) { startMobAtk(u, 'scythe'); b.vx = 0; return; }
+      if (b.gr) walkAt(u, dx - Math.sign(dx) * 1.3, MOB.mantis.speed, -13);
+    },
+    atk(u, d) {
+      if (u.af === d.w) { u.phase = 'a'; const b = u.b; b.vx = u.face * 3; }
+      if (u.af === d.w + d.a) {
+        if (!u.second) { u.second = true; u.phase = 'w'; u.af = d.w - 5; u.hitDone = false; u.atkId = ++world.atkSeq; return; }
+        u.second = false; u.phase = 'r';
+      }
+    },
+    step(u) { const b = u.b; if (b.gr) u.gait += Math.abs(b.vx) * DT * 5; },
+    draw(u, pal, ink) {
+      const b = u.b, S = u.elite ? 1.2 : 1, t = world.t + u.slot * 29, rock = Math.sin(t * 0.05) * 0.03, g = u.gait;
+      const wind = u.state === 'atk' && u.phase === 'w' ? Math.min(1, u.af / u.atkDef.w) : 0, strike = u.state === 'atk' && u.phase === 'a' ? 1 : 0;
+      ctx.save(); ctx.translate(b.x, b.y); ctx.scale(u.face * S, S);
+      const legs = (color, wd, ph) => {
+        ctx.strokeStyle = color; ctx.lineWidth = wd; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        for (const [hx, kx, fx, p] of [[0.08, 0.34, 0.44, 0], [-0.08, -0.36, -0.5, Math.PI]]) {
+          const lift = Math.max(0, Math.sin(g + p + ph)) * 0.06;
+          ctx.beginPath(); ctx.moveTo(hx, -0.74); ctx.lineTo(kx, -0.98 - lift); ctx.lineTo(fx + Math.cos(g + p + ph) * 0.05, -lift); ctx.stroke();
+        }
+      };
+      legs(pal.far, 0.035, Math.PI / 2);
+      // abdomen, low and behind, under paper wings folded flat
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(-0.34, -0.7 + rock, 0.36, 0.12, 0.32, 0, 6.283); ctx.fill();
+      ctx.fillStyle = pal.steel; ctx.strokeStyle = ink; ctx.lineWidth = 0.025;
+      ctx.beginPath(); ctx.moveTo(0.0, -0.84 + rock); ctx.quadraticCurveTo(-0.4, -0.95 + rock, -0.72, -0.6 + rock); ctx.quadraticCurveTo(-0.38, -0.74 + rock, 0.0, -0.78 + rock); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = accentC(u, pal, pal.far); ctx.lineWidth = 0.02; ctx.beginPath(); ctx.moveTo(-0.08, -0.82 + rock); ctx.quadraticCurveTo(-0.38, -0.86 + rock, -0.62, -0.64 + rock); ctx.stroke();
+      legs(ink, 0.042, 0);
+      // a long thorax standing up, and the triangular head on top
+      const top = { x: 0.16 + rock + strike * 0.12, y: -1.36 + wind * 0.05 };
+      brush({ x: 0.0, y: -0.76 }, { x: 0.06, y: -1.05 }, top, 0.12, 0.07, ink);
+      ctx.save(); ctx.translate(top.x + 0.04, top.y - 0.08); ctx.rotate(strike * 0.2 - wind * 0.1);
+      ctx.fillStyle = ink; ctx.beginPath(); ctx.moveTo(-0.12, -0.08); ctx.lineTo(0.18, -0.06); ctx.lineTo(0.04, 0.12); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = eyeC(u, pal); for (const ex of [-0.08, 0.13]) { ctx.beginPath(); ctx.arc(ex, -0.06, 0.032, 0, 6.283); ctx.fill(); }
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.014;
+      ctx.beginPath(); ctx.moveTo(0.02, -0.09); ctx.quadraticCurveTo(0.12, -0.35, 0.34, -0.36); ctx.moveTo(0.04, -0.09); ctx.quadraticCurveTo(0.2, -0.28, 0.4, -0.24); ctx.stroke();
+      ctx.restore();
+      // the raptorial forelegs: folded in prayer, raised high to wind up, flung out to strike
+      const sh = { x: top.x - 0.02, y: top.y + 0.16 };
+      const rest = { el: { x: sh.x + 0.18, y: sh.y + 0.22 }, tip: { x: sh.x + 0.1, y: sh.y - 0.06 } };
+      const up = { el: { x: sh.x + 0.05, y: sh.y - 0.2 }, tip: { x: sh.x + 0.22, y: sh.y - 0.55 } };
+      const out = { el: { x: sh.x + 0.5, y: sh.y + 0.05 }, tip: { x: sh.x + 1.12, y: sh.y + 0.32 } };
+      const pose = strike ? out : wind ? { el: lerpP(rest.el, up.el, wind), tip: lerpP(rest.tip, up.tip, wind) } : rest;
+      for (const [off, color] of [[-0.04, pal.far], [0, ink]]) {
+        const el = { x: pose.el.x + off, y: pose.el.y }, tip = { x: pose.tip.x + off, y: pose.tip.y };
+        brush({ x: sh.x + off, y: sh.y }, lerpP(sh, el, 0.5), el, 0.07, 0.06, color);
+        const nx = -(tip.y - el.y), ny = tip.x - el.x, nl = Math.hypot(nx, ny) || 1;
+        ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(el.x + nx / nl * 0.04, el.y + ny / nl * 0.04); ctx.lineTo(tip.x, tip.y); ctx.lineTo(el.x - nx / nl * 0.04, el.y - ny / nl * 0.04); ctx.closePath(); ctx.fill();
+        if (color === ink) { ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.014; ctx.beginPath(); ctx.moveTo(el.x - nx / nl * 0.03, el.y - ny / nl * 0.03); ctx.lineTo(tip.x, tip.y); ctx.stroke(); }
+      }
+      ctx.restore();
+      if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(b.x - u.face * 0.34, b.y - 0.7, 0.3, 0.1, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+    },
+  },
+
+  // ---- Wraith: a tattered hood that fades out, drifts round behind you unseen and untouchable,
+  // reappears, and reaps. Every hit it lands heals it.
+  wraith: {
+    name: 'Wraith', hp: 40, bw: 0.7, bh: 1.2, cd: 70, scraps: 0,
+    fly: () => true,
+    spawnY: (slot) => 9.4 - (slot % 2) * 0.8,
+    init(u) { u.vis = 1; u.hideT = 0; u.drained = false; },
+    think(u, e, dx, dy, tx, ty) {
+      const b = u.b;
+      u.t++;
+      if (u.hideT > 0) {   // unseen: slip round behind the fighter, then show
+        u.hideT--;
+        const hx = e.b.x - (e.face || 1) * 1.4, hy = e.b.y - 0.6;
+        b.vx = approach(b.vx, clampV((hx - b.x) * 3, 7), 30 * DT); b.vy = approach(b.vy, clampV((hy - b.y) * 3, 7), 30 * DT);
+        if (u.hideT === 0 || (Math.abs(hx - b.x) < 0.4 && u.hideT < 40)) { u.hideT = 0; u.react = 14; u.cd = Math.min(u.cd, 10); }
+        return;
+      }
+      u.face = Math.sign(dx) || u.face;
+      if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead' && Math.abs(dx) < 2.6 && Math.abs(dy) < 1.8) { startMobAtk(u, 'reap'); return; }
+      const hx = tx - Math.sign(dx || 1) * 2 + Math.sin(u.t * 0.03 + u.slot) * 0.6, hy = ty - 0.7 + Math.sin(u.t * 0.06) * 0.25;
+      b.vx = approach(b.vx, clampV((hx - b.x) * 2, 4), 16 * DT); b.vy = approach(b.vy, clampV((hy - b.y) * 2, 4), 16 * DT);
+    },
+    atk(u, d, e) {
+      const b = u.b;
+      if (u.af === 1) u.drained = false;
+      if (u.phase === 'w') { b.vx = approach(b.vx, -u.face * 1, 20 * DT); b.vy = approach(b.vy, 0, 20 * DT); }
+      if (u.af === d.w) { u.phase = 'a'; b.vx = u.face * 9; b.vy = clampV(((e.b.y - 0.6) - b.y) * 3, 4); }
+      if (u.hitLanded && !u.drained) { u.drained = true; u.hp = Math.min(u.hpMax, u.hp + 8); popText(b.x, b.y - u.bh - 0.2, '+8', 'poison', 0.4); }
+      if (u.phase === 'a') b.vx = approach(b.vx, 0, 10 * DT);
+      if (u.af === d.w + d.a) u.phase = 'r';
+      if (u.af === d.w + d.a + d.r - 1 && rng() < (u.elite ? 0.8 : 0.6)) u.hideT = 110;   // fade out again
+    },
+    step(u) {
+      u.vis = approach(u.vis, u.hideT > 0 ? 0 : 1, 0.06);
+      if (u.vis < 0.5) u.iT = Math.max(u.iT, 2);
+    },
+    draw(u, pal, ink) {
+      const b = u.b, t = world.t + u.slot * 31, cy = b.y - u.bh, S = u.elite ? 1.15 : 1;
+      ctx.save(); ctx.globalAlpha = 0.08 + 0.92 * u.vis;
+      ctx.translate(b.x, cy); ctx.scale(u.face * S, S);
+      // wisps trailing behind
+      ctx.globalAlpha *= 0.55;
+      for (let i = 0; i < 2; i++) {   // two fine wisps curling off the back of the cloak
+        const y0 = 0.4 + i * 0.3, w = Math.sin(t * 0.08 + i * 2) * 0.12;
+        brush({ x: -0.2, y: y0 }, { x: -0.55, y: y0 - 0.15 + w }, { x: -0.8 - i * 0.1, y: y0 + 0.05 - w }, 0.05, 0.004, pal.far);
+      }
+      ctx.globalAlpha /= 0.55;
+      // the cloak: a hood up top, flaring to a ragged hem that drifts
+      ctx.fillStyle = ink; ctx.beginPath();
+      ctx.moveTo(-0.08, 0.02); ctx.bezierCurveTo(0.12, -0.06, 0.3, 0.06, 0.3, 0.28);
+      ctx.bezierCurveTo(0.32, 0.55, 0.36, 0.8, 0.38, 1.0);
+      for (let i = 0; i <= 5; i++) { const x = 0.38 - i * 0.15, y = 1.02 + (i % 2 ? -0.14 : 0.04) + Math.sin(t * 0.12 + i) * 0.04; ctx.lineTo(x, y); }
+      ctx.bezierCurveTo(-0.4, 0.7, -0.34, 0.3, -0.26, 0.16); ctx.bezierCurveTo(-0.22, 0.06, -0.16, 0.02, -0.08, 0.02); ctx.fill();
+      // the hollow of the hood, and two eyes in it
+      ctx.fillStyle = pal.far; ctx.beginPath(); ctx.ellipse(0.16, 0.26, 0.1, 0.14, 0.15, 0, 6.283); ctx.fill();
+      ctx.fillStyle = eyeC(u, pal); for (const ex of [0.12, 0.21]) { ctx.beginPath(); ctx.ellipse(ex, 0.24, 0.022, 0.034, 0, 0, 6.283); ctx.fill(); }
+      ctx.strokeStyle = accentC(u, pal, pal.steel); ctx.lineWidth = 0.025; ctx.beginPath(); ctx.moveTo(-0.02, 0.04); ctx.bezierCurveTo(0.14, 0.0, 0.3, 0.1, 0.3, 0.28); ctx.stroke();
+      // a long claw reaching out, further when it reaps
+      const reach = u.state === 'atk' ? (u.phase === 'a' ? 1 : -0.3 * Math.min(1, u.af / u.atkDef.w)) : Math.sin(t * 0.05) * 0.1;
+      const sh = { x: 0.2, y: 0.5 }, hand = { x: 0.5 + reach * 0.45, y: 0.55 - reach * 0.08 };
+      brush(sh, { x: 0.36, y: 0.62 }, hand, 0.07, 0.04, ink);
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.022; ctx.lineCap = 'round';
+      for (const a of [-0.5, 0, 0.5]) { ctx.beginPath(); ctx.moveTo(hand.x, hand.y); ctx.quadraticCurveTo(hand.x + 0.1, hand.y + a * 0.1, hand.x + 0.16, hand.y + a * 0.16 + 0.06); ctx.stroke(); }
+      ctx.restore();
+    },
+  },
+
+  // ---- Toad: squats at range and shoots its tongue out to yank you in, then bites. Up close it hops on you.
+  toad: {
+    name: 'Toad', hp: 70, bw: 1.0, bh: 0.72, cd: 55,
+    init(u) { u.tongue = null; u.pouch = 0; u.hopT = 30; if (u.elite) { u.hp = u.hpMax = u.hpShow = Math.round(u.hp * 1.4); } },
+    think(u, e, dx, dy) {
+      const b = u.b, adx = Math.abs(dx);
+      if (!b.gr) return;
+      u.face = Math.sign(dx) || u.face;
+      if (u.cd <= 0 && u.react <= 0 && !e.hidden && e.state !== 'dead') {
+        if (adx < 1.5 && dy > -1.2 && dy < 1) { startMobAtk(u, 'gulp'); return; }
+        if (adx < 5 && adx > 1.4 && dy > -2.2 && dy < 1.5) { startMobAtk(u, 'tongue'); return; }
+      }
+      if (--u.hopT <= 0) {   // hop to keep three tiles off, higher if there's a step in the way
+        const want = adx > 3.6 ? Math.sign(dx) : adx < 2.4 ? -Math.sign(dx) : 0;
+        if (want) {
+          const wall = boxSolid(b.x + want * (u.bw / 2 + 0.3) - 0.05, b.y - 0.9, b.x + want * (u.bw / 2 + 0.3) + 0.05, b.y - 0.1);
+          b.vx = want * 5; b.vy = wall ? -17 : -9; b.gr = false; u.squash = -0.3;
+        }
+        u.hopT = 34 + Math.floor(rng() * 20);
+      }
+    },
+    atk(u, d, e, ev) {
+      const b = u.b;
+      if (u.atkName === 'gulp') {
+        if (u.phase === 'w') u.squash = -0.35 * Math.min(1, u.af / d.w);
+        if (u.af === d.w) { u.phase = 'a'; b.vx = u.face * 7; b.vy = -9; b.gr = false; u.squash = 0.3; }
+        if (u.phase === 'a' && ((ev & EV_LAND) || u.af >= d.w + d.a)) { u.phase = 'r'; u.af = Math.max(u.af, d.w + d.a); dust(b.x, b.y, 5, 0.9); }
+        return;
+      }
+      // the tongue: the throat swells, then it shoots out at where you stood and snaps back
+      if (u.phase === 'w') {
+        u.pouch = Math.min(1, u.af / d.w);
+        if (u.af === d.w - 1) u.aim = { x: e.b.x, y: e.b.y - 0.7 };
+      }
+      if (u.af === d.w) { u.phase = 'a'; u.pouch = 0; u.tongue = { k: 0, caught: false }; }
+      if (u.tongue) {
+        const T = u.tongue, mx = b.x + u.face * 0.5, my = b.y - 0.36, ax = u.aim.x - mx, ay = u.aim.y - my, L = Math.min(5.2, Math.hypot(ax, ay) + 0.4), a = Math.atan2(ay, ax);
+        const out = u.af - d.w, half = d.a / 2;
+        T.k = out < half ? out / half : Math.max(0, 1 - (out - half) / half);
+        T.x = mx + Math.cos(a) * L * T.k; T.y = my + Math.sin(a) * L * T.k; T.mx = mx; T.my = my;
+        if (!T.caught && !u.hitDone && e.state !== 'dead' && !(e.iT > 0) && !lying(e) && overlap(hurtbox(e, 0.05), [T.x - 0.12, T.y - 0.12, T.x + 0.12, T.y + 0.12])) {
+          T.caught = true; u.hitDone = true;
+          applyHit(u, e, ATK.tonguehit, Math.sign(e.b.x - b.x) || u.face);   // the knockback pulls you in
+          if (!world.stats[0].tongue++) log('The toad\'s tongue caught you and reeled you in.', 1);
+        }
+        if (u.af >= d.w + d.a) { u.tongue = null; u.phase = 'r'; if (T.caught) u.cd = 0; }
+      }
+    },
+    step(u) { if (u.state === 'free' && !u.b.gr) u.squash = approach(u.squash, 0.15, 0.04); if (u.state !== 'atk') u.pouch = approach(u.pouch, 0, 0.1); },
+    draw(u, pal, ink) {
+      const b = u.b, S = u.elite ? 1.35 : 1, q = Math.max(-0.4, Math.min(0.35, u.squash)), f = u.face;
+      if (u.tongue && u.tongue.k > 0) {   // drawn first, from the mouth out to a sticky tip
+        const T = u.tongue;
+        ctx.strokeStyle = '#c85a6e'; ctx.lineWidth = 0.06; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(T.mx, T.my); ctx.lineTo(T.x, T.y); ctx.stroke();
+        ctx.fillStyle = '#c85a6e'; ctx.beginPath(); ctx.arc(T.x, T.y, 0.09, 0, 6.283); ctx.fill();
+      }
+      ctx.save(); ctx.translate(b.x, b.y); ctx.scale(f * S * (1 - q * 0.5), S * (1 + q));
+      // the big hind leg, folded
+      ctx.fillStyle = pal.far; ctx.beginPath(); ctx.ellipse(-0.3, -0.2, 0.26, 0.16, -0.3, 0, 6.283); ctx.fill();
+      ctx.fillStyle = ink;
+      ctx.beginPath(); ctx.moveTo(-0.52, -0.05); ctx.bezierCurveTo(-0.6, -0.5, 0.1, -0.72, 0.42, -0.5);
+      ctx.bezierCurveTo(0.58, -0.4, 0.6, -0.14, 0.5, -0.06); ctx.bezierCurveTo(0.3, 0.02, -0.3, 0.02, -0.52, -0.05); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(-0.3, -0.18, 0.28, 0.17, -0.25, 0, 6.283); ctx.fill();   // the near thigh
+      ctx.beginPath(); ctx.ellipse(-0.08, -0.03, 0.2, 0.05, 0, 0, 6.283); ctx.fill();   // its foot
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.07; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(0.3, -0.18); ctx.lineTo(0.36, -0.01); ctx.lineTo(0.46, -0.01); ctx.stroke();
+      // the throat pouch swells before the tongue
+      if (u.pouch > 0.05) { ctx.fillStyle = pal.steel; ctx.strokeStyle = ink; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.ellipse(0.36, -0.18, 0.1 + u.pouch * 0.12, 0.06 + u.pouch * 0.1, 0, 0, 6.283); ctx.fill(); ctx.stroke(); }
+      // a wide mouth line, eyes bulging on top, warts down the back
+      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.022; ctx.beginPath(); ctx.moveTo(0.54, -0.28); ctx.quadraticCurveTo(0.35, -0.24, 0.16, -0.32); ctx.stroke();
+      for (const [ex, er] of [[0.18, 0.1], [0.34, 0.11]]) {
+        ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(ex, -0.56, er, 0, 6.283); ctx.fill();
+        ctx.fillStyle = eyeC(u, pal); ctx.beginPath(); ctx.arc(ex + 0.02, -0.58, er * 0.55, 0, 6.283); ctx.fill();
+        ctx.fillStyle = ink; ctx.fillRect(ex - 0.03, -0.595, 0.08, 0.025);
+      }
+      ctx.fillStyle = accentC(u, pal, pal.far);
+      for (const [x, y, r] of [[-0.2, -0.52, 0.035], [-0.05, -0.58, 0.03], [-0.34, -0.4, 0.03], [0.04, -0.45, 0.025]]) { ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill(); }
+      ctx.restore();
+      if (u.st.poison > 0) { ctx.globalAlpha = 0.6; ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(b.x, b.y - 0.35 * S, 0.4 * S, 0.18 * S, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+    },
+  },
+});
+Object.assign(HUNTS, {
+  mantis: { name: 'Mantis', eliteName: 'Mantis Queen', tip: 'Reads your swings: sometimes it parries on its blades and answers with a double scythe.',
+    spawn: (t) => (t === 'easy' ? [makeMob('mantis', 15.5, 1, 0, t)] : t === 'normal' ? [makeMob('mantis', 14.5, 1, 0, t), makeMob('mantis', 17.2, 1, 1, t)] : [makeMob('mantis', 16, 1, 0, t), makeMob('mantis', 14, 1, 1, t)]) },
+  wraiths: { name: 'Wraith', eliteName: 'Wraith Host', tip: 'Fades out, slips round behind you, and reappears to reap. Its hits heal it.',
+    spawn: (t) => (t === 'elite' ? [makeMob('wraith', 15.5, 1, 0, t), makeMob('wraith', 13.5, 1, 1, t)] : pack('wraith', { easy: 1, normal: 2 }[t], [15.5, 13.5], t)) },
+  toad: { name: 'Toad', eliteName: 'Toad King', tip: 'Keeps its distance and shoots its tongue out to reel you in, then bites.',
+    spawn: (t) => (t === 'easy' ? [makeMob('toad', 16, 1, 0, t)] : t === 'normal' ? [makeMob('toad', 15, 1, 0, t), makeMob('toad', 17.5, 1, 1, t)] : [makeMob('toad', 16.5, 1, 0, t), makeMob('toad', 14, 1, 1, 'normal'), makeMob('toad', 18.2, 1, 2, 'normal')]) },
+});
+Object.assign(HUNTS, {
+  bloodmantis: { name: 'Blood Mantis', eliteName: 'Blood Queen', base: 'mantis', variant: 'blood', tip: 'Its scythes open bleeds, and it parries.', spawn: HUNTS.mantis.spawn },
+  frostwraiths: { name: 'Frost Wraith', eliteName: 'Frost Host', base: 'wraiths', variant: 'frost', tip: 'A reaping touch that chills, from behind.', spawn: HUNTS.wraiths.spawn },
+  poisontoad: { name: 'Poison Toad', eliteName: 'Poison Toad King', base: 'toad', variant: 'toxic', tip: 'Its tongue and bite poison.', spawn: HUNTS.toad.spawn },
+});
 const HUNT_KEYS = Object.keys(HUNTS);
 function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
   const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v), T = TIER[tier];
@@ -4141,7 +4384,7 @@ function newWorld(seed) {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -4702,6 +4945,127 @@ for (const f of ['pack', 'quill', 'shell', 'blaze', 'rot', 'glacier']) {
   FAMILY_ITEMS[f] = Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic);
   RELIC_OF[f] = Object.keys(ITEM).find((id) => ITEM[id].family === f && ITEM[id].relic);
 }
+// Second variants of five bodies, so each old creature has two.
+Object.assign(HUNTS, {
+  vampirebats: { name: 'Vampire Bats', eliteName: 'Vampire Swarm', base: 'bats', variant: 'blood', tip: 'Every dive opens a bleed.', spawn: (t) => HUNTS.bats.spawn(t).slice(0, 3) },
+  thunderjellies: { name: 'Thunder Jellyfish', base: 'jellies', variant: 'storm', tip: 'Their stings shock; a full bar discharges.', spawn: HUNTS.jellies.spawn },
+  iceslime: { name: 'Ice Slime', eliteName: 'Ice King', base: 'slime', variant: 'frost', tip: 'Every hop chills. It splits when it pops.', spawn: HUNTS.slime.spawn },
+  venomspiders: { name: 'Venom Spiders', base: 'spiders', variant: 'toxic', tip: 'Drop from the ceiling with a poison bite.', spawn: HUNTS.spiders.spawn },
+  fireserpent: { name: 'Fire Serpent', base: 'serpent', variant: 'ember', tip: 'Its long lunges set you alight.', spawn: HUNTS.serpent.spawn },
+});
+// Their families: eleven more, for 29 in all. Each has a 2-piece and a 4-piece bonus and a few pieces.
+Object.assign(FAMILY, {
+  scythe: { name: 'Scythe', hunt: 'mantis', status: null, set2: { stats: { crit: 0.05, haste: 0.05 } },
+    set4: { desc: 'Winning a blade exchange or a parry: your next hit crits.', trig: [{ type: 'onExchange', effect: { critNext: true } }, { type: 'onParry', effect: { critNext: true } }] } },
+  reaper: { name: 'Reaper', hunt: 'bloodmantis', status: 'bleed', set2: { stats: { ls: 0.05, atk: 2 } },
+    set4: { desc: 'On crit: Bleed the foe and heal 5.', trig: [{ type: 'onCrit', effect: { apply: 'bleed', heal: 5 } }] } },
+  spectre: { name: 'Spectre', hunt: 'wraiths', status: null, set2: { stats: { evasion: 0.06, skillHaste: 0.1 } },
+    set4: { desc: 'When you dodge: 8 Shield, and your next hit crits.', trig: [{ type: 'onDodge', effect: { shield: 8, critNext: true } }] } },
+  wisp: { name: 'Wisp', hunt: 'frostwraiths', status: 'chill', set2: { stats: { resist: 0.1, evasion: 0.03 } },
+    set4: { desc: 'Every 4s: Chill the foe.', trig: [{ type: 'every', s: 4, effect: { apply: 'chill' } }] } },
+  bog: { name: 'Bog', hunt: 'toad', status: 'stun', set2: { stats: { hp: 20, regen: 0.6 } },
+    set4: { desc: 'Launching a foe heals 8. Knockback +30%.', flags: { kb: 0.3 }, trig: [{ type: 'onLaunch', effect: { heal: 8 } }] } },
+  mire: { name: 'Mire', hunt: 'poisontoad', status: 'poison', set2: { stats: { regen: 0.8, hp: 10 } },
+    set4: { desc: '+30% damage vs Poisoned.', flags: { vs: { poison: 0.3 } } } },
+  vampire: { name: 'Vampire', hunt: 'vampirebats', status: 'bleed', set2: { stats: { ls: 0.06, speed: 0.04 } },
+    set4: { desc: 'Hits heal 1. Each kill heals 10.', trig: [{ type: 'onHit', effect: { heal: 1 } }, { type: 'onKill', effect: { heal: 10 } }] } },
+  thunder: { name: 'Thunder', hunt: 'thunderjellies', status: 'shock', set2: { stats: { haste: 0.06, hp: 10 } },
+    set4: { desc: 'Your Shock never fades.', flags: { shockKeep: true } } },
+  frostgel: { name: 'Frostgel', hunt: 'iceslime', status: 'chill', set2: { stats: { hp: 15, regen: 0.6 } },
+    set4: { desc: 'When hit, 25%: Chill the attacker.', trig: [{ type: 'onHitTaken', chance: 0.25, effect: { apply: 'chill' } }] } },
+  venom: { name: 'Venom', hunt: 'venomspiders', status: 'poison', set2: { stats: { crit: 0.04, resist: 0.1 } },
+    set4: { desc: 'Every 5th hit: burst all Poison on the foe.', trig: [{ type: 'nth', n: 5, effect: { detonate: 'poison' } }] } },
+  flame: { name: 'Flame', hunt: 'fireserpent', status: 'burn', set2: { stats: { atk: 2, pen: 2 } },
+    set4: { desc: 'Launching a foe: Burn. +25% damage vs Burning.', flags: { vs: { burn: 0.25 } }, trig: [{ type: 'onLaunch', effect: { apply: 'burn' } }] } },
+});
+for (const k of Object.keys(HUNTS)) if (!HUNT_KEYS.includes(k)) HUNT_KEYS.push(k);
+const NEW_FAMS = ['scythe', 'reaper', 'spectre', 'wisp', 'bog', 'mire', 'vampire', 'thunder', 'frostgel', 'venom', 'flame'];
+for (const k of NEW_FAMS) HUNT_FAMILY[FAMILY[k].hunt] = k;
+Object.assign(ITEM, {
+  // scythe: the mantis's. Exchanges, parries, crits.
+  mantis_blade: iW('Mantis Blade', 'scythe', 'sword', { min: 7, max: 11, stats: { crit: 0.04 }, trig: [{ type: 'onParry', effect: { critNext: true } }], desc: 'A parry: your next hit crits.', flavor: 'Folds away when it\'s not needed.' }),
+  twin_scythes: iW('Twin Scythes', 'scythe', 'daggers', { flags: { backstab: 0.25 }, desc: '+25% damage from behind.', flavor: 'Two prayers, both answered.' }),
+  praying_spear: iW('Praying Spear', 'scythe', 'spear', { trig: [{ type: 'onExchange', effect: { critNext: true } }], desc: 'Winning a blade exchange: your next hit crits.', flavor: 'Still. Still. Now.' }),
+  mantis_helm: iA('Mantis Helm', 'scythe', 'head', { hp: 10, crit: 0.06 }, { flavor: 'The eyes see all the way round.' }),
+  chitin_vest: iA('Chitin Vest', 'scythe', 'core', { hp: 18, def: 2, haste: 0.04 }, { flavor: 'Light, hard, and a little green.' }),
+  stilt_boots: iA('Stilt Boots', 'scythe', 'feet', { speed: 0.05 }, { acro: 2, trig: [{ type: 'onAcro', effect: { critNext: true } }], desc: 'After a wall jump or air flip, your next hit crits.', flavor: 'Tall steps. Taller leaps.' }),
+  prayer_bead: iT('Prayer Bead', 'scythe', { stats: { crit: 0.04 }, trig: [{ type: 'onParry', effect: { heal: 8 } }], desc: 'A parry heals 8.', flavor: 'Worn smooth by patience.' }),
+  // reaper: the blood mantis's. Bleed and lifesteal.
+  reaper_sickle: iW('Reaper Sickle', 'reaper', 'sword', { ...oh('bleed'), flavor: 'Harvest time.' }),
+  red_scythes: iW('Red Scythes', 'reaper', 'daggers', { stats: { ls: 0.03 }, ...oh('bleed', 0.15), flavor: 'Cleaned once. Never again.' }),
+  reaper_hood: iA('Reaper Hood', 'reaper', 'head', { hp: 12, ls: 0.03 }, { flavor: 'The face inside is not important.' }),
+  reaper_robe: iA('Reaper Robe', 'reaper', 'core', { hp: 22, atk: 1 }, { trig: [{ type: 'onKill', effect: { heal: 10 } }], desc: 'Each kill heals 10.', flavor: 'Hems drag through what they reap.' }),
+  blood_bead: iT('Blood Bead', 'reaper', { trig: [{ type: 'onCrit', effect: { heal: 4 } }], stats: { crit: 0.03 }, desc: 'Crits heal 4.', flavor: 'Warm, and a little sticky.' }),
+  // spectre: the wraith's. Dodging, skills, vanishing.
+  ghost_blade: iW('Ghost Blade', 'spectre', 'sword', { stats: { evasion: 0.03 }, flags: { backstab: 0.25 }, desc: '+25% damage from behind.', flavor: 'You feel it before you see it.' }),
+  wail_bow: iW('Wail Bow', 'spectre', 'bow', { stats: { skillHaste: 0.08 }, flavor: 'The string moans when it\'s drawn.' }),
+  spectre_hood: iA('Spectre Hood', 'spectre', 'head', { hp: 8, evasion: 0.05 }, { flavor: 'Empty, mostly.' }),
+  shroud_cloak: iA('Shroud Cloak', 'spectre', 'core', { hp: 14, evasion: 0.06 }, { trig: [{ type: 'onDodge', effect: { skillCd: 1 } }], desc: 'When you dodge, your skill comes back 1s sooner.', flavor: 'Hard to hit what isn\'t quite there.' }),
+  drift_slippers: iA('Drift Slippers', 'spectre', 'feet', { evasion: 0.04 }, { acro: 3, flavor: 'Toes never quite touch the floor.' }),
+  haunt_lantern: iT('Haunt Lantern', 'spectre', { stats: { skillHaste: 0.1 }, trig: [{ type: 'onSkill', effect: { shield: 8 } }], desc: 'Your skill: 8 Shield.', flavor: 'Lights the way back.' }),
+  night_shade: iS('Night Shade', 'spectre', 'darksight', { evasion: 0.03 }),
+  // wisp: the frost wraith's. Chill from anywhere.
+  wisp_stars: iW('Wisp Stars', 'wisp', 'stars', oh('chill', 0.15)),
+  frostwisp_bow: iW('Rimewisp Bow', 'wisp', 'bow', { ...oh('chill'), flavor: 'Frost trails every arrow.' }),
+  wisp_hood: iA('Wisp Hood', 'wisp', 'head', { hp: 10, resist: 0.1 }, { flavor: 'Breath turns to snow inside.' }),
+  pale_cloak: iA('Pale Cloak', 'wisp', 'core', { hp: 14, evasion: 0.04 }, { trig: [{ type: 'onHitTaken', chance: 0.2, effect: { apply: 'chill' } }], desc: 'When hit, 20%: Chill the attacker.', flavor: 'Cold to the touch, from both sides.' }),
+  wisp_bell: iT('Wisp Bell', 'wisp', { trig: [{ type: 'every', s: 5, effect: { apply: 'chill' } }], desc: 'Every 5s: Chill the foe.', flavor: 'Rings with no clapper.' }),
+  // bog: the toad's. Pulling, holding, knocking about.
+  tongue_whip: iW('Tongue Whip', 'bog', 'spear', { flags: { kb: 0.3 }, desc: 'Knockback +30%.', flavor: 'Sticky. Very sticky.' }),
+  bog_maul: iW('Bog Maul', 'bog', 'hammer', { stats: { hp: 12 }, trig: [{ type: 'onLaunch', effect: { heal: 6 } }], desc: 'Launching a foe heals 6.', flavor: 'Mostly mud, partly rock.' }),
+  toad_cap: iA('Toad Cap', 'bog', 'head', { hp: 18, regen: 0.4 }, { flavor: 'Warty, but warm.' }),
+  bog_coat: iA('Bog Coat', 'bog', 'core', { hp: 30, regen: 0.4, haste: -0.04 }, { flags: { steady: 0.3 }, desc: 'Knockback taken −30%.', flavor: 'Heavy with pond water.' }),
+  leaper_boots: iA('Leaper Boots', 'bog', 'feet', { hp: 8 }, { acro: 2, trig: [{ type: 'onAcro', effect: { hop: 3 } }], desc: 'Wall jumps and air flips carry you higher.', flavor: 'Built for big jumps.' }),
+  lily_pad: iT('Lily Pad', 'bog', { trig: [{ type: 'onPad', effect: { heal: 8 } }], desc: 'Launching from a pad heals 8.', flavor: 'Lands softly, every time.' }),
+  // mire: the poison toad's. Poison and staying power.
+  mire_maul: iW('Mire Maul', 'mire', 'hammer', oh('poison', 0.25, 2)),
+  mire_spear: iW('Mire Spear', 'mire', 'spear', { ...oh('poison'), flavor: 'The tip never dries.' }),
+  mire_cap: iA('Mire Cap', 'mire', 'head', { hp: 14, regen: 0.5 }, { flavor: 'Smells of the deep pond.' }),
+  mire_boots: iA('Mire Boots', 'mire', 'feet', { hp: 8 }, { acro: 2, trig: [{ type: 'onRoll', effect: { apply: 'poison' } }], desc: 'Rolls: 1 Poison on the foe.', flavor: 'Leave a green trail.' }),
+  toad_vial: iT('Toad Vial', 'mire', { trig: [{ type: 'onLaunch', effect: { apply: 'poison', stacks: 2 } }], desc: 'Launching a foe: 2 Poison.', flavor: 'Milked, reluctantly, from a toad.' }),
+  // vampire: the vampire bats'. Lifesteal and speed.
+  vampire_fangs: iW('Vampire Fangs', 'vampire', 'daggers', { stats: { ls: 0.04 }, ...oh('bleed', 0.15), flavor: 'Always thirsty.' }),
+  night_bow: iW('Night Bow', 'vampire', 'bow', { stats: { ls: 0.03 }, flags: { vsAir: 0.2 }, desc: '+20% damage to airborne foes.', flavor: 'Hunts by moonlight.' }),
+  vampire_cowl: iA('Vampire Cowl', 'vampire', 'head', { hp: 10, ls: 0.03 }, { flavor: 'Sun-shy.' }),
+  vampire_cloak: iA('Vampire Cloak', 'vampire', 'core', { hp: 16, ls: 0.04 }, { trig: [{ type: 'onKill', effect: { heal: 10 } }], desc: 'Each kill heals 10.', flavor: 'Lined in red. Of course.' }),
+  bat_charm: iT('Bat Charm', 'vampire', { stats: { ls: 0.05, speed: 0.03 }, flavor: 'Hangs upside down on its string.' }),
+  // thunder: the thunder jellyfish's. Shock that sticks.
+  thunder_stars: iW('Thunder Stars', 'thunder', 'stars', oh('shock', 0.15)),
+  thunder_spear: iW('Thunder Spear', 'thunder', 'spear', { ...oh('shock', 0.2), flavor: 'Hums in the rain.' }),
+  thunder_hat: iA('Thunder Hat', 'thunder', 'head', { hp: 12, haste: 0.04 }, { flavor: 'A lightning rod, technically.' }),
+  thunder_robe: iA('Thunder Robe', 'thunder', 'core', { hp: 20, haste: 0.04 }, { trig: [{ type: 'onHitTaken', chance: 0.25, effect: { apply: 'shock' } }], desc: 'When hit, 25%: Shock the attacker.', flavor: 'Crackles when you sit down.' }),
+  storm_jar: iT('Storm Jar', 'thunder', { flags: { shockKeep: true }, desc: 'Your Shock never fades.', flavor: 'Caught one. Kept it.' }),
+  // frostgel: the ice slime's. Cold and sturdy.
+  ice_blade: iW('Ice Blade', 'frostgel', 'sword', { stats: { hp: 8 }, ...oh('chill', 0.15), flavor: 'Never melts, never dulls.' }),
+  slush_maul: iW('Slush Maul', 'frostgel', 'hammer', { ...oh('chill', 0.25), flavor: 'A snowball with ambition.' }),
+  ice_cap: iA('Ice Cap', 'frostgel', 'head', { hp: 16, def: 1 }, { flavor: 'Brain freeze included.' }),
+  frost_coat: iA('Frostgel Coat', 'frostgel', 'core', { hp: 26, regen: 0.4 }, { flavor: 'Wobbles, and it\'s cold.' }),
+  ice_heart: iT('Ice Heart', 'frostgel', { stats: { regen: 1 }, trig: [{ type: 'hpBelow', pct: 0.4, effect: { shield: 20, apply: 'chill', stacks: 2 } }], desc: 'Below 40% HP, once: 20 Shield and 2 Chill on the foe.', flavor: 'Thaws when you need it.' }),
+  // venom: the venom spiders'. Poison, then burst it.
+  venom_daggers: iW('Venom Daggers', 'venom', 'daggers', oh('poison')),
+  venom_bow: iW('Venom Bow', 'venom', 'bow', { ...oh('poison', 0.2, 2), flavor: 'The arrows drip.' }),
+  venom_circlet: iA('Venom Circlet', 'venom', 'head', { crit: 0.05, resist: 0.1 }, { flavor: 'Eight little fangs around the brow.' }),
+  venom_boots: iA('Venom Boots', 'venom', 'feet', { crit: 0.03 }, { acro: 4, trig: [{ type: 'onAir', effect: { apply: 'poison', stacks: 2 } }], desc: 'Air attacks that land: 2 Poison.', flavor: 'Drop on them. Like we do.' }),
+  venom_sac: iT('Venom Sac', 'venom', { trig: [{ type: 'nth', n: 5, effect: { detonate: 'poison' } }], desc: 'Every 5th hit: burst all Poison on the foe.', flavor: 'Squeeze gently. Or don\'t.' }),
+  // flame: the fire serpent's. Burn and Pierce.
+  flame_spear: iW('Flame Spear', 'flame', 'spear', { ...oh('burn'), flavor: 'Lunges like the serpent does.' }),
+  fire_sword: iW('Fire Sword', 'flame', 'sword', { stats: { pen: 2 }, ...oh('burn', 0.15), flavor: 'Glows in the dark. Burns in the light.' }),
+  flame_crest: iA('Flame Crest', 'flame', 'head', { hp: 12, atk: 1 }, { flavor: 'A plume of real fire.' }),
+  scale_robe: iA('Firescale Robe', 'flame', 'core', { hp: 20, pen: 2 }, { trig: [{ type: 'onLaunch', effect: { apply: 'burn' } }], desc: 'Launching a foe: Burn.', flavor: 'Shed by something very hot.' }),
+  fire_fang: iT('Fire Fang', 'flame', { trig: [{ type: 'onHit', chance: 0.2, effect: { apply: 'burn' } }], desc: '20% on hit: Burn.', flavor: 'Still smoking.' }),
+});
+// relics for the three new bodies' families
+Object.assign(ITEM, {
+  queens_blade: iT('Queen\'s Prayer', 'scythe', { relic: true, trig: [{ type: 'onParry', effect: { critNext: true, apply: 'frenzy', duration: 3 } }, { type: 'onExchange', effect: { apply: 'frenzy', duration: 3 } }], desc: 'A parry or a won exchange: Frenzy 3s, and a parry makes your next hit crit.', flavor: 'She waits. She always wins.' }),
+  wraith_lantern: iT('Wraith Lantern', 'spectre', { relic: true, stats: { evasion: 0.08 }, trig: [{ type: 'onDodge', effect: { heal: 6, critNext: true } }], desc: 'When you dodge: heal 6 and your next hit crits.', flavor: 'The flame inside is someone else\'s.' }),
+  toad_crown: iT('Toad King\'s Pearl', 'bog', { relic: true, flags: { kb: 0.5, steady: 0.3 }, trig: [{ type: 'onLaunch', effect: { heal: 5, shield: 5 } }], desc: 'Knockback +50%, taken −30%. Launching a foe: heal 5 and 5 Shield.', flavor: 'Found in the king\'s throat. Don\'t ask.' }),
+});
+for (const id of Object.keys(ITEM)) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
+for (const f of NEW_FAMS) {
+  FAMILY_ITEMS[f] = Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic);
+  const rl = Object.keys(ITEM).find((id) => ITEM[id].family === f && ITEM[id].relic);
+  if (rl) RELIC_OF[f] = rl;
+}
 
 // Perks: the niche effects rare and epic items can roll. Rares have a 40% chance of one; epics always have
 // one and a 25% chance of a second. 60% of the time a perk that fits the item's statuses.
@@ -4840,15 +5204,16 @@ function runBuild(equip, pieces = [], boons = null) {
   return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: fams };
 }
 
-// Which creatures turn up each day, one list per card tier. Entries are hunt:tier.
+// Which creatures turn up each day, one list per card. Entries are hunt:tier. Plain bodies first, their
+// variants from day 3, and the harder of each later on.
 const DAY_POOLS = [
-  { easy: ['slime:easy', 'bats:easy'], normal: ['serpent:easy', 'spiders:easy', 'jellies:easy'], elite: ['brute:normal', 'jellies:normal', 'bats:normal'] },
-  { easy: ['slime:easy', 'bats:easy', 'spiders:easy', 'crows:easy'], normal: ['serpent:normal', 'jellies:easy', 'slime:normal', 'hounds:easy'], elite: ['brute:normal', 'spiders:normal', 'crab:easy'] },
-  { easy: ['spiders:easy', 'jellies:easy', 'toxic:easy', 'hounds:easy'], normal: ['bats:normal', 'frostbats:easy', 'brute:easy', 'crows:normal', 'crab:easy'], elite: ['slime:elite', 'serpent:elite', 'storm:normal', 'hounds:elite'] },
-  { easy: ['toxic:easy', 'frostbats:easy', 'jellies:easy', 'crab:easy'], normal: ['blood:easy', 'storm:normal', 'emberjellies:easy', 'crab:normal', 'hounds:normal'], elite: ['bats:elite', 'spiders:elite', 'molten:normal', 'crows:elite'] },
-  { easy: ['blood:easy', 'storm:easy', 'emberjellies:easy', 'crows:normal'], normal: ['toxic:normal', 'frostbats:normal', 'molten:easy', 'emberhounds:easy', 'plaguecrows:easy'], elite: ['brute:elite', 'jellies:elite', 'blood:elite', 'crab:elite'] },
-  { easy: ['toxic:normal', 'frostbats:normal', 'hounds:normal', 'frostcrab:easy'], normal: ['storm:normal', 'blood:normal', 'emberjellies:normal', 'emberhounds:normal', 'frostcrab:normal'], elite: ['toxic:elite', 'frostbats:elite', 'molten:elite', 'plaguecrows:elite', 'emberhounds:elite'] },
-  { easy: ['blood:normal', 'emberjellies:normal', 'storm:normal', 'plaguecrows:easy'], normal: ['molten:normal', 'frostbats:elite', 'toxic:normal', 'plaguecrows:normal', 'frostcrab:normal'], elite: ['molten:elite', 'storm:elite', 'emberjellies:elite', 'blood:elite', 'frostcrab:elite', 'hounds:elite'] },
+  { easy: ['slime:easy', 'bats:easy', 'crows:easy'], normal: ['serpent:easy', 'spiders:easy', 'jellies:easy', 'toad:easy'], elite: ['brute:normal', 'jellies:normal', 'bats:normal', 'mantis:easy'] },
+  { easy: ['slime:easy', 'bats:easy', 'spiders:easy', 'crows:easy', 'toad:easy'], normal: ['serpent:normal', 'jellies:easy', 'slime:normal', 'hounds:easy', 'mantis:easy', 'wraiths:easy'], elite: ['brute:normal', 'spiders:normal', 'crab:easy', 'toad:normal'] },
+  { easy: ['spiders:easy', 'jellies:easy', 'toxic:easy', 'hounds:easy', 'iceslime:easy', 'wraiths:easy'], normal: ['bats:normal', 'frostbats:easy', 'brute:easy', 'crows:normal', 'crab:easy', 'mantis:normal', 'vampirebats:easy'], elite: ['slime:elite', 'serpent:elite', 'storm:normal', 'hounds:elite', 'wraiths:normal'] },
+  { easy: ['toxic:easy', 'frostbats:easy', 'jellies:easy', 'crab:easy', 'venomspiders:easy', 'thunderjellies:easy'], normal: ['blood:easy', 'storm:normal', 'emberjellies:easy', 'crab:normal', 'hounds:normal', 'toad:normal', 'fireserpent:easy', 'iceslime:normal'], elite: ['bats:elite', 'spiders:elite', 'molten:normal', 'crows:elite', 'mantis:elite', 'toad:elite'] },
+  { easy: ['blood:easy', 'storm:easy', 'emberjellies:easy', 'crows:normal', 'vampirebats:easy', 'poisontoad:easy'], normal: ['toxic:normal', 'frostbats:normal', 'molten:easy', 'emberhounds:easy', 'plaguecrows:easy', 'bloodmantis:easy', 'frostwraiths:easy', 'venomspiders:normal', 'thunderjellies:normal'], elite: ['brute:elite', 'jellies:elite', 'blood:elite', 'crab:elite', 'wraiths:elite', 'vampirebats:normal'] },
+  { easy: ['toxic:normal', 'frostbats:normal', 'hounds:normal', 'frostcrab:easy', 'fireserpent:easy', 'iceslime:normal'], normal: ['storm:normal', 'blood:normal', 'emberjellies:normal', 'emberhounds:normal', 'frostcrab:normal', 'poisontoad:normal', 'bloodmantis:normal', 'vampirebats:normal'], elite: ['toxic:elite', 'frostbats:elite', 'molten:elite', 'plaguecrows:elite', 'emberhounds:elite', 'frostwraiths:normal', 'iceslime:elite', 'venomspiders:elite'] },
+  { easy: ['blood:normal', 'emberjellies:normal', 'storm:normal', 'plaguecrows:easy', 'thunderjellies:normal', 'frostwraiths:easy'], normal: ['molten:normal', 'frostbats:elite', 'toxic:normal', 'plaguecrows:normal', 'frostcrab:normal', 'fireserpent:normal', 'bloodmantis:normal', 'poisontoad:normal'], elite: ['molten:elite', 'storm:elite', 'emberjellies:elite', 'blood:elite', 'frostcrab:elite', 'hounds:elite', 'bloodmantis:elite', 'frostwraiths:elite', 'poisontoad:elite', 'vampirebats:elite', 'thunderjellies:elite', 'fireserpent:elite'] },
 ];
 const CARD_GOLD = { easy: 2, normal: 3, elite: 5, duel: 6, duelLoss: 3 };
 const SELL = { common: 1, rare: 2, epic: 4 };
@@ -4860,7 +5225,7 @@ function makeGhost(seed, round) {
   const r = runRng(seed, round, 'ghost'), day = dayOf(round), fams = r.shuffle(Object.keys(FAMILY)).slice(0, 2), equip = {};
   const card = day >= 6 ? 'elite' : day >= 3 ? 'normal' : 'easy';
   // a little less geared than a player can be by that day: two pieces more a day, filled in this order
-  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 1 + 2 * day));
+  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + 2 * day));
   // from day 4 their families' keystones can turn up, from day 6 their relics
   const extra = fams.flatMap((f) => [day >= 4 && KEYSTONE_OF[f], day >= 6 && RELIC_OF[f]]).filter(Boolean);
   for (const s of slots) {
@@ -6111,6 +6476,8 @@ const FAM_ACC = {
   gel: '#2fa58a', wing: '#7057cf', scale: '#2f8a2f', silk: '#8f7fc4', tide: '#1a9bb0', iron: '#6b7682',
   toxic: '#6aa21a', frost: '#4fb2de', storm: '#e0a000', blood: '#c0304a', ember: '#eb6834', molten: '#b8461b',
   pack: '#9c6b3c', quill: '#b0892c', shell: '#d0705a', blaze: '#f08c1a', rot: '#7a8f2a', glacier: '#5b7fd1',
+  scythe: '#4f9e3a', reaper: '#a8243c', spectre: '#8fa6b8', wisp: '#7fc9e0', bog: '#6d7b3a', mire: '#8a9b2a',
+  vampire: '#8e1f4a', thunder: '#e8b800', frostgel: '#5fbfb6', venom: '#6f9a1a', flame: '#e2562b',
 };
 const PAPER_C = '#f4f6f8';
 const pth = (d, fill = 'currentColor', stroke = 'none', w = 1.5, extra = '') => `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"${extra}/>`;
@@ -6138,7 +6505,7 @@ const ART_WEAPON = {
   spear(v, a) {
     const head = [
       'M21 11 L25 4 L28 3.5 L27.5 6.5 L21 11 Z M21 11 L23.5 5.5',
-      'M19 13 L22.5 9.5 M18.5 8 C 19 10.5 21.5 13 24 13.5 M18.5 8 L17.5 5.5 M24 13.5 L26.5 14.5 M22.5 9.5 L28 4',
+      'M16 10 L22 16 M16 10 L22.5 3.5 M19 13 L26.5 5.5 M22 16 L28.5 9.5 M22.5 3.5 L20.5 4 M28.5 9.5 L28 11.5',
       'M21 11 L25 4 L28 3.5 L27.5 6.5 Z M24.5 8 C 27.5 9 28 12 26 14',
     ][v % 3];
     return ln(v % 3 === 1 ? 'M4 28 L19 13' : 'M4 28 L21.5 10.5', 'currentColor', 2.4) + (v % 3 === 1 ? ln(head, 'currentColor', 2.2) : paperP(head)) + ln(v % 3 === 1 ? 'M14.5 17.5 L17 15' : 'M17 15 L19.5 12.5', a, 3.4);
@@ -6244,7 +6611,10 @@ const FAM_MARK = {
   blaze: (a) => pth('M24.5 31 C 22 31 21.5 28.5 22.5 26.5 C 23.2 25.2 24.3 24.3 24 22 C 26 23 27 25.5 26.5 28 Z M28.5 31 C 27 31 26.5 29.5 27.2 28.3 C 27.7 27.4 28.4 26.8 28.2 25.3 C 29.6 26 30.3 27.8 30 29.5 Z', a),
   rot: (a) => circ(25, 28, 2.2, 'none', a, 1.2) + circ(29, 26.5, 1.4, a) + circ(28.2, 30.2, 0.9, a) + circ(23.5, 23.8, 0.9, a),
   glacier: (a) => pth('M26 21.5 L30 24 V28.5 L26 31 L22 28.5 V24 Z', 'none', a, 1.3) + ln('M26 21.5 V31', a, 1),
+  scythe: (a) => pth('M22 30 C 23 24 27 21.5 30.5 22 C 27 23.5 25 26 24.5 30 Z', a),
+  spectre: (a) => ln('M23 30 C 22 26 25 23 27 25 C 29 27 27 30 25.5 28.5 C 24.5 27.5 26 26 27 26.5', a, 1.3),
 };
+Object.assign(FAM_MARK, { reaper: FAM_MARK.blood, wisp: FAM_MARK.frost, bog: FAM_MARK.gel, mire: FAM_MARK.toxic, vampire: FAM_MARK.wing, thunder: FAM_MARK.storm, frostgel: FAM_MARK.gel, venom: FAM_MARK.toxic, flame: FAM_MARK.ember });
 // which drawing each item gets, from its kind and name
 function artShape(it) {
   const n = it.name;
@@ -6268,7 +6638,7 @@ function artShape(it) {
     const map = [['Clover', 'clover'], ['Hourglass', 'hourglass'], ['Glass Heart', 'heart'], ['Heart of Winter', 'heart'], ['Heart', 'heart'], ['Locket', 'locket'], ['Bell', 'bell'],
       ['Vial', 'vial'], ['Fang', 'fang'], ['Tooth', 'fang'], ['Ring', 'ring'], ['Eye', 'eye'], ['Mirror', 'mirror'], ['Idol', 'idol'], ['Chalice', 'chalice'],
       ['Censer', 'censer'], ['Bottled', 'bottle'], ['Conch', 'shell'], ['Stone', 'stone'], ['Spool', 'spool'], ['String', 'spool'], ['Ribbon', 'ribbon'],
-      ['Pearl', 'orb'], ['Shell', 'shell'], ['Collar', 'ring'], ['Pod', 'orb'], ['Core', 'core_gear'], ['Coil', 'coil'], ['Feather', 'feather'], ['Weight', 'feather'], ['Pot', 'pot'], ['Jelly', 'jar'], ['Quicksand', 'hourglass']];
+      ['Pearl', 'orb'], ['Shell', 'shell'], ['Collar', 'ring'], ['Jar', 'jar'], ['Lantern', 'vial'], ['Pod', 'orb'], ['Core', 'core_gear'], ['Coil', 'coil'], ['Feather', 'feather'], ['Weight', 'feather'], ['Pot', 'pot'], ['Jelly', 'jar'], ['Quicksand', 'hourglass']];
     for (const [w, k] of map) if (n.includes(w)) return [k];
     return ['charm'];
   }
