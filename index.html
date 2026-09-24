@@ -1004,7 +1004,8 @@ function tryAirAttack(u, e) {
   if (isRanged(u)) {
     // shoot from the top of a jump, once any wall jumps the macro still needs are done
     if (u.cd > 0 || e.ghost || b.vy < -7 || b.wr > 0 || (u.ai.macro && u.ai.ms.wj > 0)) return false;
-    if (Math.hypot(dx, dy) < 2 || rng() > 0.3) return false;
+    // mid-vault, the throw down at the rival from over its head is the whole point
+    if (Math.hypot(dx, dy) < 2 || rng() > (u.vaultT > world.t ? 0.8 : 0.3)) return false;
     const sol = aimAt(u, e);
     if (!sol) return false;
     u.face = f; u.aimSol = sol; startAtk(u, u.w === 'bow' ? 'ashoot' : 'athrow');
@@ -1220,6 +1221,7 @@ function rangedEngage(u, e) {
   const danger = isRanged(e) ? 2.2 : u.w === 'stars' ? 3.1 : 3.3;
   if (dist > danger + 1 || (u.react > 0 || ai.escT > world.t || dist > danger)) return backpedal(u, e, dist, danger);
   ai.escT = world.t + 8;
+  if (cornerVault(u, e)) return true;
   const ex = e.b.x + e.b.vx * 0.35, cur = Math.hypot(b.x - ex, dy);
   let best = null, bs = -1e9;
   const cands = u.macros.filter((m) => m.hold);
@@ -1252,6 +1254,52 @@ function rangedEngage(u, e) {
   // cornered: roll straight past the rival
   if (u.acro >= 1 && !isRanged(e) && dist < 2 && rollSafe(u, Math.sign(dx) || u.face)) return startRoll(u, Math.sign(dx) || u.face);
   return backpedal(u, e, dist, danger);
+}
+// Cornered against a wall by a blade: run up the wall (acrobatics 3) or kick off it (2) and flip
+// over the rival's head, landing on the open side. Every candidate is traced frame by frame and
+// kept only if it clears the rival's head where it crosses over and lands well past it.
+function cornerVault(u, e) {
+  const b = u.b;
+  if (u.acro < 2 || isRanged(e) || e.ghost || !b.gr || Math.abs(e.b.y - b.y) > 1) return false;
+  // a swing already on its way would catch the run back to the wall: take off between swings
+  if (e.state === 'atk' && e.phase !== 'r') return false;
+  const toE = Math.sign(e.b.x - b.x) || u.face, away = -toE;
+  // how far back is the wall? The floor on the way there has to be solid, or the way out is down, not over.
+  let wallD = -1;
+  for (let d = 0.05; d <= 1.8; d += 0.25) {
+    if (boxSolid(b.x + away * d - W / 2, b.y - H + 0.25, b.x + away * d + W / 2, b.y - 0.3)) { wallD = d; break; }
+    if (!boxSolid(b.x + away * d - W / 2, b.y, b.x + away * d + W / 2, b.y + 0.05)) return false;
+  }
+  if (wallD < 0) return false;
+  let best = null, bs = -1e9;
+  for (const m of u.macros) {
+    if (m.dir !== away || !m.wj || m.wb) continue;
+    const fl = simFlight(stateOf(b), m, u.side, b.speed, u.acro);
+    if (!fl || fl.launched || !fl.land || !standable(fl.land.c, fl.land.r)) continue;
+    const land = fl.land, landEx = e.b.x + e.b.vx * Math.min(0.5, land.f / 60) * 0.6;
+    if ((land.x - landEx) * toE < 2.4 || inZone(land.x)) continue;
+    // where the flight passes over the rival, the feet must be above its head
+    let clear = true, peak = 99, ran = false;
+    fl.pts.forEach((p, f) => {
+      const ex = e.b.x + e.b.vx * Math.min(0.5, f / 60) * 0.6;
+      if (Math.abs(p.x - ex) < W + 0.45 && p.y > e.b.y - H - 0.6) clear = false;
+      peak = Math.min(peak, p.y);
+      if (f > 0 && p.vy === -ACRO.wrV) ran = true;
+    });
+    if (!clear) continue;
+    const sc = (land.x - landEx) * toE * 6 - land.f * 0.1 + (b.y - peak) * 2 + (ran ? 8 : 0) + rng() * 3;
+    if (sc > bs) { bs = sc; best = { m, fl, ran }; }
+  }
+  if (!best) return false;
+  startMacro(u, best.m, true); u.ai.path.length = 0; u.backflip = false; u.react = 10;
+  u.vaultT = world.t + best.fl.land.f;
+  if (!world.demo) world.stats[u.side].vaults = (world.stats[u.side].vaults || 0) + 1;
+  if (!world.demo && !u.loggedVault) {
+    u.loggedVault = true;
+    const how = best.ran ? 'ran up the wall' : 'kicked off the wall';
+    log(u.side ? `The rival ${how} and flipped over your head.` : `Your fighter ${how} and flipped over the rival.`, u.side);
+  }
+  return true;
 }
 // Keep the gap on foot: walk backwards facing the blade, so the next throw is always ready to go.
 function backpedal(u, e, dist, danger) {
