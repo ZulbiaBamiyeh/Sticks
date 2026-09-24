@@ -9,7 +9,13 @@ await p.goto(new URL('../index.html', import.meta.url).href);
 const out = await p.evaluate(([N, strat]) => {
   localStorage.clear();
   const H = window.__homeTurf, R = H.run;
-  const score = (b) => (100 + b.stats.hp) / 100 * (1 + b.stats.atk) * (1 + b.stats.crit * 0.6) / (1 - Math.min(0.6, b.stats.armor)) * (1 + b.stats.regen * 0.03) * (1 + b.acro * 0.03) * (b.skill ? 1.08 : 1) * (b.trinket ? 1.1 : 1) * (1 + b.stats.onHit.length * 0.05);
+  // a rough worth for a build: damage per hit times how often, times how long it lasts
+  const score = (b) => {
+    const st = b.stats, w = st.wpn || { min: 6, max: 10, base: 8 };
+    const off = ((w.min + w.max) / 2 + st.atk) / w.base * (1 + st.crit * (0.6 + st.critDmg)) * (1 + st.haste) * (1 + st.ls * 2) * (1 + 0.06 * st.onHit.length + 0.05 * st.trig.length);
+    const tough = (100 + st.hp) * (1 + st.def / 26) / (1 - Math.min(0.4, st.evasion)) * (1 + st.regen * 0.03) * (1 + st.resist * 0.2) * (1 + st.thorns * 0.02);
+    return off * tough * (1 + b.acro * 0.03) * (b.skill ? 1.08 : 1) * (1 + 0.08 * Object.keys(st.flags).length);
+  };
   const res = { crowns: 0, duelWins: [], endDay: [], huntWin: { easy: [0, 0], normal: [0, 0], elite: [0, 0] }, duel: [0, 0] };
   for (let k = 0; k < N; k++) {
     const run = new R.Run(1000 + k);
@@ -24,15 +30,18 @@ const out = await p.evaluate(([N, strat]) => {
       } else {
         const pick = strat === 'easy' ? 0 : strat === 'normal' ? 1 : strat === 'elite' ? 2 : (run.day <= 1 ? 1 : 1);
         const o = run.offers[pick];
-        const r = H.fight(run.seed * 7 + run.round, b, `${o.hunt}:${o.tier}:${R.dayPower(run.day)}`);
+        const r = H.fight(run.seed * 7 + run.round, b, `${o.hunt}:${o.tier}:${R.mobPower(run.day)}`);
         const won = r.winner === 0;
         res.huntWin[o.card][1]++; if (won) res.huntWin[o.card][0]++;
         run.resolve(won, o);
         if (run.loot) {
           // take whichever drop raises the score most, else bag it
-          let best = -1, bs = score(b);
-          run.loot.items.forEach((inst, i) => { const eq = { ...run.equip, [R.ITEM[inst.item].slot]: inst }, s = score(R.runBuild(eq)); if (s > bs) { bs = s; best = i; } });
-          run.takeLoot(Math.max(0, best), best >= 0 ? 'wear' : 'bag');
+          let best = -1, bestAct = 'wear', bs = score(b);
+          run.loot.items.forEach((inst, i) => {
+            const k = R.ITEM[inst.item].slot, targets = k === 'trinket' ? ['trinket1', 'trinket2'] : [k];
+            for (const t of targets) { const s = score(R.runBuild({ ...run.equip, [t]: inst })); if (s > bs) { bs = s; best = i; bestAct = k === 'trinket' ? t : 'wear'; } }
+          });
+          run.takeLoot(Math.max(0, best), best >= 0 ? bestAct : 'bag');
         }
       }
       run.next();

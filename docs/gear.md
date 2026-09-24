@@ -88,16 +88,25 @@ Each changes combat, never movement, and reads from one mark.
 The AI makes choices around statuses without its movement changing: it
 avoids exchanges while Sundered and presses a frozen rival.
 
-## Sets (schools)
+## Sets
 
-Hunt rivals and mobs belong to schools, and wearing two or four pieces of a
-school's gear gives a bonus that bends a rule:
+Each creature family drops its own gear. Two pieces give the set's stats; four
+pieces bend a rule, often the rule one of the keystones bends:
+- **Gel:** heals hurt the foe.
+- **Wing:** dodges build Atk.
+- **Scale:** damage per status on the foe.
+- **Silk:** Crit per Chill stack.
+- **Tide:** a starting Shield that also hits.
+- **Iron:** Atk from Def.
+- **Toxic:** Regen ticks Poison the foe.
+- **Frost:** freeze at 2 Chill.
+- **Storm:** Shock bursts per stack.
+- **Blood:** Bleed heals you.
+- **Ember:** faster damage over time.
+- **Molten:** Thorns carry your statuses.
 
-- **Crane:** 2: +1 acrobatics. 4: a hit resets your air flip.
-- **Wasp:** 2: stars ricochet off one wall. 4: every third volley throws three.
-- **Mantis:** 2: win tied exchanges. 4: a won exchange gives a free riposte.
-- **Spring:** 2: your pads throw the rival away too. 4: pad landings send a shockwave.
-- **Moth:** 4: every vanish leaves a decoy.
+The earlier idea of schools that bend movement (Crane, Wasp, Mantis, Spring,
+Moth) is still open for later.
 
 ## Hunts against mobs
 

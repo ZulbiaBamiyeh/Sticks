@@ -7,7 +7,7 @@ different. ZereshkStory gets there with this much content:
 | --- | --- | --- |
 | Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 12 creatures (6 bodies, 6 variants) × 3 tiers |
 | Biomes | 10 | 1 hunting ground |
-| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 82 in 12 families, across six slots |
+| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 131: 37 weapons, 38 armour, 25 trinkets, 9 skill items, 10 keystones, 12 relics |
 | Statuses | 14 | 5 |
 
 ## Creatures: bodies × variants × tiers
@@ -57,9 +57,20 @@ The run loop is built (see the README): days, three hunt offers, loot, gear and
 bag, set bonuses, duels against generated and saved builds, and saving. There
 are six bodies, each with a status variant, and a family of gear for each.
 
+Items now work like ZereshkStory's:
+- weapon damage ranges with a pace and a signature per type;
+- flat Atk, Def with Pierce, Crit and Crit damage, Haste, Evasion, Resist,
+  Lifesteal, Regen and Thorns;
+- trigger trinkets in two trinket slots;
+- ten keystones and twelve relics that bend rules;
+- perks on rare and epic items;
+- 2-piece set stats and 4-piece set rules.
+
+Creatures in a run grow 35% a day on top of gear's day scaling
+(`mobPower`), because gear multiplies.
+
 Next, in order:
 1. **More bodies** from the list above, two or three at a time, each with a
    variant and a family.
-2. **Keystones and relics:** rule-changing items from Elite hunts.
-3. **The shop, merging and events,** as in ZereshkStory.
-4. **4-piece set bonuses** that bend a rule, not just add stats.
+2. **The shop, merging and events,** as in ZereshkStory.
+3. **Item art on the doll:** the fighter wearing what's equipped.

@@ -12,19 +12,40 @@ Then two stick figures fight it out on their own.
   ZereshkStory's structure with this game's fights:
   - Seven days, each three hunts and then a duel. Win five duels for the Crown;
     lose three and the run is over. Losing a hunt only costs its drop.
-  - Each hunt offers three creatures, Easy, Normal and Elite, and every card
-    shows its full drop list and its family's set bonus. Win, then pick one of
+  - Each hunt offers three creatures, Easy, Normal and Elite. A card shows the
+    creature, its difficulty, the rarity odds of its drops and an icon for each
+    drop (keystones rimmed in bronze, relics in gold). Win, then pick one of
     three drops, with one reroll a day. Harder creatures and variants turn up on
-    later days, and creatures and gear both grow stronger each day.
-  - Gear goes on the paper doll: head, core, feet (acrobatics), weapon, skill and
-    trinket. Items come in Common, Rare and Epic, with extra stats at higher
-    rarities, and two pieces from the same family give a set bonus. A six-slot
-    bag holds spares, and they sell for gold.
+    later days, and creatures grow a little faster than gear does.
+  - Gear works like ZereshkStory's. Weapons roll a damage range and carry
+    their type's pace and signature. The Sword gets +8% Crit, Daggers ×1.5
+    status chances, the Spear Pierce 3, the Hammer a 10% Stun, the Bow +30%
+    Crit damage and Stars +5% Evasion. The stats are HP, Atk (flat damage per
+    hit), Def, Crit, Crit damage, Haste (attack speed), Evasion, Resist,
+    Lifesteal, Regen, Thorns, Pierce, run speed and skill haste. Pieces can
+    carry statuses on hit.
+  - Trinkets have triggers: at battle start, on hit, on crit, every nth hit,
+    when hit, when you dodge, every few seconds, or once below some HP. For
+    example Metronome (every 3rd hit: Stun) and Last Stand Locket (below 40%
+    HP: 30 Shield). There are two trinket slots.
+  - **Keystones** (10, from Normal and Elite hunts) and **relics** (12, from
+    Elite hunts only) bend a rule rather than add numbers. Examples: Juggernaut
+    Plate (gain Atk equal to half your Def), Tesla Coil (max Shock bursts for 8
+    per stack), Echo Conch (statuses land twice 30% of the time), Phoenix
+    Feather (rise once at 25% HP) and Gilded Hourglass (turn to gold below 40%
+    HP).
+  - Items are Common, Rare or Epic. Rarer items are stronger, roll affixes, and
+    roll perks such as "On crit: 2 Shock", "+25% damage vs Poisoned" or "When
+    you dodge: 10 Shield". Two pieces of a family give its set stats. Four
+    bend a rule, often the one a keystone bends, so the two can double down.
+    A six-slot bag holds spares, and they sell for gold.
   - Duels are against another build for that day. Entering a duel saves yours,
     so later runs can meet your old builds. The run saves as you go, and the
     run bar continues it.
-  - 82 items in 12 families, one per creature, and 12 creatures at three tiers.
-    `tools/runbot.mjs` plays whole runs headless.
+  - 131 items: 37 weapons, 38 head, core and feet pieces, 25 trinkets, 9 skill
+    items, 10 keystones and 12 relics, in 12 families, one per creature.
+    There are 12 creatures at three tiers. `tools/runbot.mjs` plays whole
+    runs headless.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
     reach, and it knocks arrows and stars out of the air.
@@ -95,7 +116,8 @@ Then two stick figures fight it out on their own.
     slams twice. From range it scoops ink off its back and lobs it.
 
   With random builds, Easy hunts are won about 95% of the time, Normal about
-  55–90% and Elite about 15–45%.
+  55–90% and Elite about 15–45%. In a run, a bot that always takes Normal hunts
+  wins about two thirds of them.
   - **Variants** appear from day 3 in a run: the same bodies with a status on
     their attacks and that status's colour on their eyes and markings. They
     are the Toxic Slime (poison), Frost Bats (chill), Storm Serpent (shock),
@@ -139,9 +161,9 @@ Then two stick figures fight it out on their own.
   scout each one before the fight and can change your build to counter it.
   Your record against each rival is kept in this browser.
 - **Equip screen:** the build screen opens on a paper doll, like ZereshkStory's.
-  The camera zooms in on your fighter, with three slots down each side: Head,
-  Core and Feet (acrobatics) on the left, and Weapon, Skill and Trinket on the
-  right. Head and Core are locked until the roguelike adds gear for them. Tap a
+  The camera zooms in on your fighter, with seven slots: Head, Core, Feet
+  (acrobatics) and Skill on the left, and Weapon and two Trinkets on the right.
+  Head, Core and the second trinket are for the roguelike's gear. Tap a
   slot to pick for it below. A stat sheet shows speed, frames to the first hit,
   reach, skill cooldown, the status your hits carry, and acrobatic moves. The
   **Your half** tab is where you build.
