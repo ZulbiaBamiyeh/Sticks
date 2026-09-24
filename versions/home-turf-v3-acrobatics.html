@@ -1,0 +1,3608 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- artifact:start -->
+<title>Home Turf</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
+<style>
+  :root {
+    --paper: #e6e9e3;
+    --panel: #f3f4f0;
+    --ink: #16191d;
+    --ink-2: #57606a;
+    --line: #c5cbc3;
+    --stage: #c1c7bf;
+    --blue: #2358d6;
+    --red: #d63f2b;
+    --on-ink: #ffffff;
+    --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+    --ui: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    color-scheme: light;
+  }
+  html, body { height: 100%; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 500 15px/1.35 var(--ui);
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  #app {
+    height: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 10px 8px;
+  }
+  .mark { font: 900 27px/1 var(--display); letter-spacing: 0.03em; }
+  .mark .h { color: var(--blue); }
+  .mark .t { color: var(--red); }
+  .phase {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    text-align: right;
+  }
+  .top-r { display: flex; align-items: center; gap: 6px; margin-right: -6px; }
+  .snd { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent; }
+  .snd:active { background: var(--line); }
+  .snd svg { width: 18px; height: 18px; fill: none; stroke: var(--ink-2); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .snd .spk { fill: var(--ink-2); }
+  .snd[aria-pressed="true"] .off, .snd[aria-pressed="false"] .on { display: none; }
+  #stage {
+    position: relative;
+    flex: 0 1000 auto;   /* the arena gives up height first; the panel only scrolls once it is down to its minimum */
+    height: min(100%, calc((min(100vw, 560px) - 32px) * 1.08));
+    min-height: 180px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--stage);
+  }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud {
+    position: absolute;
+    inset: 0 0 auto 0;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    padding: 9px 10px 16px;
+    align-items: start;
+    pointer-events: none;
+    background: linear-gradient(rgba(230, 233, 227, 0.92) 55%, rgba(230, 233, 227, 0));
+  }
+  .hp .who {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .hp .who span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hp .who b { font: 900 17px/1 var(--display); letter-spacing: 0.04em; color: var(--blue); }
+  .hp.r .who { justify-content: flex-end; }
+  .hp.r .who b { color: var(--red); }
+  .bar { position: relative; height: 8px; margin-top: 4px; background: rgba(22, 25, 29, 0.16); border-radius: 2px; overflow: hidden; }
+  .bar i { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; }
+  .hp.r .bar i { left: auto; right: 0; }
+  .bar .chip { background: rgba(255, 255, 255, 0.85); }
+  .hp .fill { background: var(--blue); }
+  .hp.r .fill { background: var(--red); }
+  #clock { font: 900 22px/1 var(--display); font-variant-numeric: tabular-nums; padding-top: 1px; min-width: 44px; text-align: center; }
+  #clock.sq { color: var(--red); }
+  #toast {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - 24px);
+    box-sizing: border-box;
+    background: var(--ink);
+    color: var(--on-ink);
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    pointer-events: none;
+  }
+  #result {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    background: rgba(243, 244, 240, 0.95);
+    border: 2px solid var(--ink);
+    border-radius: 6px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .res-k { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .res-t { font: 900 40px/0.95 var(--display); letter-spacing: 0.02em; text-wrap: balance; }
+  .res-t.b { color: var(--blue); }
+  .res-t.r { color: var(--red); }
+  #resStats { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 4px 0 0; font-size: 14px; }
+  #resStats dt { color: var(--ink-2); }
+  #resStats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* On short screens the panel scrolls and its buttons stay pinned to the bottom. */
+  .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding-block: 12px 14px; }
+  .panel > * { flex-shrink: 0; }
+  .panel .actions { margin-top: auto; position: sticky; bottom: 0; padding-top: 8px; background: linear-gradient(rgba(230, 233, 227, 0), var(--paper) 8px); }
+  @media (max-height: 700px) { #loadHint { display: none; } }
+  .row-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .budget { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .budget.full { color: var(--red); }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .chips, .tools { display: grid; gap: 8px; }
+  .chips { grid-template-columns: repeat(3, 1fr); }
+  .tools { grid-template-columns: repeat(4, 1fr); }
+  .tools.three { grid-template-columns: repeat(3, 1fr); }
+  .opt {
+    background: var(--panel);
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 9px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .opt b { font: 900 19px/1 var(--display); letter-spacing: 0.03em; }
+  .opt small { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .opt[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .opt[aria-pressed="true"] small { color: #c3c9cf; }
+  .tool { gap: 3px; padding: 7px 8px; }
+  .tool .ic { display: flex; align-items: center; justify-content: space-between; }
+  .tool svg { width: 20px; height: 20px; }
+  .tool b { font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hint { margin: 0; font-size: 13px; color: var(--ink-2); max-width: 62ch; }
+  .actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+  .actions.four { grid-template-columns: 1fr 1fr; }
+  .go {
+    background: var(--ink);
+    color: var(--on-ink);
+    border: 0;
+    border-radius: 6px;
+    padding: 11px 12px;
+    font: 900 22px/1 var(--display);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ghost {
+    background: transparent;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  #ticker { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; min-height: 64px; font-size: 14px; }
+  #ticker li { display: flex; gap: 8px; align-items: baseline; }
+  #ticker time { font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 30px; }
+  #ticker .sw { flex: none; width: 8px; height: 8px; border-radius: 1px; background: var(--ink-2); transform: translateY(-1px); }
+  #ticker .s0 .sw { background: var(--blue); }
+  #ticker .s1 .sw { background: var(--red); }
+  #ticker .empty { color: var(--ink-2); }
+  .actions.three { grid-template-columns: 1fr 1fr 2fr; }
+  .go { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .actions.three .go { letter-spacing: 0.04em; }
+
+  /* skill meter under each health bar: fills while the skill recharges, flashes when it fires */
+  .skm { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+  .hp.r .skm { flex-direction: row-reverse; }
+  .skb { position: relative; flex: 0 0 38px; height: 4px; border-radius: 2px; background: rgba(22, 25, 29, 0.16); overflow: hidden; }
+  .skb i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink-2); }
+  .hp.r .skb i { inset: 0 0 0 auto; }
+  .skm.ready .skn { color: var(--ink); }
+  #skB.ready .skb i { background: var(--blue); }
+  #skR.ready .skb i { background: var(--red); }
+  .skm.fired .skn { animation: fired 0.5s ease-out; }
+  @keyframes fired { 0% { color: var(--on-ink); background: var(--ink); } 100% { color: var(--ink-2); background: transparent; } }
+  .skn { padding: 1px 3px; margin: -1px -3px; border-radius: 2px; white-space: nowrap; }
+
+  /* skill chips */
+  .sk-ic { display: inline-flex; width: 20px; height: 20px; flex: none; }
+  .sk-ic svg { width: 100%; height: 100%; }
+  .opt[aria-pressed="true"] .sk-ic svg { --c: var(--on-ink); }
+  .skill b { font-size: 16px; letter-spacing: 0.01em; text-overflow: clip; }
+
+  /* acrobatics: a stat bar where each step unlocks a move */
+  .acro { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .acro button { border: 1.5px solid var(--line); background: var(--panel); padding: 7px 2px 6px; font-size: 12px; font-weight: 700;
+    letter-spacing: 0.02em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0; }
+  .acro button:first-child { border-radius: 6px 0 0 6px; }
+  .acro button:last-child { border-radius: 0 6px 6px 0; }
+  .acro button.on { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .acro button[aria-pressed="true"] { box-shadow: inset 0 -3px 0 var(--blue); }
+  .acro-pips { display: inline-flex; gap: 3px; margin-right: 6px; vertical-align: 1px; }
+  .acro-pips i { width: 7px; height: 7px; border-radius: 1px; background: var(--line); }
+  .acro-pips i.on { background: var(--red); }
+  #rvAcro { font-size: 14px; }
+
+  /* rival page */
+  .ladder { display: inline-flex; align-items: center; gap: 4px; margin-left: -6px; }
+  .nav-b { display: inline-grid; place-items: center; width: 28px; height: 28px; margin: -6px 0; border: 0; background: transparent; border-radius: 6px; padding: 0; }
+  .nav-b svg { width: 14px; height: 14px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-b:active { background: var(--line); }
+  .rec.won { color: var(--blue); }
+  .rv-head { display: flex; flex-direction: column; gap: 2px; }
+  .rv-name { margin: 0; font: 900 52px/0.86 var(--display); letter-spacing: 0.02em; text-transform: uppercase; color: var(--red); }
+  .rv-tag { margin: 0; font-size: 15px; font-weight: 600; }
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { background: var(--panel); border: 1.5px solid var(--line); border-radius: 6px; padding: 8px 10px 9px; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .card .lbl { font-size: 10px; }
+  .card-t { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .card-t b { font: 900 21px/1 var(--display); letter-spacing: 0.03em; white-space: nowrap; }
+  .card-t small { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .card p { margin: 0; font-size: 13px; line-height: 1.3; color: var(--ink-2); }
+  .scout { border-left: 3px solid var(--red); padding: 1px 0 1px 10px; display: flex; flex-direction: column; gap: 2px; }
+  .scout p { margin: 0; font-size: 14px; line-height: 1.35; }
+  .bring { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
+  .bring b { color: var(--blue); font-weight: 700; }
+  .panel.enter > * { animation: rise 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .panel.enter > :nth-child(2) { animation-delay: 0.03s; }
+  .panel.enter > :nth-child(3) { animation-delay: 0.06s; }
+  .panel.enter > :nth-child(4) { animation-delay: 0.09s; }
+  .panel.enter > :nth-child(5) { animation-delay: 0.12s; }
+  .panel.enter > :nth-child(6) { animation-delay: 0.15s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .rv-name.slam { animation: slam 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.2) backwards; }
+  @keyframes slam { 0% { opacity: 0; transform: translateX(-14px) skewX(-12deg); letter-spacing: 0.2em; } 60% { opacity: 1; } 100% { transform: none; } }
+  @media (max-width: 380px) {
+    .tools { gap: 6px; }
+    .tool { padding-inline: 6px; }
+    .skill b { font-size: 15px; letter-spacing: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .panel.enter > *, .rv-name.slam, .skm.fired .skn { animation: none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="mark"><span class="h">HOME</span> <span class="t">TURF</span></div>
+    <div class="top-r">
+      <div class="phase" id="phase">Scouting</div>
+      <button class="snd" id="sndBtn" aria-pressed="true" aria-label="Music">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path class="spk" d="M3 7.5 H6 L10.5 4 V16 L6 12.5 H3 Z"/><path class="on" d="M13 7.2 Q14.6 10 13 12.8 M15.4 5.2 Q18.4 10 15.4 14.8"/><path class="off" d="M13.2 7.5 L18 12.5 M18 7.5 L13.2 12.5"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div id="stage">
+    <canvas id="cv" aria-label="Arena"></canvas>
+    <div id="hud" hidden>
+      <div class="hp" id="hpB">
+        <div class="who"><b>You</b><span id="wB">Sword</span></div>
+        <div class="bar"><i class="chip"></i><i class="fill"></i></div>
+        <div class="skm" id="skB"><span class="skn"></span><span class="skb"><i></i></span></div>
+      </div>
+      <div id="clock">0:00</div>
+      <div class="hp r" id="hpR">
+        <div class="who"><span id="wR">Bow</span><b id="nR">Rival</b></div>
+        <div class="bar"><i class="chip"></i><i class="fill"></i></div>
+        <div class="skm" id="skR"><span class="skn"></span><span class="skb"><i></i></span></div>
+      </div>
+    </div>
+    <div id="toast" hidden></div>
+    <div id="result" hidden>
+      <div class="res-k" id="resKicker">KO · 0:24</div>
+      <div class="res-t" id="resTitle">You win</div>
+      <dl id="resStats"></dl>
+    </div>
+  </div>
+
+  <section class="panel" id="rivalPanel" hidden>
+    <div class="row-h">
+      <span class="ladder">
+        <button class="nav-b" id="rvPrev" aria-label="Previous rival"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" /></svg></button>
+        <span class="lbl" id="rvCount">Rival 1 of 8</span>
+        <button class="nav-b" id="rvNext" aria-label="Next rival"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3 L11 8 L6 13" /></svg></button>
+      </span>
+      <span class="lbl rec" id="rvRecord">Not beaten yet</span>
+    </div>
+    <div class="rv-head">
+      <h2 class="rv-name" id="rvName">Tack</h2>
+      <p class="rv-tag" id="rvTag">Guards the porch.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <span class="lbl">Weapon</span>
+        <div class="card-t"><b id="rvW">Sword</b><small id="rvWs">7f · combo</small></div>
+        <p id="rvWd"></p>
+      </div>
+      <div class="card">
+        <span class="lbl">Skill</span>
+        <div class="card-t"><span class="sk-ic" id="rvSi"></span><b id="rvS">Parry</b><small id="rvSs">5.5s</small></div>
+        <p id="rvSd"></p>
+      </div>
+    </div>
+    <div class="scout">
+      <span class="lbl">Scouting report</span>
+      <p id="rvTip"></p>
+    </div>
+    <div class="bring"><span class="lbl">Acrobatics</span><span id="rvAcro"></span></div>
+    <div class="bring"><span class="lbl">You bring</span><b id="rvYou">Sword · Blink</b></div>
+    <div class="actions">
+      <button class="ghost" id="rvEdit">Edit build</button>
+      <button class="go" id="rvFight">Fight</button>
+    </div>
+  </section>
+
+  <section class="panel" id="buildPanel" hidden>
+    <div class="row-h"><span class="lbl">Weapon</span><span class="lbl">Frames to hit</span></div>
+    <div class="chips" id="weapons"></div>
+    <div class="row-h"><span class="lbl">Skill</span><span class="lbl">Cooldown</span></div>
+    <div class="tools" id="skills"></div>
+    <div class="row-h"><span class="lbl">Acrobatics</span><span class="lbl" id="acroLbl">Level 2</span></div>
+    <div class="acro" id="acro"></div>
+    <p class="hint" id="loadHint"></p>
+    <div class="row-h"><span class="lbl">Your half · tap to build</span><span class="budget" id="budget">9 / 10 pts</span></div>
+    <div class="tools" id="tools">
+      <button class="opt tool" data-t="block" aria-pressed="true">
+        <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="#3b4a68"/><rect x="2" y="2" width="18" height="3" fill="#2358d6"/></svg><small>1 pt</small></span>
+        <b>Block</b>
+      </button>
+      <button class="opt tool" data-t="spikes" aria-pressed="false">
+        <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2 20 L5.5 9 L9 20 Z M8 20 L11.5 9 L15 20 Z M14 20 L17.5 9 L21 20 Z" fill="#16191d"/><path d="M4.4 12.5 L5.5 9 L6.6 12.5 Z M10.4 12.5 L11.5 9 L12.6 12.5 Z M16.4 12.5 L17.5 9 L18.6 12.5 Z" fill="#2358d6"/></svg><small>2 pts</small></span>
+        <b>Spikes</b>
+      </button>
+      <button class="opt tool" data-t="pad" aria-pressed="false">
+        <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><rect x="3" y="18" width="16" height="3" fill="#16191d"/><path d="M6 18 L16 15.5 L6 13 L16 10.5" stroke="#16191d" stroke-width="1.6" fill="none"/><rect x="2" y="7.5" width="18" height="3" fill="#2358d6"/><path d="M7 5 L11 2 L15 5" stroke="#2358d6" stroke-width="1.6" fill="none"/></svg><small>2 pts</small></span>
+        <b>Pad</b>
+      </button>
+      <button class="opt tool" data-t="erase" aria-pressed="false">
+        <span class="ic"><svg viewBox="0 0 22 22" aria-hidden="true"><path d="M5 5 L17 17 M17 5 L5 17" stroke="#16191d" stroke-width="2.6" stroke-linecap="round"/></svg><small></small></span>
+        <b>Erase</b>
+      </button>
+    </div>
+    <div class="actions three">
+      <button class="ghost" id="clearBtn">Clear</button>
+      <button class="ghost" id="scoutBtn">Rival</button>
+      <button class="go" id="fightBtn">Fight</button>
+    </div>
+  </section>
+
+  <section class="panel" id="fightPanel" hidden>
+    <div class="row-h"><span class="lbl">What happened</span><span class="lbl" id="seedLbl"></span></div>
+    <ol id="ticker"><li class="empty">Nothing yet.</li></ol>
+    <div class="actions four" id="liveActions">
+      <button class="ghost" id="speedBtn">Speed 1×</button>
+      <button class="ghost" id="editBtn">Edit build</button>
+    </div>
+    <div class="actions four" id="endActions" hidden>
+      <button class="ghost" id="replayBtn">Replay</button>
+      <button class="ghost" id="rematchBtn">Rematch</button>
+      <button class="ghost" id="edit2Btn">Edit build</button>
+      <button class="go" id="nextBtn">Next rival</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------------------------------------------------------------- constants
+const COLS = 20, ROWS = 12, DT = 1 / 60;
+const W = 0.56, H = 1.46;                       // fighter body box, in tiles
+const P = { accG: 80, accA: 46, fric: 64, g: 58, jumpV: 19.6, cut: 0.45, maxFall: 25, padV: 27.5 };
+const BUDGET = 10, COST = { block: 1, spikes: 2, pad: 2 };
+// Spikes are switched off for now: they're stripped from every layout and the build tools. The code stays.
+const SPIKES_ON = false;
+const SPAWN_C = 2, SPAWN_R = 10, BMIN = 1, BMAX = 8;   // local build columns; 9 and 10 are no-man's-land
+const SQ_START = 20, SQ_SPEED = 0.42, SQ_MAX = 7.5, TIME_CAP = 75;
+const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16, EV_WJ = 32, EV_DJ = 64, EV_WR = 128, EV_MANTLE = 256;
+// range > 0 marks a ranged weapon and is the distance its fighter likes to keep; stop is where melee fighters plant their feet.
+const WEAP = {
+  sword: { name: 'Sword', speed: 7.2, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
+  daggers: { name: 'Daggers', speed: 7.8, atk: 'stab1', stop: 0.55, stat: '4f · flurry', desc: 'Fastest hands and feet in the game, with the shortest reach.' },
+  spear: { name: 'Spear', speed: 6.7, atk: 'thrust', stop: 2.25, stat: '9f · reach', desc: 'Longest reach. Keeps you at the tip and stabs up at anyone above.' },
+  hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
+  bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
+  stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
+};
+const WEAPONS = Object.keys(WEAP);
+const MIN_SPEED = 5.7;
+const SKILL = {
+  blink: { name: 'Blink', cd: 450, stat: '7.5s', desc: 'Teleports up to three tiles, through walls. Dodges, closes gaps, gets away.' },
+  darksight: { name: 'Dark Sight', cd: 480, dur: 210, stat: '8s', desc: 'Invisible for three and a half seconds. The rival loses track, and the first hit out of it crits.' },
+  parry: { name: 'Parry', cd: 390, stat: '6.5s', desc: 'Catches a hit, a shot or a hook. The attacker is left wide open.' },
+  hook: { name: 'Hook', cd: 300, stat: '5s', desc: 'Throws a chain across the arena and drags the rival in.' },
+};
+const SKILLS = Object.keys(SKILL);
+// Projectiles. v is launch speed and g is gravity, both in tiles per second.
+const SHOT = {
+  arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
+  star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
+};
+const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
+const CRIT = 1.6;
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const PAL = {
+  out: '#c1c7bf', bg: '#d7dbd5', tile: '#3f474e', tileHi: '#5b656d', blockB: '#3b4a68', blockR: '#5e3f3c',
+  ink: '#16191d', far: '#4d555c', hatch: 'rgba(22,25,29,0.07)', grid: 'rgba(22,25,29,0.09)',
+  blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
+  tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
+};
+const PAL_INV = {
+  out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
+  ink: '#ffffff', far: '#d9ddd6', hatch: 'rgba(0,0,0,0)', grid: 'rgba(0,0,0,0)',
+  blue: '#7fa3ff', red: '#ff7c66', spark: '#ffffff', steel: '#16191d', fog: 'rgba(22,25,29,0.9)',
+  tintB: 'rgba(0,0,0,0)', tintR: 'rgba(0,0,0,0)', label: 'rgba(0,0,0,0)',
+};
+const TEAM = ['blue', 'red'];
+
+// ---------------------------------------------------------------- state
+let A = null;              // compiled arena
+let world = null;          // fight/build clock, rng, effects
+let U = [];                // fighters
+let shots = [], parts = [];
+let mode = 'build';
+let speedMul = 1;
+let fightSeed = 1;
+const rng = () => world.rng();
+// A second random stream for looks only (which swing, which dodge), so variety never changes who wins.
+const vr = () => world.vrng();
+
+function mulberry(a) {
+  return () => {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const approach = (v, t, s) => (v < t ? Math.min(t, v + s) : Math.max(t, v - s));
+const wrap = (a) => ((((a + Math.PI) % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) - Math.PI;
+const clockStr = (f) => { const s = Math.floor(f / 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+// ---------------------------------------------------------------- arena
+// A build is stored in the blue player's local coordinates; the rival's is mirrored.
+function makeArena(builds) {
+  const n = COLS * ROWS;
+  const a = {
+    solid: new Uint8Array(n), owner: new Int8Array(n).fill(-1),
+    spikes: new Int8Array(n).fill(-1), pads: new Int8Array(n).fill(-1), padAnim: new Float32Array(n),
+  };
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) a.solid[r * COLS + c] = 1;
+  }
+  builds.forEach((bd, side) => {
+    if (!bd) return;
+    for (const p of bd.pieces) {
+      const c = side ? COLS - 1 - p.c : p.c, i = p.r * COLS + c;
+      if (p.t === 'block') { a.solid[i] = 1; a.owner[i] = side; }
+      else if (p.t === 'spikes') a.spikes[i] = side;
+      else a.pads[i] = side;
+    }
+  });
+  return a;
+}
+const solidAt = (c, r) => (c < 0 || c >= COLS || r < 0 || r >= ROWS) ? true : A.solid[r * COLS + c] === 1;
+function boxSolid(x0, y0, x1, y1) {
+  const c0 = Math.floor(x0), c1 = Math.floor(x1 - 1e-6), r0 = Math.floor(y0), r1 = Math.floor(y1 - 1e-6);
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (solidAt(c, r)) return true;
+  return false;
+}
+const standable = (c, r) => c > 0 && c < COLS - 1 && r > 1 && r < ROWS - 1 && !solidAt(c, r) && !solidAt(c, r - 1) && solidAt(c, r + 1);
+
+// ---------------------------------------------------------------- physics
+// One controller shared by the real fight and by every planning simulation,
+// so a jump the planner found is a jump the fighter can make.
+// Acrobatics (b.acro) unlocks moves in this same controller: 2 = wall slide and wall jump,
+// 3 = wall run (hold jump against a wall), 4 = a second jump in the air. Rolls (level 1) are a fighter state.
+const ACRO = { slideV: 4.2, wjVX: 8.6, wjVY: 16.2, wjLock: 10, wrV: 11.5, wrFrames: 24, djV: 16 };
+const touchingWall = (b, s) => (s > 0 ? boxSolid(b.x + W / 2, b.y - H + 0.25, b.x + W / 2 + 0.06, b.y - 0.3) : boxSolid(b.x - W / 2 - 0.06, b.y - H + 0.25, b.x - W / 2, b.y - 0.3));
+function physStep(b, dir, press, hold, side, ctl, fr) {
+  let ev = 0;
+  const acro = b.acro || 0;
+  // after a wall jump, pushing back toward the wall is ignored for a moment so the fighter actually leaves it
+  if (b.wjT > 0) { b.wjT--; if (dir === b.wjSide) dir = 0; }
+  if (b.gr) {
+    if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accG * DT);
+    else b.vx = approach(b.vx, 0, P.fric * fr * DT);
+  } else if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accA * DT);
+  if (ctl && press) {
+    if (b.gr) { b.vy = -P.jumpV; b.gr = false; b.jumping = true; ev |= EV_JUMP; }
+    else if (acro >= 2 && b.onWall) {
+      b.vx = -b.onWall * ACRO.wjVX; b.vy = -ACRO.wjVY; b.jumping = true; b.wjT = ACRO.wjLock; b.wjSide = b.onWall;
+      b.wr = 0; b.dj = false; ev |= EV_WJ;
+    } else if (acro >= 4 && !b.dj) { b.vy = -ACRO.djV; b.jumping = true; b.dj = true; ev |= EV_DJ; }
+  }
+  if (b.jumping) {
+    if (b.vy >= 0) b.jumping = false;
+    else if (!hold && !b.wr) { b.vy *= P.cut; b.jumping = false; }
+  }
+  b.vy = Math.min(b.vy + P.g * DT, P.maxFall);
+  // wall run: holding jump into a wall carries the fighter straight up it
+  if (acro >= 3 && ctl && hold && dir && !b.wrUsed && !b.wr && (b.gr || b.vy < 4) && touchingWall(b, dir)) {
+    b.wr = ACRO.wrFrames; b.wrUsed = true; b.wrSide = dir; b.gr = false; b.jumping = false; ev |= EV_WR;
+  }
+  if (b.wr > 0) {
+    if (ctl && hold && dir === b.wrSide && touchingWall(b, b.wrSide)) { b.vy = -ACRO.wrV; b.vx = b.wrSide * 0.6; b.wr--; }
+    else {
+      // ran off the top of the wall: pop over the ledge
+      if (!touchingWall(b, b.wrSide) && b.vy < 0) { b.vx = b.wrSide * 5; b.vy = Math.min(b.vy, -7); ev |= EV_MANTLE; }
+      b.wr = 0;
+    }
+  }
+  if (acro >= 2 && !b.gr && !b.wr && b.onWall && dir === b.onWall && b.vy > ACRO.slideV) b.vy = approach(b.vy, ACRO.slideV, 90 * DT);
+  const dx = b.vx * DT;
+  b.x += dx; b.wallV = 0;
+  if (dx !== 0 && boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
+    if (dx > 0) b.x = Math.floor(b.x + W / 2 - 1e-6) - W / 2 - 1e-4;
+    else b.x = Math.floor(b.x - W / 2) + 1 + W / 2 + 1e-4;
+    b.wallV = b.vx; b.vx = 0; ev |= EV_WALL;
+  }
+  const dy = b.vy * DT, wasGr = b.gr;
+  b.y += dy; b.gr = false;
+  if (boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
+    if (dy > 0) { b.y = Math.floor(b.y - 1e-6); b.landV = b.vy; b.vy = 0; b.gr = true; if (!wasGr) ev |= EV_LAND; }
+    else { b.y = Math.floor(b.y - H) + 1 + H + 1e-4; b.vy = 0; if (b.wr) b.wr = 0; }
+  }
+  if (b.gr) { b.dj = false; b.wrUsed = false; b.wr = 0; b.onWall = 0; }
+  else b.onWall = acro >= 2 ? (touchingWall(b, 1) ? 1 : touchingWall(b, -1) ? -1 : 0) : 0;
+  b.spike = -1;
+  const c0 = Math.floor(b.x - W / 2), c1 = Math.floor(b.x + W / 2 - 1e-6), r0 = Math.floor(b.y - H), r1 = Math.floor(b.y - 1e-6);
+  for (let r = Math.max(0, r0); r <= Math.min(ROWS - 1, r1); r++) for (let c = Math.max(0, c0); c <= Math.min(COLS - 1, c1); c++) {
+    const i = r * COLS + c;
+    if (A.spikes[i] >= 0 && b.x + W / 2 > c + 0.12 && b.x - W / 2 < c + 0.88 && b.y > r + 0.58) b.spike = i;
+    if (A.pads[i] === side && b.gr && r === r1 && b.x > c + 0.08 && b.x < c + 0.92) {
+      b.vy = -P.padV; b.gr = false; b.jumping = false; b.pad = i; ev |= EV_PAD;
+    }
+  }
+  return ev;
+}
+const BODY_KEYS = ['x', 'y', 'vx', 'vy', 'gr', 'jumping', 'onWall', 'wjT', 'wjSide', 'wr', 'wrSide', 'wrUsed', 'dj'];
+const stateOf = (b) => { const s = {}; for (const k of BODY_KEYS) s[k] = b[k]; return s; };
+
+// ---------------------------------------------------------------- navigation
+// A "macro" is a scripted input: hold a direction (after a delay) and hold jump for n frames.
+// Acrobatic macros add wall jumps (wj: how many, wb: steer back to the same wall to climb it)
+// and a second jump in the air at frame dj.
+const MACROS = [];
+for (const dir of [-1, 0, 1]) for (const hold of [5, 10, 18]) for (const delay of (dir ? [0, 8] : [0])) MACROS.push({ dir, hold, delay });
+MACROS.push({ dir: -1, hold: 0, delay: 0 }, { dir: 1, hold: 0, delay: 0 });
+const MACROS_BY_ACRO = [MACROS];
+for (let lv = 1; lv <= 4; lv++) {
+  const extra = [];
+  for (const dir of [-1, 1]) {
+    if (lv >= 2) extra.push({ dir, hold: 18, delay: 0, wj: 1 }, { dir, hold: 10, delay: 0, wj: 1 }, { dir, hold: 18, delay: 0, wj: 3, wb: 1 }, { dir, hold: 18, delay: 6, wj: 2 });
+    if (lv >= 3) extra.push({ dir, hold: 40, delay: 0 }, { dir, hold: 40, delay: 0, wj: 1 });
+    if (lv >= 4) extra.push({ dir, hold: 18, delay: 0, dj: 17 }, { dir, hold: 10, delay: 0, dj: 12 }, { dir, hold: 18, delay: 0, dj: 17, wj: 1 });
+  }
+  if (lv >= 4) extra.push({ dir: 0, hold: 18, delay: 0, dj: 17 });
+  MACROS_BY_ACRO.push(lv >= 2 ? [...MACROS, ...extra] : MACROS);
+}
+const PADM = [];
+for (const dir of [-1, 0, 1]) for (const delay of (dir ? [0, 10, 22] : [0])) PADM.push({ dir, hold: 0, delay });
+
+// The inputs a macro gives on its next frame. Shared by the planner and by fighters running the macro.
+const macroState = (m) => ({ f: 0, dir: m.dir, hold: m.hold, wj: m.wj || 0, lastWJ: -99, jf: 0 });
+function macroInput(ms, m, b, out) {
+  const f = ms.f++;
+  let press = f === 0 && m.hold > 0;
+  if (ms.wj > 0 && !b.gr && b.onWall && f - ms.lastWJ > 5 && b.vy > -5 && (b.acro || 0) >= 2) {
+    press = true; ms.wj--; ms.lastWJ = f; ms.jf = f; ms.hold = 14;
+    ms.dir = m.wb ? b.onWall : -b.onWall;   // climb the same wall, or carry on away from it
+  }
+  if (m.dj && f === m.dj && !b.gr) { press = true; ms.jf = f; ms.hold = 14; }
+  out.dir = f >= m.delay ? ms.dir : 0;
+  out.press = press;
+  out.hold = f - ms.jf < ms.hold;
+  return out;
+}
+
+function simMacro(s, m, side, speed, acro = 0) {
+  const b = { ...s, speed, acro }, ms = macroState(m), inp = {};
+  let air = !b.gr, land = -1, spikes = null, f = 0, fancy = 0;
+  for (; f < 170; f++) {
+    macroInput(ms, m, b, inp);
+    const ev = physStep(b, land >= 0 ? 0 : inp.dir, inp.press, inp.hold, side, true, 1);
+    if (ev & (EV_WJ | EV_WR | EV_DJ)) fancy++;
+    if (b.spike >= 0) { if (!spikes) spikes = []; if (!spikes.includes(b.spike)) spikes.push(b.spike); }
+    if ((ev & EV_PAD) && (air || f > 0)) {
+      const i = b.pad;
+      return { c: i % COLS, r: Math.floor(i / COLS), frames: f + 1, spikes, x: b.x, fancy };
+    }
+    if (!b.gr) air = true;
+    else if (air && land < 0) land = f;
+    if (land >= 0 && (Math.abs(b.vx) < 0.5 || f - land > 16)) break;
+    if (!air && f > 40) return null;
+  }
+  if (land < 0 || !b.gr) return null;
+  return { c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), frames: f + 1, spikes, x: b.x, fancy };
+}
+
+function buildNav(side, speed, cMax = COLS, acro = 0) {
+  const idx = new Int16Array(COLS * ROWS).fill(-1), nodes = [];
+  for (let r = 1; r < ROWS - 1; r++) for (let c = 1; c < Math.min(cMax, COLS - 1); c++) {
+    if (!standable(c, r)) continue;
+    const i = r * COLS + c;
+    idx[i] = nodes.length;
+    nodes.push({ c, r, i, pad: A.pads[i] === side, spike: A.spikes[i], edges: [] });
+  }
+  const macros = MACROS_BY_ACRO[acro];
+  nodes.forEach((n, ni) => {
+    const best = new Map();
+    const add = (res, type, m) => {
+      const j = idx[res.r * COLS + res.c];
+      if (j < 0 || j === ni) return;
+      const key = j * 2 + (res.spikes ? 1 : 0);
+      // acrobatic routes cost a little extra, so fighters only climb walls when it's worth it
+      const cost = res.frames + (type === 'jump' ? 5 : type === 'pad' ? 3 : 1) + (res.fancy ? 6 : 0);
+      const cur = best.get(key);
+      if (!cur || cost < cur.cost) best.set(key, { from: ni, to: j, type, m, cost, spikes: res.spikes || [] });
+    };
+    const s = { x: n.c + 0.5, y: n.r + 1, vx: 0, vy: 0, gr: true, jumping: false };
+    if (n.pad) {
+      for (const m of PADM) { const res = simMacro(s, m, side, speed, acro); if (res) add(res, 'pad', m); }
+    } else {
+      for (const d of [-1, 1]) {
+        const nc = n.c + d, i = n.r * COLS + nc;
+        if (nc < cMax && standable(nc, n.r)) add({ c: nc, r: n.r, frames: Math.round(60 / speed), spikes: A.spikes[i] >= 0 ? [i] : null }, 'walk', { dir: d });
+      }
+      for (const m of macros) {
+        if (m.hold === 0) { const nc = n.c + m.dir; if (solidAt(nc, n.r) || standable(nc, n.r)) continue; }
+        const res = simMacro(s, m, side, speed, acro);
+        if (res) add(res, m.hold ? 'jump' : 'drop', m);
+      }
+    }
+    n.edges = [...best.values()];
+  });
+  return { nodes, idx };
+}
+
+function dijkstra(nav, start, known, blocked) {
+  const N = nav.nodes.length, dist = new Float32Array(N).fill(1e9), prev = new Array(N).fill(null), done = new Uint8Array(N);
+  dist[start] = 0;
+  for (;;) {
+    let u = -1, bd = 1e9;
+    for (let i = 0; i < N; i++) if (!done[i] && dist[i] < bd) { bd = dist[i]; u = i; }
+    if (u < 0) break;
+    done[u] = 1;
+    for (const e of nav.nodes[u].edges) {
+      if (blocked && blocked.has(e)) continue;
+      let c = e.cost;
+      if (known && e.spikes.length) for (const s of e.spikes) if (known.has(s)) { c += 110; break; }
+      if (bd + c < dist[e.to]) { dist[e.to] = bd + c; prev[e.to] = e; }
+    }
+  }
+  return { dist, prev };
+}
+function reach(nav, s, reverse) {
+  const N = nav.nodes.length, seen = new Uint8Array(N);
+  let adj = null;
+  if (reverse) { adj = nav.nodes.map(() => []); nav.nodes.forEach((n) => n.edges.forEach((e) => adj[e.to].push(e.from))); }
+  const st = [s]; seen[s] = 1;
+  while (st.length) {
+    const u = st.pop();
+    const next = reverse ? adj[u] : nav.nodes[u].edges.map((e) => e.to);
+    for (const v of next) if (!seen[v]) { seen[v] = 1; st.push(v); }
+  }
+  return seen;
+}
+
+// A half is legal when the rival can get in and back out, and the owner can get out.
+function validate(build) {
+  const save = A;
+  A = makeArena([build, null]);
+  try {
+    const out = buildNav(1, MIN_SPEED, 12), own = buildNav(0, WEAP[build.weapon].speed, 12);
+    const mid = 10 * COLS + 9, spawn = SPAWN_R * COLS + SPAWN_C;
+    const M = out.idx[mid], S = out.idx[spawn];
+    if (S < 0) return { ok: false, msg: 'Your fighter needs room to stand at the spawn.' };
+    const rOut = reach(out, M);
+    if (!rOut[S]) return { ok: false, msg: 'The rival needs a way to reach your spawn.' };
+    const back = reach(out, M, true);
+    for (let i = 0; i < rOut.length; i++) if (rOut[i] && !back[i]) return { ok: false, msg: 'That makes a pit the rival could never climb out of.' };
+    const M2 = own.idx[mid], S2 = own.idx[spawn];
+    const rOwn = reach(own, S2);
+    if (!rOwn[M2]) return { ok: false, msg: 'Your fighter would be walled in.' };
+    const back2 = reach(own, M2, true);
+    for (let i = 0; i < rOwn.length; i++) if (rOwn[i] && !back2[i]) return { ok: false, msg: 'Your fighter could get stuck in there.' };
+    return { ok: true };
+  } finally { A = save; }
+}
+
+// ---------------------------------------------------------------- attacks & poses
+// Frame data: w = windup, a = active, r = recovery. Boxes are [x0, y0, x1, y1] from the feet, facing right.
+// fast = the next hit of the combo can start sooner; next = always follows on, hit or miss.
+const ATK = {
+  slash1: { w: 7, a: 5, r: 14, dmg: 8, kb: [4, -3], stun: 18, hs: 4, box: [0.1, -1.5, 1.35, -0.15], lunge: 3.5, melee: 1, trail: 1, chain: 'slash2' },
+  slash2: { w: 6, a: 5, r: 14, dmg: 8, kb: [4.5, -6], stun: 18, hs: 4, box: [0.05, -1.75, 1.3, -0.3], lunge: 3, melee: 1, trail: 1, chain: 'slash3' },
+  slash3: { w: 11, a: 7, r: 20, dmg: 13, kb: [6.5, -15], stun: 36, hs: 8, box: [0, -2, 1.35, -0.1], lunge: 6, hop: -9, melee: 1, trail: 1, tumble: 1, big: 1 },
+  aslash: { w: 4, a: 12, r: 8, dmg: 8, kb: [7, -7], stun: 20, hs: 5, box: [-0.85, -1.8, 1.25, 0.25], melee: 1, trail: 1, air: 1 },
+  stab1: { w: 4, a: 3, r: 10, dmg: 6, kb: [3, -2], stun: 18, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3.5, melee: 1, trail: 1, chain: 'stab2', fast: 1 },
+  stab2: { w: 3, a: 3, r: 10, dmg: 6, kb: [3, -2.5], stun: 18, hs: 3, box: [0.1, -1.4, 1.05, -0.4], lunge: 3, melee: 1, trail: 1, chain: 'stab3', fast: 1, back: 1 },
+  stab3: { w: 6, a: 5, r: 17, dmg: 9, kb: [7, -11], stun: 32, hs: 7, box: [-0.3, -1.75, 1.2, -0.1], lunge: 5, hop: -7, melee: 1, trail: 1, tumble: 1, big: 1 },
+  thrust: { w: 9, a: 4, r: 16, dmg: 11, kb: [8.5, -3.5], stun: 25, hs: 5, box: [0.45, -1.3, 2.35, -0.6], lunge: 4, melee: 1, trail: 1 },
+  rise: { w: 8, a: 5, r: 15, dmg: 10, kb: [3, -12], stun: 26, hs: 6, box: [-0.25, -3.3, 1.0, -1.0], melee: 1, trail: 1, tumble: 1 },
+  hammer: { w: 17, a: 6, r: 22, dmg: 23, kb: [12, -9], stun: 44, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1,
+    shock: { r: 2.1, dmg: 6, kb: [7, -7], stun: 22, hs: 6, tumble: 1 } },
+  kick: { w: 5, a: 4, r: 12, dmg: 5, kb: [9, -4], stun: 18, hs: 4, box: [0.1, -1.15, 1.0, -0.35] },
+  shoot: { w: 16, a: 1, r: 10, shot: 'arrow', cd: 5 },
+  throw: { w: 10, a: 1, r: 4, shot: 'star', next: 'throw2' },
+  throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 16 },
+  // air moves: shots fired mid-jump, and plunges that dive onto whoever is below
+  ashoot: { w: 11, a: 1, r: 8, shot: 'arrow', air: 1, cd: 10 },
+  athrow: { w: 6, a: 1, r: 3, shot: 'star', air: 1, next: 'athrow2' },
+  athrow2: { w: 4, a: 1, r: 10, shot: 'star', air: 1, back: 1, cd: 14 },
+  plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
+  aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
+  dash: { w: 7, a: 6, r: 18, dmg: 9, kb: [7, -5], stun: 22, hs: 6, box: [0.1, -1.5, 1.45, -0.15], lunge: 12.5, melee: 1, trail: 1 },
+};
+
+const STANCE = {
+  sword: { hipH: 0.7, lean: 0.14, head: -0.06, fx: 0.24, fy: 0.22, bx: -0.1, by: 0.3, wa: -0.95, wb: 0, ffx: 0.24, ffy: 0.7, bfx: -0.22, bfy: 0.7, drop: 0, ai: 0.9, draw: 0 },
+  daggers: { hipH: 0.62, lean: 0.3, head: -0.12, fx: 0.26, fy: 0.24, bx: 0.06, by: 0.34, wa: -0.4, wb: 2.1, ffx: 0.3, ffy: 0.62, bfx: -0.3, bfy: 0.62, drop: 0, ai: 0.9, draw: 0 },
+  spear: { hipH: 0.68, lean: 0.12, head: -0.04, fx: 0.22, fy: 0.3, bx: 0, by: 0.3, wa: -0.28, wb: 0, ffx: 0.3, ffy: 0.68, bfx: -0.26, bfy: 0.68, drop: 0, ai: 0.9, draw: 0 },
+  hammer: { hipH: 0.68, lean: 0.1, head: -0.04, fx: 0.1, fy: 0.12, bx: 0, by: 0.2, wa: -2.15, wb: 0, ffx: 0.27, ffy: 0.68, bfx: -0.25, bfy: 0.68, drop: 0, ai: 0.9, draw: 0 },
+  bow: { hipH: 0.72, lean: 0.06, head: -0.02, fx: 0.3, fy: 0.3, bx: -0.06, by: 0.3, wa: 0, wb: 0, ffx: 0.2, ffy: 0.72, bfx: -0.2, bfy: 0.72, drop: 0, ai: 0.95, draw: 0 },
+  stars: { hipH: 0.66, lean: 0.2, head: -0.06, fx: 0.2, fy: 0.3, bx: 0.1, by: 0.2, wa: -0.3, wb: 0, ffx: 0.26, ffy: 0.66, bfx: -0.24, bfy: 0.66, drop: 0, ai: 0.9, draw: 0 },
+};
+const PK = Object.keys(STANCE.sword);
+const LEGK = new Set(['ffx', 'ffy', 'bfx', 'bfy']);
+const ARMK = new Set(['fx', 'fy', 'bx', 'by', 'wa', 'wb', 'ai', 'draw']);
+const RUN = {
+  sword: { lean: 0.42, hipH: 0.66, head: 0.1, fx: -0.2, fy: 0.26, wa: 2.7, bx: 0.18, by: 0.22 },
+  daggers: { lean: 0.58, hipH: 0.6, head: 0.16, fx: -0.28, fy: 0.3, wa: 2.5, bx: -0.3, by: 0.26, wb: 2.7 },
+  spear: { lean: 0.34, hipH: 0.66, fx: 0.16, fy: 0.3, wa: -0.1 },
+  hammer: { lean: 0.3, hipH: 0.66, fx: 0.06, fy: 0.12, wa: -2.35 },
+  bow: { lean: 0.3, hipH: 0.68, ai: 1.2 },
+  stars: { lean: 0.52, hipH: 0.62, head: 0.14, fx: -0.28, fy: 0.3, bx: -0.3, by: 0.28 },
+};
+const AIR = {
+  sword: { fx: 0.1, fy: -0.1, wa: -1.5, bx: -0.25, by: -0.15, lean: 0.1 },
+  daggers: { fx: 0.16, fy: -0.06, wa: -0.9, bx: -0.2, by: 0.08, lean: 0.22 },
+  spear: { wa: -0.6, lean: 0.05 },
+  hammer: { lean: 0.05 },
+  bow: { bx: -0.25, by: -0.1, ai: 0.5 },
+  stars: { fx: 0.12, fy: -0.1, bx: -0.26, by: 0, lean: 0.16 },
+};
+const WIN = {
+  sword: { fx: 0.08, fy: -0.5, wa: -1.62, lean: -0.05, head: -0.2 },
+  daggers: { fx: 0.18, fy: -0.4, wa: -1.3, bx: 0.1, by: 0.32, wb: 1.5, lean: 0.02, head: -0.15, hipH: 0.7 },
+  spear: { fx: 0.06, fy: -0.42, wa: -1.57, lean: -0.05, head: -0.15 },
+  hammer: { fx: 0.1, fy: -0.42, wa: -1.7, lean: -0.05, head: -0.15 },
+  bow: { ai: -1.3, lean: -0.05, head: -0.2 },
+  stars: { fx: 0.14, fy: -0.52, lean: -0.05, head: -0.2, hipH: 0.72 },
+};
+const ATK_POSE = {
+  slash1: { w: { fx: -0.16, fy: -0.14, wa: -2.5, lean: -0.02, hipH: 0.66, bx: 0.05, by: 0.2 }, a: { fx: 0.46, fy: 0.06, wa: 0.35, lean: 0.34, hipH: 0.62, bx: -0.28, by: 0.18 }, r: { fx: 0.34, fy: 0.26, wa: 1.05, lean: 0.3, hipH: 0.64 } },
+  slash2: { w: { fx: 0.12, fy: 0.34, wa: 2.35, lean: 0.3, hipH: 0.62 }, a: { fx: 0.36, fy: -0.32, wa: -1.35, lean: -0.05, hipH: 0.72, bx: -0.3, by: 0.3 }, r: { fx: 0.26, fy: -0.12, wa: -1.8, lean: 0.05 } },
+  slash3: { w: { fx: -0.26, fy: 0.32, wa: 2.8, lean: 0.5, hipH: 0.5, bx: 0.2, by: 0.25 }, a: { fx: 0.3, fy: -0.48, wa: -1.6, lean: -0.2, hipH: 0.78, bx: -0.3, by: -0.1 }, r: { fx: 0.2, fy: -0.3, wa: -2.0, lean: 0 } },
+  aslash: { w: { fx: 0.1, fy: -0.3, wa: -1.8, wb: -1.6 }, a: { fx: 0.44, fy: 0, wa: 0, wb: 0.4, lean: 0.2 }, r: { fx: 0.3, fy: 0.2, wa: 0.9 } },
+  stab1: { w: { fx: 0.0, fy: 0.22, wa: -0.1, lean: 0.24, hipH: 0.6 }, a: { fx: 0.56, fy: 0.12, wa: 0.05, lean: 0.48, hipH: 0.57, bx: -0.14, by: 0.32 }, r: { fx: 0.38, fy: 0.2, wa: -0.2, lean: 0.36 } },
+  stab2: { w: { bx: -0.12, by: 0.16, wb: 0.3, fx: 0.12, fy: 0.3, lean: 0.26 }, a: { bx: 0.56, by: 0.06, wb: 0.0, fx: -0.1, fy: 0.3, wa: 1.8, lean: 0.48, hipH: 0.57 }, r: { bx: 0.36, by: 0.2, wb: 0.4, lean: 0.36 } },
+  stab3: { w: { fx: -0.2, fy: 0.26, wa: 2.6, bx: -0.26, by: 0.2, wb: 2.6, lean: 0.56, hipH: 0.5 }, a: { fx: 0.44, fy: -0.3, wa: -1.2, bx: 0.3, by: -0.2, wb: -1.4, lean: -0.12, hipH: 0.76 }, r: { fx: 0.3, fy: -0.2, wa: -1.5, lean: 0 } },
+  thrust: { w: { fx: -0.1, fy: 0.3, wa: -0.08, lean: -0.1, hipH: 0.66, ffx: 0.36, bfx: -0.34 }, a: { fx: 0.6, fy: 0.2, wa: -0.05, lean: 0.42, hipH: 0.58, ffx: 0.52, bfx: -0.44 }, r: { fx: 0.44, fy: 0.24, wa: -0.1, lean: 0.3, hipH: 0.62 } },
+  rise: { w: { fx: 0.04, fy: 0.42, wa: -0.6, lean: 0.26, hipH: 0.55 }, a: { fx: 0.16, fy: -0.5, wa: -1.45, lean: -0.16, hipH: 0.76 }, r: { fx: 0.14, fy: -0.36, wa: -1.4, lean: -0.05 } },
+  hammer: { w: { fx: -0.12, fy: -0.36, wa: -3.0, lean: -0.28, hipH: 0.74 }, a: { fx: 0.36, fy: 0.3, wa: 0.95, lean: 0.5, hipH: 0.54 }, r: { fx: 0.34, fy: 0.34, wa: 1.15, lean: 0.45, hipH: 0.56 } },
+  kick: { w: { lean: -0.1, ffx: -0.1, ffy: 0.4 }, a: { lean: -0.35, ffx: 0.72, ffy: 0.05, bx: -0.3, by: -0.1 }, r: { lean: -0.1 } },
+  shoot: { w: { lean: -0.06 }, a: {}, r: {} },
+  throw: { w: { fx: -0.28, fy: -0.26, lean: -0.1, hipH: 0.64, bx: 0.2, by: 0.22 }, a: { fx: 0.54, fy: 0.04, lean: 0.36, hipH: 0.6 }, r: { fx: 0.44, fy: 0.14, lean: 0.32 } },
+  throw2: { w: { bx: -0.08, by: -0.12, fx: 0.3, fy: 0.26, lean: 0.26 }, a: { bx: 0.54, by: 0.02, fx: -0.12, fy: 0.3, lean: 0.42 }, r: { bx: 0.4, by: 0.14, lean: 0.3 } },
+  ashoot: { w: { lean: -0.2, head: -0.1 }, a: { lean: -0.25 }, r: { lean: -0.1 } },
+  athrow: { w: { fx: -0.3, fy: -0.3, lean: -0.25, bx: 0.2, by: 0.2 }, a: { fx: 0.54, fy: 0.1, lean: 0.25 }, r: { fx: 0.44, fy: 0.16 } },
+  athrow2: { w: { bx: -0.1, by: -0.2, fx: 0.3, fy: 0.2, lean: 0.1 }, a: { bx: 0.54, by: 0.08, fx: -0.12, fy: 0.26, lean: 0.35 }, r: { bx: 0.4, by: 0.14 } },
+  plunge: {
+    w: { fx: 0.08, fy: -0.42, wa: -1.6, wb: -1.4, bx: 0.0, by: -0.35, lean: -0.15, hipH: 0.74, ffx: 0.3, ffy: 0.35, bfx: -0.1, bfy: 0.45 },
+    a: { fx: 0.16, fy: 0.36, wa: 1.5, wb: 1.5, bx: 0.1, by: 0.36, lean: 0.25, hipH: 0.7, ffx: 0.25, ffy: 0.3, bfx: -0.15, bfy: 0.4 },
+    r: { fx: 0.26, fy: 0.42, wa: 1.3, wb: 1.3, bx: 0.14, by: 0.42, lean: 0.5, hipH: 0.44, head: 0.2 },
+  },
+  aslam: {
+    w: { fx: -0.1, fy: -0.46, wa: -2.7, lean: -0.32, hipH: 0.72, ffx: 0.3, ffy: 0.4, bfx: -0.1, bfy: 0.45 },
+    a: { fx: 0.32, fy: 0.28, wa: 1.2, lean: 0.42, hipH: 0.66 },
+    r: { fx: 0.4, fy: 0.42, wa: 1.0, lean: 0.55, hipH: 0.44, head: 0.2 },
+  },
+  dash: {
+    w: { fx: -0.22, fy: 0.3, wa: 2.6, lean: 0.62, hipH: 0.5, bx: 0.22, by: 0.2, ffx: 0.4, bfx: -0.46, head: 0.1 },
+    a: { fx: 0.52, fy: 0.04, wa: 0.12, lean: 0.56, hipH: 0.52, bx: -0.36, by: 0.1, ffx: 0.56, bfx: -0.56 },
+    r: { fx: 0.4, fy: 0.26, wa: 0.9, lean: 0.42, hipH: 0.56 },
+  },
+};
+// Alternate swings for the same attacks (same reach and timing, different shape), picked at random.
+const ATK_POSE_ALT = {
+  slash1: { w: { fx: 0.0, fy: -0.5, wa: -2.0, lean: -0.12, hipH: 0.72, bx: 0.1, by: -0.3 }, a: { fx: 0.42, fy: 0.12, wa: 0.7, lean: 0.4, hipH: 0.6, bx: 0.2, by: 0.25 }, r: { fx: 0.35, fy: 0.32, wa: 1.2, lean: 0.35, hipH: 0.62 } },
+  slash2: { w: { fx: -0.15, fy: 0.05, wa: 2.9, lean: 0.1, hipH: 0.64, bx: 0.25, by: 0.1 }, a: { fx: 0.46, fy: -0.05, wa: -0.1, lean: 0.3, hipH: 0.62, bx: -0.3, by: 0.2 }, r: { fx: 0.3, fy: 0.05, wa: -0.6, lean: 0.2 } },
+  stab1: { w: { fx: 0.05, fy: 0.4, wa: 0.3, lean: 0.35, hipH: 0.52 }, a: { fx: 0.55, fy: 0.3, wa: 0.15, lean: 0.55, hipH: 0.5 }, r: { fx: 0.4, fy: 0.3, wa: 0.1, lean: 0.45 } },
+  stab2: { w: { bx: -0.15, by: -0.3, wb: -1.2, fx: 0.1, fy: 0.3, lean: 0.2 }, a: { bx: 0.5, by: -0.15, wb: -0.2, fx: -0.05, fy: 0.3, lean: 0.4 }, r: { bx: 0.35, by: 0.1, lean: 0.3 } },
+  thrust: { w: { fx: -0.1, fy: 0.05, wa: -0.25, lean: -0.1, hipH: 0.7 }, a: { fx: 0.58, fy: 0.02, wa: -0.2, lean: 0.35, hipH: 0.64, ffx: 0.5, bfx: -0.4 }, r: { fx: 0.42, fy: 0.12, wa: -0.2, lean: 0.25 } },
+  hammer: { w: { fx: -0.3, fy: 0.1, wa: 3.0, lean: -0.1, hipH: 0.64 }, a: { fx: 0.4, fy: 0.15, wa: 0.2, lean: 0.45, hipH: 0.58 }, r: { fx: 0.35, fy: 0.2, wa: 0.5, lean: 0.4 } },
+  kick: { w: { lean: -0.2, ffx: -0.05, ffy: 0.3 }, a: { lean: -0.5, ffx: 0.7, ffy: -0.15, bx: -0.3, by: -0.2 }, r: { lean: -0.15 } },
+  throw: { w: { fx: -0.1, fy: -0.5, lean: -0.15, hipH: 0.66 }, a: { fx: 0.5, fy: 0.15, lean: 0.4, hipH: 0.6 }, r: { fx: 0.4, fy: 0.25, lean: 0.3 } },
+  dash: { w: { fx: -0.25, fy: -0.2, wa: -2.6, lean: 0.55, hipH: 0.5, ffx: 0.4, bfx: -0.46 }, a: { fx: 0.5, fy: 0.2, wa: 0.6, lean: 0.6, hipH: 0.5, ffx: 0.56, bfx: -0.56 }, r: { fx: 0.4, fy: 0.3, wa: 1.0, lean: 0.45 } },
+};
+
+// Skill poses. Hook throws with the back hand so the weapon stays up.
+const SK_POSE = {
+  parry: { fx: 0.3, fy: 0.02, wa: -1.5, wb: -1.25, bx: 0.24, by: 0.06, ai: -0.5, lean: -0.1, hipH: 0.6, head: -0.1 },
+  cast: { hipH: 0.46, lean: 0.6, head: 0.3, fx: 0.1, fy: -0.14, bx: 0.14, by: -0.1, ai: 1.3 },
+  hook: {
+    w: { bx: -0.32, by: -0.26, lean: -0.14, hipH: 0.66 },
+    a: { bx: 0.58, by: 0.0, lean: 0.3, hipH: 0.6 },
+    r: { bx: 0.2, by: 0.26, lean: 0.1 },
+  },
+};
+
+// ---------------------------------------------------------------- fighters
+function makeUnit(side, weapon, skill, acro = 0) {
+  const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
+  const pose = { p: {}, v: {} };
+  for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
+  const u = {
+    side, w: weapon, skill: skill || null, acro, macros: MACROS_BY_ACRO[acro], hp: 100, hpShow: 100,
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed, acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
+    rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
+    face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
+    hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
+    rot: 0, rotV: 0, rotDriven: false, backflip: false, downT: 0, iT: 0, spikeCd: 0,
+    react: 0, cd: 0, flash: 0, dodged: -1, padLaunched: false, aimSol: null,
+    // skills: skCd counts down to ready; hidden counts down Dark Sight; fade is how see-through the figure is drawn.
+    skCd: 75, skName: null, sf: 0, skTried: -1, hidden: 0, fade: 0, ambush: false, surprise: 0, hook: null, ghosts: [],
+    seen: { x: sc + 0.5, y: SPAWN_R + 1 }, ghostE: null, blind: 0,
+    in: { dir: 0, press: false, hold: false },
+    ai: { path: [], macro: null, mf: 0, air: false, replan: 0, fail: 0, blocked: new Set(), goal: -1, sx: 0, sy: 0, stuck: 0 },
+    known: new Set(), nav: null, navOk: null, pose, gait: 0, trail: [], scarf: null, rag: null, demo: null,
+  };
+  for (let i = 0; i < A.spikes.length; i++) if (A.spikes[i] === side) u.known.add(i);
+  return u;
+}
+
+function hurtbox(u) { const b = u.b; return [b.x - W / 2, b.y - H, b.x + W / 2, b.y]; }
+function worldBox(x, y, f, box) { return f > 0 ? [x + box[0], y + box[1], x + box[2], y + box[3]] : [x - box[2], y + box[1], x - box[0], y + box[3]]; }
+function overlap(a, b, m = 0) { return a[0] < b[2] + m && a[2] > b[0] - m && a[1] < b[3] + m && a[3] > b[1] - m; }
+function inBox(ax, ay, f, box, tx, ty, m) { return overlap(worldBox(ax, ay, f, box), [tx - W / 2, ty - H, tx + W / 2, ty], m); }
+function lineClear(x0, y0, x1, y1) {
+  const d = Math.hypot(x1 - x0, y1 - y0), n = Math.ceil(d / 0.25);
+  for (let i = 1; i < n; i++) { const t = i / n; if (solidAt(Math.floor(x0 + (x1 - x0) * t), Math.floor(y0 + (y1 - y0) * t))) return false; }
+  return true;
+}
+const knownHit = (u, r) => !!(r.spikes && r.spikes.some((s) => u.known.has(s)));
+const inZone = (x) => x < world.zone || x > COLS - world.zone;
+const isRanged = (u) => !!WEAP[u.w].range;
+const lying = (u) => u.state === 'down' || u.state === 'getup';
+
+function startAtk(u, name) {
+  u.state = 'atk'; u.atkName = name; u.atkDef = ATK[name]; u.af = 0; u.phase = 'w';
+  u.hitDone = false; u.hitLanded = false; u.atkId = ++world.atkSeq; u.ai.macro = null;
+  u.poseVar = ATK_POSE_ALT[name] && vr() < 0.5 ? 1 : 0;
+  if (u.hidden) {
+    // Striking out of Dark Sight: the rival never saw it coming, so it can't dodge and the hit crits.
+    reveal(u); u.ambush = true;
+    const e = foe(u);
+    if (e) { e.surprise = 18; popText(e.b.x, e.b.y - H - 0.8, '!', TEAM[e.side], 0.9); }
+  }
+}
+// Roll (acrobatics 1): a low, fast tumble that can't be hit for most of its length.
+function startRoll(u, dir, len = 16) {
+  const b = u.b;
+  if (u.acro < 1 || u.rollCd > 0 || !b.gr || u.state === 'dead') return false;
+  u.state = 'roll'; u.rollT = u.rollMax = len; u.rollDir = dir; u.face = dir;
+  b.vx = dir * Math.max(10.5, Math.abs(b.vx)); u.iT = Math.max(u.iT, len - 5); u.rollCd = 50;
+  u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false; u.flipT = 0;
+  dust(b.x, b.y, 3, 0.4);
+  if (!world.demo) world.stats[u.side].rolls++;
+  return true;
+}
+function startMacro(u, m, keepFace) {
+  const ai = u.ai;
+  ai.macro = m; ai.mf = 0; ai.air = !u.b.gr; ai.ms = macroState(m);
+  if (!keepFace && m.dir) u.face = m.dir;
+}
+
+// ---------------------------------------------------------------- perception
+// What a fighter thinks its rival is. Normally the rival itself; while the rival is in Dark Sight it is a
+// stand-in parked where the rival was last seen, unless the rival is close enough to bump into.
+function perceive(u) {
+  const e = foe(u);
+  if (!e) return null;
+  if (!e.hidden || e.state === 'dead' || (Math.abs(e.b.x - u.b.x) < 0.9 && Math.abs(e.b.y - u.b.y) < 1.3)) {
+    u.seen.x = e.b.x; u.seen.y = e.b.y;
+    return e;
+  }
+  let g = u.ghostE;
+  if (!g) g = u.ghostE = { ghost: true, side: e.side, w: e.w, b: { x: 0, y: 0, vx: 0, vy: 0, gr: true }, state: 'free', phase: null, atkDef: null, atkId: -1, face: 1, hp: 0, iT: 0 };
+  g.b.x = u.seen.x; g.b.y = u.seen.y; g.face = e.face; g.hp = e.hp;
+  return g;
+}
+const targetOf = (u) => (world.demo ? null : perceive(u));
+const foe = (u) => (world.demo ? null : U[1 - u.side]);
+
+// ---------------------------------------------------------------- AI
+function think(u) {
+  const e = perceive(u), b = u.b, ai = u.ai, inp = u.in;
+  inp.dir = 0; inp.press = false; inp.hold = false;
+  if (world.intro > 0 || world.over) return;
+  if (u.react > 0) u.react--;
+  if (u.surprise > 0) u.surprise--;
+  if (u.state === 'atk') {
+    comboLogic(u, e);
+    if (u.atkDef.air && !u.atkDef.shot) { const dx = e.b.x - b.x; inp.dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; }
+    return;
+  }
+  if (u.state !== 'free') { ai.macro = null; ai.path.length = 0; return; }
+  if (u.padLaunched) { u.padLaunched = false; choosePadMacro(u, e); }
+  if (ai.macro) {
+    const m = ai.macro, f = ai.mf++;
+    macroInput(ai.ms, m, b, inp);
+    if (!b.gr) ai.air = true;
+    if ((ai.air && b.gr && f > 1) || ai.mf > 170) { ai.macro = null; ai.replan = 0; inp.dir = 0; inp.press = false; }
+    else { if (!b.gr && !trySkill(u, e, true)) tryAirAttack(u, e); return; }
+  }
+  if (trySkill(u, e, !b.gr)) return;
+  if (!b.gr) {
+    if (tryAirAttack(u, e)) return;
+    // a shooter in the air drifts away from a blade instead of floating into it
+    if (isRanged(u) && !isRanged(e) && !e.ghost && Math.abs(e.b.x - b.x) < 5) inp.dir = -(Math.sign(e.b.x - b.x) || u.face);
+    return;
+  }
+  if (tryDodge(u, e)) return;
+  if (tryEvade(u, e)) return;
+  if (tryAttack(u, e)) return;
+  if (tryDeflect(u, e)) return;
+  if (u.recover) { u.recover = false; if (recoverChoice(u, e)) return; }
+  if (u.guardT > 0 && guardStand(u, e)) return;
+  if (e.ghost && searchLook(u, e)) return;
+  if (isRanged(u) ? rangedEngage(u, e) : meleeEngage(u, e)) return;
+  stuckCheck(u);
+  if (--ai.replan <= 0) plan(u, e);
+  follow(u, e);
+  // closing on a shooter across open floor: the occasional roll for a burst of speed
+  const ddx = e.b.x - b.x;
+  if (u.acro >= 1 && !isRanged(u) && isRanged(e) && !e.ghost && b.gr && u.rollCd <= 0 && u.in.dir === Math.sign(ddx) &&
+      Math.abs(e.b.y - b.y) < 0.6 && Math.abs(ddx) > 3 && Math.abs(ddx) < 7 && rng() < 0.04 && rollSafe(u, u.in.dir)) startRoll(u, u.in.dir);
+}
+
+function comboLogic(u, e) {
+  const d = u.atkDef;
+  if (u.phase === 'r' && u.hitLanded && d.chain && u.af >= d.w + d.a + (d.fast ? 1 : 3) && e.state !== 'dead' && !lying(e)) {
+    const f = Math.sign(e.b.x - u.b.x) || u.face;
+    const nx = ATK[d.chain];   // the next hit lunges, so it reaches a little further than its box
+    if (inBox(u.b.x, u.b.y, f, nx.box, e.b.x + e.b.vx * nx.w / 60, e.b.y, 0.2 + (nx.lunge || 0) * nx.w / 120)) { u.face = f; startAtk(u, d.chain); }
+  }
+}
+
+function tryAirAttack(u, e) {
+  if (u.react > 0 || u.state !== 'free' || e.state === 'dead' || lying(e)) return false;
+  const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, f = Math.sign(dx) || u.face;
+  if (isRanged(u)) {
+    // shoot from the top of a jump, once any wall jumps the macro still needs are done
+    if (u.cd > 0 || e.ghost || b.vy < -7 || b.wr > 0 || (u.ai.macro && u.ai.ms.wj > 0)) return false;
+    // mid-vault, the throw down at the rival from over its head is the whole point
+    if (Math.hypot(dx, dy) < 2 || rng() > (u.vaultT > world.t ? 0.8 : 0.3)) return false;
+    const sol = aimAt(u, e);
+    if (!sol) return false;
+    u.face = f; u.aimSol = sol; startAtk(u, u.w === 'bow' ? 'ashoot' : 'athrow');
+    return true;
+  }
+  if (e.ghost) return false;
+  // dive onto someone below
+  if (dy > 0.7 && dy < 5 && b.vy > -6 && Math.abs(dx) < (u.w === 'hammer' ? 1.9 : 1.2) + dy * 0.12 && !(u.ai.macro && u.ai.ms.wj > 0)) {
+    u.face = f; startAtk(u, u.w === 'hammer' ? 'aslam' : 'plunge'); return true;
+  }
+  if ((u.w === 'sword' || u.w === 'daggers') && inBox(b.x, b.y, f, ATK.aslash.box, e.b.x, e.b.y, 0)) { u.face = f; startAtk(u, 'aslash'); return true; }
+  return false;
+}
+
+// Frames until the rival's melee swing lands on u, or -1 if it won't.
+function meleeThreat(u, e) {
+  if (e.state !== 'atk' || e.phase !== 'w' || !e.atkDef.melee) return -1;
+  if (!inBox(e.b.x, e.b.y, e.face, e.atkDef.box, u.b.x, u.b.y, 0.25)) return -1;
+  return e.atkDef.w - e.af;
+}
+// Frames until a rival shot (or hook) reaches u, or -1.
+function shotThreat(u, maxT) {
+  const hb = hurtbox(u);
+  let best = -1;
+  const test = (x, y, vx, vy, g) => {
+    for (let t = 1; t <= maxT; t++) {
+      x += vx * DT; y += vy * DT; vy += g * DT;
+      if (solidAt(Math.floor(x), Math.floor(y))) return;
+      if (x > hb[0] - 0.12 && x < hb[2] + 0.12 && y > hb[1] - 0.1 && y < hb[3] + 0.05) { if (best < 0 || t < best) { best = t; u.threat = obj; } return; }
+    }
+  };
+  let obj = null;
+  for (const a of shots) if (a.owner !== u.side && !a.stuck && !a.dead) { obj = a; test(a.x, a.y, a.vx, a.vy, SHOT[a.kind].g); }
+  const e = foe(u);
+  if (e && e.hook && e.hook.phase === 'out') { obj = e.hook; test(e.hook.x, e.hook.y, e.hook.vx, e.hook.vy, 0); }
+  return best;
+}
+
+function tryDodge(u, e) {
+  if (u.surprise > 0 || u.dodged === e.atkId) return false;
+  if (meleeThreat(u, e) < 0) return false;
+  u.dodged = e.atkId;
+  const remain = e.atkDef.w - e.af, toward = Math.sign(e.b.x - u.b.x) || u.face;
+  // Roll through the swing and come up behind the attacker.
+  if (u.acro >= 1 && u.rollCd <= 0 && rng() < 0.6) {
+    const dir = Math.abs(e.b.x - u.b.x) < 1.7 ? toward : -toward;
+    if (rollSafe(u, dir)) return startRoll(u, dir);
+  }
+  if (e.atkName === 'hammer') return false;   // too tall to jump; tryAttack walks back from it
+  // Beat a slow swing to the punch, unless it's a hammer that will swing straight through the hit.
+  if ((u.w === 'sword' || u.w === 'daggers') && remain > ATK[WEAP[u.w].atk].w + 1 && rng() < 0.5) {
+    u.face = toward; startAtk(u, WEAP[u.w].atk); return true;
+  }
+  const p = { bow: 0.6, stars: 0.6, daggers: 0.55, sword: 0.4, spear: 0.3, hammer: 0.2 }[u.w] + (remain > 10 ? 0.25 : 0);
+  if (rng() < p) {
+    const away = -toward, m = { dir: away, hold: 12, delay: 0 };
+    const r = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
+    if (r && !knownHit(u, r) && Math.abs(r.x - u.b.x) > 1.2) { u.face = -away; startMacro(u, m, true); u.ai.path.length = 0; u.backflip = true; return true; }
+  }
+  return false;
+}
+// Is there floor to roll along in this direction, clear of known spikes and the closing walls?
+function rollSafe(u, dir) {
+  const b = u.b, r = Math.floor(b.y - 1e-3);
+  for (let k = 0.6; k <= 2.6; k += 0.5) {
+    const x = b.x + dir * k, c = Math.floor(x), i = r * COLS + c;
+    if (!standable(c, r) || (A.spikes[i] >= 0 && u.known.has(i)) || inZone(x)) return false;
+  }
+  return true;
+}
+// Shots on the way in: roll through them, or hop over a low one.
+function tryEvade(u, e) {
+  if (u.surprise > 0 || !u.b.gr) return false;
+  const t = shotThreat(u, 14);
+  if (t < 2 || u.evaded === u.threat) return false;
+  u.evaded = u.threat;
+  const toward = Math.sign(e.b.x - u.b.x) || u.face, dirs = isRanged(u) ? [-toward, toward] : [toward, -toward];
+  if (u.acro >= 1 && u.rollCd <= 0 && t <= 10) for (const d of dirs) if (rollSafe(u, d)) return startRoll(u, d);
+  // hop: only if the hop really clears the shot
+  for (const m of [{ dir: dirs[0], hold: 10, delay: 0 }, { dir: dirs[0], hold: 18, delay: 0 }, { dir: 0, hold: 18, delay: 0 }]) {
+    if (!pathClears(u, m, t + 8)) continue;
+    const r = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
+    if (r && !knownHit(u, r) && !inZone(r.x)) { u.face = toward; startMacro(u, m, true); u.ai.path.length = 0; return true; }
+  }
+  return false;
+}
+// Step a macro and the rival's shots together: does the fighter stay out of every shot?
+function pathClears(u, m, frames) {
+  const b = { ...stateOf(u.b), speed: u.b.speed, acro: u.acro }, ms = macroState(m), inp = {};
+  const sh = shots.filter((a) => a.owner !== u.side && !a.stuck && !a.dead).map((a) => ({ x: a.x, y: a.y, vx: a.vx, vy: a.vy, g: SHOT[a.kind].g }));
+  for (let f = 0; f < frames; f++) {
+    macroInput(ms, m, b, inp);
+    physStep(b, inp.dir, inp.press, inp.hold, u.side, true, 1);
+    for (const a of sh) {
+      a.x += a.vx * DT; a.y += a.vy * DT; a.vy += a.g * DT;
+      if (a.x > b.x - W / 2 - 0.1 && a.x < b.x + W / 2 + 0.1 && a.y > b.y - H - 0.05 && a.y < b.y) return false;
+    }
+  }
+  return true;
+}
+
+function tryAttack(u, e) {
+  if (u.react > 0 || u.cd > 0 || e.state === 'dead') return false;
+  const b = u.b, eb = e.b, dx = eb.x - b.x, dy = eb.y - b.y, f = Math.sign(dx) || u.face, wp = WEAP[u.w];
+  if (wp.range) {
+    const dist = Math.hypot(dx, dy);
+    if (u.hidden && dist < 3.5) return false;   // slip away first; the shot out of hiding is worth more from range
+    if (!e.ghost && Math.abs(dx) < 1.25 && Math.abs(dy) < 1 && !lying(e)) { u.face = f; startAtk(u, 'kick'); return true; }
+    if (dist < 1.8) return false;
+    if (e.ghost && u.blind <= 0) return false;  // one hopeful shot at where the rival vanished, then hold fire
+    const sol = aimAt(u, e);
+    if (sol) { u.face = f; u.aimSol = sol; if (e.ghost) u.blind--; startAtk(u, wp.atk); return true; }
+    return false;
+  }
+  if (lying(e) || e.ghost) return false;
+  // Never trade into an armored hammer swing: back off and let it whiff.
+  if (e.state === 'atk' && e.atkName === 'hammer' && e.phase === 'w' && meleeThreat(u, e) >= 0) {
+    const away = -Math.sign(dx) || -u.face, c = Math.floor(b.x + away * 0.45), r = Math.floor(b.y - 1e-3);
+    if (standable(c, r) && !(A.spikes[r * COLS + c] >= 0 && u.known.has(r * COLS + c))) { u.in.dir = away; u.face = -away; return true; }
+    return false;
+  }
+  if (u.w === 'spear' && dy < -0.9 && dy > -3.2 && Math.abs(dx) < 1.1) { u.face = f; startAtk(u, 'rise'); return true; }
+  const name = wp.atk, def = ATK[name], lead = def.w / 60 * 0.6;
+  if (inBox(b.x, b.y, f, def.box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
+  // sword: a long dash slash from just out of reach
+  if (u.w === 'sword' && !(u.ai.dashT > world.t) && eb.gr && Math.abs(dy) < 0.5 && Math.abs(dx) > 1.9 && Math.abs(dx) < 3 &&
+      walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u) && !(e.state === 'atk' && e.atkName === 'hammer')) {
+    u.ai.dashT = world.t + 80; u.face = f; startAtk(u, 'dash'); return true;
+  }
+  if ((u.w === 'sword' || u.w === 'daggers') && !eb.gr && dy < -0.8 && dy > -3.6 && Math.abs(dx) < 2.2) {   // a rival standing on a ledge gets climbed to instead
+    startMacro(u, { dir: Math.abs(dx) > 0.5 ? f : 0, hold: dy < -2 ? 18 : 10, delay: 0 });
+    u.face = f; u.react = 10; u.ai.path.length = 0; return true;
+  }
+  return false;
+}
+
+// Just shaken off a hit from a blade: swing back, back off, or put the guard up and wait for the next swing.
+function recoverChoice(u, e) {
+  if (isRanged(u) || isRanged(e) || e.ghost || Math.abs(e.b.x - u.b.x) > 2.4 || Math.abs(e.b.y - u.b.y) > 0.8) return false;
+  const r = rng(), away = -(Math.sign(e.b.x - u.b.x) || u.face);
+  if (r < 0.4) { u.guardT = 45; u.face = -away; return true; }
+  if (r < 0.62) {
+    if (u.acro >= 1 && u.rollCd <= 0 && rollSafe(u, away)) return startRoll(u, away);
+    const m = { dir: away, hold: 12, delay: 0 }, res = simMacro(stateOf(u.b), m, u.side, u.b.speed, u.acro);
+    if (res && !knownHit(u, res) && !inZone(res.x)) { u.face = -away; startMacro(u, m, true); u.ai.path.length = 0; u.backflip = true; return true; }
+  }
+  return false;
+}
+// On guard: hold ground facing the rival, edging back a little if it crowds in.
+function guardStand(u, e) {
+  u.guardT--;
+  if (e.state === 'dead' || isRanged(e) || Math.abs(e.b.x - u.b.x) > 3) { u.guardT = 0; return false; }
+  const dx = e.b.x - u.b.x;
+  u.face = Math.sign(dx) || u.face;
+  u.in.dir = Math.abs(dx) < 0.9 && walkLine(u.b.x, u.b.x - u.face * 0.8, Math.floor(u.b.y - 1e-3), u) ? -u.face : 0;
+  return true;
+}
+
+function tryDeflect(u) {
+  if (u.w !== 'sword' || u.react > 0) return false;
+  for (const a of shots) {
+    if (a.owner === u.side || a.stuck || a.rolled[u.side]) continue;
+    const dx = u.b.x - a.x;
+    if (Math.sign(dx) !== Math.sign(a.vx)) continue;
+    const t = Math.abs(dx) / Math.abs(a.vx) * 60;
+    if (t > ATK.slash1.w + 2 || t < ATK.slash1.w - 3) continue;
+    const yAt = a.y + a.vy * t / 60;
+    if (yAt < u.b.y - H - 0.3 || yAt > u.b.y + 0.1) continue;
+    a.rolled[u.side] = 1;
+    if (rng() < 0.6) { u.face = Math.sign(a.x - u.b.x) || u.face; startAtk(u, 'slash1'); return true; }
+  }
+  return false;
+}
+
+// The rival vanished right here: stand and look both ways.
+function searchLook(u, e) {
+  if (Math.abs(e.b.x - u.b.x) + Math.abs(e.b.y - u.b.y) > 1.6) return false;
+  if ((world.t + u.side * 11) % 34 === 0) u.face = -u.face;
+  return true;
+}
+
+function walkLine(x0, x1, r, u) {
+  const a = Math.floor(Math.min(x0, x1)), z = Math.floor(Math.max(x0, x1));
+  for (let c = a; c <= z; c++) {
+    if (!standable(c, r)) return false;
+    const i = r * COLS + c;
+    if (A.spikes[i] >= 0 && u.known.has(i)) return false;
+    if (A.pads[i] === u.side) return false;
+  }
+  return true;
+}
+function meleeEngage(u, e) {
+  const b = u.b, eb = e.b, dx = eb.x - b.x, dy = eb.y - b.y;
+  if (e.state === 'dead' || e.ghost || Math.abs(dy) > 0.6 || Math.abs(dx) > 4.5 || !eb.gr) return false;
+  if (!walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u)) return false;
+  let stop = WEAP[u.w].stop;
+  // Against a hammer, wait just outside its reach and step in while it recovers from a swing.
+  if (e.w === 'hammer' && u.w !== 'hammer' && u.w !== 'spear' && e.state !== 'stun' && !(e.state === 'atk' && e.phase === 'r')) stop = 2.4;
+  const want = eb.x - Math.sign(dx) * stop, d = want - b.x;
+  u.face = Math.sign(dx) || u.face;
+  u.in.dir = Math.abs(d) > 0.12 ? Math.sign(d) : 0;
+  if (u.in.dir) {
+    const c = Math.floor(b.x + u.in.dir * 0.45), r = Math.floor(b.y - 1e-3), i = r * COLS + c;
+    if (!standable(c, r) || (A.spikes[i] >= 0 && u.known.has(i)) || A.pads[i] === u.side || inZone(b.x + u.in.dir * 0.6)) u.in.dir = 0;
+  }
+  return true;
+}
+// Kiting: when the rival gets close, take the jump that lands farthest from it,
+// favouring high ground and a clear shot. Wall jumps, wall runs and flips are all candidates.
+function rangedEngage(u, e) {
+  const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, dist = Math.hypot(dx, dy), ai = u.ai;
+  if (e.state === 'dead') return false;
+  const danger = isRanged(e) ? 2.2 : u.w === 'stars' ? 3.1 : 3.3;
+  if (dist > danger + 1 || (u.react > 0 || ai.escT > world.t || dist > danger)) return backpedal(u, e, dist, danger);
+  ai.escT = world.t + 8;
+  if (cornerVault(u, e)) return true;
+  const ex = e.b.x + e.b.vx * 0.35, cur = Math.hypot(b.x - ex, dy);
+  let best = null, bs = -1e9;
+  const cands = u.macros.filter((m) => m.hold);
+  // an own pad within a couple of steps is an escape too: run onto it and get thrown clear
+  for (const dir of [-1, 1]) {
+    const r0 = Math.floor(b.y - 1e-3);
+    for (let k = 1; k <= 2; k++) if (A.pads[r0 * COLS + Math.floor(b.x + dir * k)] === u.side) { cands.push({ dir, hold: 0, delay: 0, pad: 1 }); break; }
+  }
+  for (const m of cands) {
+    let r;
+    if (m.pad) {
+      const fl = simFlight(stateOf(b), m, u.side, b.speed, u.acro);
+      if (!fl || !fl.launched || fl.land.pad) continue;
+      r = { x: fl.land.x, r: fl.land.r, frames: fl.land.f, spikes: null };
+    } else r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
+    if (!r || knownHit(u, r) || inZone(r.x)) continue;
+    const ly = r.r + 1, d = Math.hypot(r.x - ex, (ly - e.b.y) * 1.2);
+    let sc = d * 10 - r.frames * 0.12 + (lineClear(r.x, ly - 1.2, e.b.x, e.b.y - 0.9) ? 6 : 0) + Math.max(0, e.b.y - ly) * 5 + rng() * 4;
+    if (d < 2.2) sc -= 40;
+    // going over the rival's head is the last resort, for when the way back is shut
+    if (Math.sign(r.x - ex) !== Math.sign(b.x - ex)) sc -= 25;
+    if (sc > bs) { bs = sc; best = { m, d }; }
+  }
+  if (best && best.d > cur + 0.9) {
+    u.face = Math.sign(dx) || u.face; startMacro(u, best.m, true); ai.path.length = 0;
+    if (!best.m.wj && !best.m.dj && best.m.dir === -Math.sign(dx) && best.m.hold <= 18) u.backflip = true;
+    u.react = 10;
+    return true;
+  }
+  // cornered: roll straight past the rival
+  if (u.acro >= 1 && !isRanged(e) && dist < 2 && rollSafe(u, Math.sign(dx) || u.face)) return startRoll(u, Math.sign(dx) || u.face);
+  return backpedal(u, e, dist, danger);
+}
+// Cornered against a wall by a blade: run up the wall (acrobatics 3) or kick off it (2) and flip
+// over the rival's head, landing on the open side. Every candidate is traced frame by frame and
+// kept only if it clears the rival's head where it crosses over and lands well past it.
+function cornerVault(u, e) {
+  const b = u.b;
+  if (u.acro < 2 || isRanged(e) || e.ghost || !b.gr || Math.abs(e.b.y - b.y) > 1) return false;
+  // a swing already on its way would catch the run back to the wall: take off between swings
+  if (e.state === 'atk' && e.phase !== 'r') return false;
+  const toE = Math.sign(e.b.x - b.x) || u.face, away = -toE;
+  // how far back is the wall? The floor on the way there has to be solid, or the way out is down, not over.
+  let wallD = -1;
+  for (let d = 0.05; d <= 1.8; d += 0.25) {
+    if (boxSolid(b.x + away * d - W / 2, b.y - H + 0.25, b.x + away * d + W / 2, b.y - 0.3)) { wallD = d; break; }
+    if (!boxSolid(b.x + away * d - W / 2, b.y, b.x + away * d + W / 2, b.y + 0.05)) return false;
+  }
+  if (wallD < 0) return false;
+  let best = null, bs = -1e9;
+  for (const m of u.macros) {
+    if (m.dir !== away || !m.wj || m.wb) continue;
+    const fl = simFlight(stateOf(b), m, u.side, b.speed, u.acro);
+    if (!fl || fl.launched || !fl.land || !standable(fl.land.c, fl.land.r)) continue;
+    const land = fl.land, landEx = e.b.x + e.b.vx * Math.min(0.5, land.f / 60) * 0.6;
+    if ((land.x - landEx) * toE < 2.4 || inZone(land.x)) continue;
+    // where the flight passes over the rival, the feet must be above its head
+    let clear = true, peak = 99, ran = false;
+    fl.pts.forEach((p, f) => {
+      const ex = e.b.x + e.b.vx * Math.min(0.5, f / 60) * 0.6;
+      if (Math.abs(p.x - ex) < W + 0.45 && p.y > e.b.y - H - 0.6) clear = false;
+      peak = Math.min(peak, p.y);
+      if (f > 0 && p.vy === -ACRO.wrV) ran = true;
+    });
+    if (!clear) continue;
+    const sc = (land.x - landEx) * toE * 6 - land.f * 0.1 + (b.y - peak) * 2 + (ran ? 8 : 0) + rng() * 3;
+    if (sc > bs) { bs = sc; best = { m, fl, ran }; }
+  }
+  if (!best) return false;
+  startMacro(u, best.m, true); u.ai.path.length = 0; u.backflip = false; u.react = 10;
+  u.vaultT = world.t + best.fl.land.f;
+  if (!world.demo) world.stats[u.side].vaults = (world.stats[u.side].vaults || 0) + 1;
+  if (!world.demo && !u.loggedVault) {
+    u.loggedVault = true;
+    const how = best.ran ? 'ran up the wall' : 'kicked off the wall';
+    log(u.side ? `The rival ${how} and flipped over your head.` : `Your fighter ${how} and flipped over the rival.`, u.side);
+  }
+  return true;
+}
+// Keep the gap on foot: walk backwards facing the blade, so the next throw is always ready to go.
+function backpedal(u, e, dist, danger) {
+  const b = u.b;
+  if (isRanged(e) || e.ghost || !b.gr || dist > danger + 1 || Math.abs(e.b.y - b.y) > 1.5) return false;
+  const away = -(Math.sign(e.b.x - b.x) || u.face), r = Math.floor(b.y - 1e-3), c = Math.floor(b.x + away * 0.6), i = r * COLS + c;
+  if (!standable(c, r) || (A.spikes[i] >= 0 && u.known.has(i)) || inZone(b.x + away * 0.8)) return false;
+  u.in.dir = away; u.face = -away;
+  return true;
+}
+
+function nodeAt(u, x, y) {
+  const r = Math.floor(y - 1e-3), c = Math.floor(x);
+  for (const cc of [c, x - c < 0.5 ? c - 1 : c + 1]) {
+    if (cc < 0 || cc >= COLS || r < 0 || r >= ROWS) continue;
+    const j = u.nav.idx[r * COLS + cc];
+    if (j >= 0) return j;
+  }
+  return -1;
+}
+const nodeOf = (u) => nodeAt(u, u.b.x, u.b.y);
+function score(u, e, n, d, isStart) {
+  const nx = n.c + 0.5, ny = n.r + 1, ex = e.b.x, ey = e.b.y;
+  const de = Math.hypot(nx - ex, (ny - ey) * 1.3), range = WEAP[u.w].range;
+  let s;
+  if (range) {
+    const los = lineClear(nx, ny - 1.2, ex, ey - 0.9);
+    // Stars fly flat, so they need a clear line far more than the bow does.
+    s = d * 0.45 + 18 * Math.abs(de - range) + (los ? 0 : u.w === 'stars' ? 140 : 70) + (de < 3.2 ? (3.2 - de) * 70 : 0);
+    // kiting: high ground is worth a detour, and so is a spot with more ways out
+    s -= Math.max(0, Math.min(4, ey - ny)) * (10 + u.acro * 4);
+    s -= Math.min(10, n.edges.length) * 1.5;
+  } else s = d + 28 * Math.max(0, de - Math.max(0.9, WEAP[u.w].stop)) + (Math.abs(ny - ey) > 0.5 ? 25 : 0);
+  if (n.spike >= 0 && u.known.has(n.i)) s += 500;
+  if (n.pad) s += 1e5;   // your own pad throws you; nobody can stand on it
+  const zf = world.zone + (world.t > SQ_START * 60 - 120 ? 1.4 : 0);
+  if (nx < zf + 0.4 || nx > COLS - zf - 0.4) s += 400;
+  if (isStart) s -= 10;
+  return s;
+}
+function plan(u, e) {
+  const ai = u.ai, nav = u.nav;
+  ai.replan = 16 + Math.floor(rng() * 8);
+  const s = nodeOf(u);
+  if (s < 0) { ai.path.length = 0; return; }
+  const { dist, prev } = dijkstra(nav, s, u.known, ai.blocked);
+  // For a shooter facing a blade: how close does the route to each spot pass by the blade?
+  let near = null;
+  if (isRanged(u) && !isRanged(e) && !e.ghost) {
+    near = new Float32Array(nav.nodes.length).fill(-1);
+    const ex = e.b.x + e.b.vx * 0.3, ey = e.b.y;
+    const gap = (i) => { const n = nav.nodes[i]; return Math.hypot(n.c + 0.5 - ex, n.r + 1 - ey); };
+    const walk = (i) => {
+      if (near[i] >= 0) return near[i];
+      near[i] = gap(i);   // guards against cycles before the real value is known
+      const p = prev[i];
+      return (near[i] = p && p.from !== i ? Math.min(gap(i), walk(p.from)) : gap(i));
+    };
+    for (let i = 0; i < nav.nodes.length; i++) if (dist[i] < 1e9) walk(i);
+  }
+  let best = s, bs = 1e9;
+  for (let i = 0; i < nav.nodes.length; i++) {
+    if (dist[i] >= 1e9) continue;
+    let sc = score(u, e, nav.nodes[i], dist[i], i === s);
+    if (near && i !== s) sc += Math.max(0, 2.4 - near[i]) * 90;
+    if (sc < bs) { bs = sc; best = i; }
+  }
+  // A pad can beat any walking route: a blade springs over the rival and comes down on it,
+  // a shooter springs up to high ground or to a shot from the top of the arc.
+  ai.padIntent = null;
+  const pp = padPlan(u, e, dist, bs);
+  if (pp) { best = pp.node; ai.padIntent = pp; }
+  ai.goal = best;
+  const path = [];
+  for (let k = best; k !== s && prev[k]; k = prev[k].from) path.push(prev[k]);
+  path.reverse();
+  ai.path = path;
+}
+// Trace a macro's whole flight, not just where it lands. A pad under the start launches it.
+function simFlight(s, m, side, speed, acro) {
+  const b = { ...s, speed, acro }, ms = macroState(m), inp = {}, pts = [];
+  let air = !b.gr, launched = !b.gr;
+  for (let f = 0; f < 150; f++) {
+    macroInput(ms, m, b, inp);
+    const ev = physStep(b, inp.dir, inp.press, inp.hold, side, true, 1);
+    if (ev & EV_PAD) {
+      if (launched) return { pts, launched, land: { x: b.x, c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), f, pad: true } };
+      launched = true;
+    }
+    if ((ev & EV_WALL) && b.gr && !launched) return null;
+    pts.push({ x: b.x, y: b.y, vy: b.vy });
+    if (!b.gr) air = true;
+    else if (air) return { pts, launched, land: { x: b.x, c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), f } };
+  }
+  return null;
+}
+// Does this flight come down on the rival from above, close enough for a plunge?
+function flightStrikes(u, e, fl) {
+  const ex = e.b.x + e.b.vx * 0.3, ey = e.b.y, reach = u.w === 'hammer' ? 1.9 : 1.2;
+  for (const p of fl.pts) {
+    const dy = ey - p.y;
+    if (p.vy > -6 && dy > 0.7 && dy < 5 && Math.abs(p.x - ex) < reach + dy * 0.12) return true;
+  }
+  return false;
+}
+// Does the top of this flight give a shooter a clear shot?
+function flightShot(e, fl) {
+  for (const p of fl.pts) {
+    if (p.vy < -7 || p.vy > 4) continue;
+    const d = Math.hypot(e.b.x - p.x, e.b.y - p.y);
+    if (d > 2.2 && d < 9 && lineClear(p.x, p.y - 1.1, e.b.x, e.b.y - 0.9)) return true;
+  }
+  return false;
+}
+function padPlan(u, e, dist, bs) {
+  const nav = u.nav, ai = u.ai;
+  if (e.ghost || lying(e) || ai.padCd > world.t) return null;
+  let pick = null, ps = bs;
+  for (let i = 0; i < nav.nodes.length; i++) {
+    const n = nav.nodes[i];
+    if (!n.pad || dist[i] > 150) continue;
+    if (isRanged(u) && !isRanged(e) && Math.sign(n.c + 0.5 - e.b.x) !== Math.sign(u.b.x - e.b.x)) continue;   // a shooter won't run past a blade to reach a pad
+    const s0 = { x: n.c + 0.5, y: n.r + 1, vx: 0, vy: 0, gr: true, jumping: false };
+    for (const m of PADM) {
+      const fl = simFlight(s0, m, u.side, u.b.speed, u.acro);
+      if (!fl || fl.land.pad || !fl.launched) continue;
+      let sc;
+      if (!isRanged(u)) {
+        if (!flightStrikes(u, e, fl)) continue;
+        sc = dist[i] + fl.land.f * 0.5 - 35;
+      } else {
+        const j = nodeAt(u, fl.land.x, fl.land.r + 1);
+        if (j < 0) continue;
+        sc = score(u, e, nav.nodes[j], dist[i] + fl.land.f * 0.45, false) - (flightShot(e, fl) ? 14 : 0) - 6;
+      }
+      if (sc < ps) { ps = sc; pick = { node: i, i: n.i, m, strike: !isRanged(u) }; }
+    }
+  }
+  return pick;
+}
+function findMacro(u, e) {
+  const to = u.nav.nodes[e.to], s = stateOf(u.b);
+  for (const m of [e.m, ...u.macros]) {
+    const r = simMacro(s, m, u.side, u.b.speed, u.acro);
+    if (r && r.c === to.c && r.r === to.r && !knownHit(u, r)) return m;
+  }
+  return null;
+}
+function follow(u, en) {
+  const ai = u.ai, b = u.b, nav = u.nav, cur = nodeOf(u);
+  let e = ai.path[0];
+  while (e && e.type === 'walk' && cur === e.to) { ai.path.shift(); e = ai.path[0]; }
+  if (!e) { u.face = Math.sign(en.b.x - b.x) || u.face; return; }
+  if (e.type === 'walk') {
+    if (cur !== e.from && cur !== e.to) { ai.replan = 0; }
+    const to = nav.nodes[e.to], d = Math.sign(to.c + 0.5 - b.x);
+    u.in.dir = d; if (d) u.face = d;
+    return;
+  }
+  const from = nav.nodes[e.from], cx = from.c + 0.5, off = b.x - cx;
+  if (cur !== e.from || e.type === 'pad') {
+    if (Math.abs(off) < 1.6 && Math.floor(b.y - 1e-3) === from.r) { u.in.dir = -Math.sign(off); if (u.in.dir) u.face = u.in.dir; }
+    else ai.replan = 0;
+    return;
+  }
+  if (Math.abs(off) < 0.4 && (world.t + u.side) % 2 === 0) {
+    const m = findMacro(u, e);
+    if (m) { startMacro(u, m); ai.path.shift(); ai.fail = 0; return; }
+  }
+  if (Math.abs(off) < 0.08 && Math.abs(b.vx) < 0.5 && ++ai.fail > 6) { ai.blocked.add(e); ai.fail = 0; ai.replan = 0; }
+  u.in.dir = Math.abs(off) > 0.06 ? -Math.sign(off) : 0;
+  if (u.in.dir) u.face = u.in.dir;
+}
+function choosePadMacro(u, e) {
+  const ai = u.ai, nav = u.nav, p = ai.path;
+  // launched with a plan: fly the plan
+  const pi = ai.padIntent;
+  ai.padIntent = null; ai.padCd = world.t + 150;
+  if (pi && pi.i === u.b.pad) { startMacro(u, pi.m); ai.air = true; ai.path.length = 0; u.padStrike = pi.strike; return; }
+  while (p.length && p[0].type === 'walk') p.shift();
+  let target = null;
+  if (p.length && p[0].type === 'pad') { target = nav.nodes[p[0].to]; p.shift(); }
+  const g = target || (ai.goal >= 0 ? nav.nodes[ai.goal] : null), s = stateOf(u.b);
+  let best = null, bs = 1e9, strike = false;
+  for (const m of PADM) {
+    const r = simMacro(s, m, u.side, u.b.speed, u.acro);
+    if (!r) continue;
+    let sc = g ? Math.abs(r.c - g.c) + Math.abs(r.r - g.r) * 1.5 : 0;
+    if (knownHit(u, r)) sc += 50;
+    if (A.pads[r.r * COLS + r.c] === u.side && !(target && r.c === target.c && r.r === target.r)) sc += 200;
+    if (target && r.c === target.c && r.r === target.r) sc -= 100;
+    // steer the flight to use it: over the rival for a blade, to a shot or high ground for a shooter
+    let hits = false;
+    if (e && !e.ghost && !lying(e)) {
+      const fl = simFlight(s, m, u.side, u.b.speed, u.acro);
+      if (fl) {
+        if (!isRanged(u) && flightStrikes(u, e, fl)) { sc -= 80; hits = true; }
+        if (isRanged(u)) {
+          if (flightShot(e, fl)) sc -= 6;
+          const j = nodeAt(u, fl.land.x, fl.land.r + 1);
+          if (j >= 0) sc += score(u, e, nav.nodes[j], 0, false) * 0.08;
+        }
+      }
+    }
+    if (sc < bs) { bs = sc; best = m; strike = hits; }
+  }
+  if (best) { startMacro(u, best); ai.air = true; u.padStrike = strike; }
+}
+function stuckCheck(u) {
+  const ai = u.ai, b = u.b;
+  if (world.t % 45 !== 0) return;
+  const moved = Math.abs(b.x - ai.sx) + Math.abs(b.y - ai.sy);
+  ai.sx = b.x; ai.sy = b.y;
+  if (moved < 0.15 && ai.path.length) {
+    if (++ai.stuck >= 2) {
+      ai.stuck = 0; ai.blocked.clear();
+      const order = u.macros.slice().sort(() => rng() - 0.5);
+      for (const m of order) {
+        const r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
+        if (r && standable(r.c, r.r) && !knownHit(u, r) && (r.c !== Math.floor(b.x))) { startMacro(u, m); ai.path.length = 0; break; }
+      }
+    }
+  } else ai.stuck = 0;
+}
+
+// ---------------------------------------------------------------- skills
+// Each fighter carries one skill. The AI decides when to use it; the skill state runs it frame by frame.
+function trySkill(u, e, air) {
+  if (!u.skill || u.skCd > 0 || u.state !== 'free' || u.surprise > 0 || !e || e.state === 'dead') return false;
+  if (u.skill === 'blink') return aiBlink(u, e, air);
+  if (air) return false;
+  if (u.skill === 'parry') return aiParry(u, e);
+  if (u.skill === 'darksight') return aiDarkSight(u, e);
+  if (u.skill === 'hook') return aiHook(u, e);
+  return false;
+}
+function startSkill(u, name, face) {
+  u.state = 'skill'; u.skName = name; u.sf = 0;
+  u.ai.macro = null; u.ai.path.length = 0; u.backflip = false;
+  if (face) u.face = face;
+  u.skCd = SKILL[u.skill].cd;
+  if (!world.demo) world.stats[u.side].skill++;
+  if (u.hidden && name !== 'cast') reveal(u);
+  return true;
+}
+function endSkill(u, react) { u.state = 'free'; u.skName = null; u.react = react; }
+function skillStep(u) {
+  const f = ++u.sf;
+  if (u.skName === 'parry') { if (f >= 24) endSkill(u, 4); }
+  else if (u.skName === 'cast') { if (f === 1) u.iT = Math.max(u.iT, 10); if (f === 2) goHidden(u); if (f >= 7) endSkill(u, 1); }
+  else if (u.skName === 'hook') {
+    if (f === 8) throwHook(u);
+    if ((f > 8 && !u.hook) || f > 150) endSkill(u, 3);
+  }
+}
+const parrying = (u) => u.state === 'skill' && u.skName === 'parry' && u.sf <= 16;
+const facingPoint = (u, x) => Math.abs(x - u.b.x) < 0.25 || Math.sign(x - u.b.x) === u.face;
+
+// ---- Blink
+function aiBlink(u, e, air) {
+  const ranged = isRanged(u), eRanged = !!WEAP[e.w].range, b = u.b;
+  const t = meleeThreat(u, e);
+  if (t >= 1 && t <= 9 && u.skTried !== e.atkId) {
+    u.skTried = e.atkId;
+    if (rng() < 0.85) return blinkTo(u, e, ranged ? 'away' : 'behind');
+  }
+  // Blink straight through an incoming shot: toward the shooter for a blade, away from it for a shooter.
+  if (shotThreat(u, 16) >= 2 && u.skTried !== u.threat) {
+    u.skTried = u.threat;
+    if (rng() < 0.8) return blinkTo(u, e, ranged ? 'away' : 'toward', true);
+  }
+  if (air || e.ghost || lying(e)) return false;
+  const dist = Math.hypot(e.b.x - b.x, e.b.y - b.y);
+  if (ranged) return !eRanged && dist < 2.6 && blinkTo(u, e, 'away');   // kite
+  if (eRanged) return false;   // save it for the next shot
+  if (dist > 2.4 && dist < 5.5 && (Math.abs(e.b.y - b.y) > 0.6 || !walkLine(b.x, e.b.x, Math.floor(b.y - 1e-3), u))) return blinkTo(u, e, 'close');
+  return false;
+}
+// Where would a fighter dropped at (x, y) come to rest? Null if it lands somewhere it shouldn't.
+function settle(u, x, y) {
+  const s = { x, y, vx: 0, vy: 0, gr: false, jumping: false, speed: u.b.speed };
+  for (let f = 0; f < 90; f++) {
+    const ev = physStep(s, 0, false, false, u.side, false, 1);
+    if ((s.spike >= 0 && u.known.has(s.spike)) || (ev & EV_PAD)) return null;
+    if (s.gr) {
+      const j = nodeAt(u, s.x, s.y);
+      if (j < 0 || !u.navOk[j] || inZone(s.x)) return null;
+      return s;
+    }
+  }
+  return null;
+}
+function blinkTo(u, e, mode, dodgeShots) {
+  const b = u.b, ex = e.b.x, ey = e.b.y, side = Math.sign(ex - b.x) || u.face;
+  const d0 = Math.hypot(ex - b.x, ey - b.y);
+  let best = null, bs = 1e9;
+  for (let dx = -3.2; dx <= 3.21; dx += 0.4) for (const dy of [0, -1, 1, -2, 2, -3]) {
+    const dd = Math.hypot(dx, dy);
+    if (dd < 1.3 || dd > 3.4) continue;
+    const x = b.x + dx, y = b.y + dy;
+    if (x < 1 + W / 2 || x > COLS - 1 - W / 2 || y - H < 1 || y > ROWS - 1) continue;
+    if (boxSolid(x - W / 2, y - H, x + W / 2, y)) continue;
+    const s = settle(u, x, y);
+    if (!s) continue;
+    const de = Math.hypot(s.x - ex, s.y - ey);
+    let sc;
+    if (mode === 'behind' || mode === 'close') {
+      const tx = ex + (mode === 'behind' ? side : -side) * 0.85;
+      if (Math.abs(s.y - ey) > 0.5) continue;
+      sc = Math.abs(s.x - tx) * 2;
+      if (sc > 1.6) continue;
+    } else if (mode === 'toward') {
+      if (de < 0.7 || de > d0 - 1.2) continue;
+      sc = de + Math.abs(s.y - ey) * 0.3;
+    } else {
+      if (de < d0 + 1) continue;
+      sc = -de - (lineClear(s.x, s.y - 1.2, ex, ey - 0.9) ? 1.5 : 0);
+    }
+    if (dodgeShots) {
+      const save = { x: b.x, y: b.y };
+      b.x = x; b.y = y;
+      const hit = shotThreat(u, 20) >= 0;
+      b.x = save.x; b.y = save.y;
+      if (hit) continue;
+    }
+    if (sc < bs) { bs = sc; best = { x, y }; }
+  }
+  if (!best) return false;
+  doBlink(u, best.x, best.y, ex);
+  return true;
+}
+function doBlink(u, x, y, lookX) {
+  const b = u.b, S = skel(u), dx = x - b.x, dy = y - b.y;
+  u.ghosts.push({ S, age: 0, max: 20 });
+  const n = 4;
+  for (let i = 1; i < n; i++) {
+    const k = i / n, G = {};
+    for (const key in S) G[key] = key === 'wp' ? S.wp : key === 'w' ? S.w : { x: S[key].x + dx * k, y: S[key].y + dy * k };
+    G.wp = {}; for (const key in S.wp) G.wp[key] = S.wp[key] && { x: S.wp[key].x + dx * k, y: S.wp[key].y + dy * k };
+    u.ghosts.push({ S: G, age: -i, max: 8 + i * 2 });
+  }
+  selection(b.x, b.y, u.side); selection(x, y, u.side);
+  for (let i = 0; i < 6; i++) streak(b.x + dx * (0.2 + i * 0.12), b.y - 0.3 - Math.random() * 1.1 + dy * (0.2 + i * 0.12), Math.atan2(dy, dx), 0.5 + Math.random() * 0.6, TEAM[u.side]);
+  pixels(b.x, b.y - 0.8, u.side, 8); pixels(x, y - 0.8, u.side, 8);
+  if (u.scarf) for (const p of u.scarf) { p.x += dx; p.y += dy; p.px += dx; p.py += dy; }
+  u.trail.length = 0;
+  b.x = x; b.y = y; b.vx = 0; b.vy = 0; b.gr = false; b.jumping = false;
+  u.iT = Math.max(u.iT, 6); u.skCd = SKILL.blink.cd; u.react = Math.min(u.react, 2);
+  u.ai.macro = null; u.ai.path.length = 0; u.ai.replan = 0; u.backflip = false;
+  if (lookX !== undefined) u.face = Math.sign(lookX - x) || u.face;
+  if (u.hidden) reveal(u);
+  callout(u, 'BLINK');
+  if (!world.demo) { world.stats[u.side].skill++; world.hs = Math.max(world.hs, 2); }
+}
+
+// ---- Parry
+function aiParry(u, e) {
+  const t = meleeThreat(u, e);
+  if (t >= 2 && t <= 13 && u.skTried !== e.atkId) {
+    u.skTried = e.atkId;
+    if (rng() < 0.85) return startSkill(u, 'parry', Math.sign(e.b.x - u.b.x) || u.face);
+  }
+  if (shotThreat(u, 12) >= 3) return startSkill(u, 'parry', Math.sign(u.threat.x - u.b.x) || u.face);
+  return false;
+}
+function parrySuccess(u, att, x, y, what = 'shot') {
+  endSkill(u, 0);
+  u.cd = 0; u.skCd = Math.min(u.skCd, 240); u.iT = Math.max(u.iT, 8);
+  if (att) {
+    att.state = 'stun'; att.stunT = 44; att.tumble = false; att.skName = null;
+    att.b.vx = (Math.sign(att.b.x - u.b.x) || -u.face) * 5;
+    att.ai.macro = null; att.ai.path.length = 0; att.hitDone = true; att.flash = 6; att.backflip = false;
+    if (att.hook && att.hook.phase !== 'back') att.hook.phase = 'back';
+  }
+  const px = x ?? u.b.x + u.face * 0.45, py = y ?? u.b.y - 1.05;
+  sparks(px, py, 0, 26); ring(px, py, 1.7, 'spark'); ring(px, py, 1.1, TEAM[u.side]);
+  streak(px, py, -1.35, 2.2, 'spark'); streak(px, py, 0.2, 1.6, 'spark');
+  callout(u, 'PARRY');
+  world.hs = Math.max(world.hs, 12); world.impact = Math.max(world.impact, 2); world.punch = 1; sfxShake(7);
+  if (world.demo) return;
+  world.slowT = Math.max(world.slowT, 16);
+  world.stats[u.side].parry++;
+  const thing = att ? '' : what === 'hook' ? ' the hook' : ' the shot';
+  if (att) log(u.side ? `${rivalName()} parried. You're wide open.` : 'Parried. The rival is wide open.', u.side);
+  else log(u.side ? `${rivalName()} parried${thing}.` : `Parried${thing}.`, u.side);
+}
+
+// ---- Dark Sight
+// Dark Sight is a vanish: cast into an incoming hit or shot, the smoke takes it, and the fighter slips away unseen.
+function aiDarkSight(u, e) {
+  if (e.ghost || lying(e)) return false;
+  const t = meleeThreat(u, e), st = shotThreat(u, 10);
+  if (((t >= 1 && t <= 6) || (st >= 1 && st <= 6)) && rng() < 0.35) return startSkill(u, 'cast');
+  const dist = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y), eRanged = !!WEAP[e.w].range;
+  if (!isRanged(u)) return eRanged && dist > 3 && dist < 8 && shotThreat(u, 24) < 0 && startSkill(u, 'cast');   // close in on a shooter unseen
+  return !eRanged && dist < 2.4 && startSkill(u, 'cast');   // lose a blade that got too close
+}
+function goHidden(u) {
+  u.hidden = SKILL.darksight.dur;
+  smoke(u.b.x, u.b.y, 12);
+  callout(u, 'DARK SIGHT');
+  const e = foe(u);
+  if (!e || world.demo) return;
+  e.blind = 1; e.ai.replan = 0;
+  popText(e.b.x, e.b.y - H - 0.8, '?', TEAM[e.side], 0.9);
+  if (!world.stats[u.side].hid++) log(u.side ? `${rivalName()} vanished.` : 'Your fighter vanished. The rival has lost track of it.', u.side);
+}
+function reveal(u) {
+  if (!u.hidden) return;
+  u.hidden = 0;
+  smoke(u.b.x, u.b.y, 6);
+}
+
+// ---- Hook
+function aiHook(u, e) {
+  if (e.ghost || lying(e) || e.iT > 0 || e.state === 'dead') return false;
+  if (isRanged(u) && !isRanged(e)) return false;   // a shooter has no reason to reel in a blade
+  const o = hookHand(u, Math.sign(e.b.x - u.b.x) || u.face), tx = e.b.x, ty = e.b.y - 0.9, d = Math.hypot(tx - o.x, ty - o.y);
+  if (d < 2.8 || d > HOOK.range - 0.6 || !lineClear(o.x, o.y, tx, ty)) return false;
+  return startSkill(u, 'hook', Math.sign(e.b.x - u.b.x) || u.face);
+}
+const hookHand = (u, f = u.face) => ({ x: u.b.x + f * 0.3, y: u.b.y - 1.1 });
+function throwHook(u) {
+  const o = hookHand(u), e = targetOf(u);
+  const tx = e ? e.b.x + e.b.vx * 0.1 : o.x + u.face * 5, ty = e ? e.b.y - 0.9 : o.y;
+  const dx = tx - o.x, dy = ty - o.y, d = Math.hypot(dx, dy) || 1;
+  u.hook = { x: o.x, y: o.y, vx: dx / d * HOOK.v, vy: dy / d * HOOK.v, phase: 'out', dist: 0, hold: 0 };
+  streak(o.x, o.y, Math.atan2(dy, dx), 0.8, TEAM[u.side]);
+}
+function stepHook(u) {
+  const h = u.hook;
+  if (!h) return;
+  if (u.state === 'dead') { u.hook = null; return; }
+  const e = foe(u);
+  if (h.phase === 'out') {
+    for (let k = 0; k < 3 && h.phase === 'out'; k++) {
+      h.x += h.vx * DT / 3; h.y += h.vy * DT / 3; h.dist += HOOK.v * DT / 3;
+      if (solidAt(Math.floor(h.x), Math.floor(h.y))) { h.phase = 'back'; sparks(h.x, h.y, -Math.sign(h.vx), 5, 'spark'); break; }
+      if (h.dist > HOOK.range) { h.phase = 'back'; break; }
+      if (!e || e.state === 'dead' || lying(e) || e.iT > 0) continue;
+      if (h.x > e.b.x - W / 2 - 0.08 && h.x < e.b.x + W / 2 + 0.08 && h.y > e.b.y - H && h.y < e.b.y) {
+        if (parrying(e) && facingPoint(e, h.x)) { h.phase = 'back'; parrySuccess(e, null, h.x, h.y, 'hook'); break; }
+        latch(u, e, h);
+      }
+    }
+  } else if (h.phase === 'pull' && e) {
+    h.x = e.b.x; h.y = e.b.y - 0.9;
+    if (--h.hold <= 0) h.phase = 'back';
+  } else {
+    const o = hookHand(u), dx = o.x - h.x, dy = o.y - h.y, d = Math.hypot(dx, dy);
+    if (d < HOOK.back * DT * 1.2) { u.hook = null; return; }
+    h.x += dx / d * HOOK.back * DT; h.y += dy / d * HOOK.back * DT;
+  }
+}
+// Hooked: the rival is thrown on an arc that lands it just in front of the thrower.
+function latch(u, e, h) {
+  h.phase = 'pull'; h.hold = 14;
+  const sx = Math.sign(u.b.x - e.b.x) || 1, gap = Math.max(0, Math.abs(u.b.x - e.b.x) - 1.0);
+  const vx = 16, t = Math.max(0.16, gap / vx), dy = u.b.y - e.b.y;
+  e.state = 'stun'; e.stunT = 36; e.tumble = false; e.skName = null; e.backflip = false; e.flash = 6;
+  e.ai.macro = null; e.ai.path.length = 0;
+  if (e.hook && e.hook.phase !== 'back') e.hook.phase = 'back';
+  e.b.vx = sx * vx; e.b.vy = Math.max(-19, dy / t - P.g * t / 2); e.b.gr = false; e.b.jumping = false; e.face = sx;
+  sparks(h.x, h.y, sx, 12); ring(h.x, h.y, 1, TEAM[u.side]);
+  callout(e, 'HOOKED', u.side);
+  world.hs = Math.max(world.hs, 6); sfxShake(5);
+  if (world.demo) return;
+  world.stats[u.side].hooks++;
+  hurt(e, HOOK.dmg * (u.ambush ? CRIT : 1), 'hit', u.side);
+  u.ambush = false;
+  if (world.stats[u.side].hooks === 1) log(u.side ? `${rivalName()} hooked you and reeled you in.` : 'Hooked. Your fighter reeled the rival in.', u.side);
+}
+
+// ---------------------------------------------------------------- ranged
+function shotOrigin(u, f, kind) { return kind === 'arrow' ? { x: u.b.x + f * 0.12, y: u.b.y - 1.15 } : { x: u.b.x + f * 0.35, y: u.b.y - 1.1 }; }
+function solveArc(ox, oy, tx, ty, high, K) {
+  const dx = tx - ox, dyUp = oy - ty, X = Math.abs(dx), s = Math.sign(dx) || 1, v2 = K.v * K.v, g = K.g;
+  const disc = v2 * v2 - g * (g * X * X + 2 * dyUp * v2);
+  if (disc < 0 || X < 0.2) return null;
+  const ang = Math.atan((v2 + (high ? 1 : -1) * Math.sqrt(disc)) / (g * X));
+  return { vx: s * K.v * Math.cos(ang), vy: -K.v * Math.sin(ang) };
+}
+function arcClear(ox, oy, v, tx, g) {
+  let x = ox, y = oy, vy = v.vy;
+  const s = Math.sign(tx - ox);
+  for (let i = 0; i < 240; i++) {
+    x += v.vx * DT; y += vy * DT; vy += g * DT;
+    if (Math.sign(tx - x) !== s) return true;
+    if (solidAt(Math.floor(x), Math.floor(y))) return false;
+  }
+  return false;
+}
+function aimAt(u, e) {
+  const kind = ATK[WEAP[u.w].atk].shot, K = SHOT[kind];
+  const f = e ? Math.sign(e.b.x - u.b.x) || u.face : u.face, o = shotOrigin(u, f, kind);
+  if (!e) return solveArc(o.x, o.y, o.x + f * 5, o.y - 0.3, false, K);
+  const tx0 = e.b.x, ty0 = e.b.y - 0.85, t = Math.hypot(tx0 - o.x, ty0 - o.y) / K.v;
+  const tx = tx0 + e.b.vx * t * 0.55, ty = ty0 + Math.min(0, e.b.vy) * t * 0.2;
+  for (const hi of (kind === 'arrow' ? [false, true] : [false])) {
+    const v = solveArc(o.x, o.y, tx, ty, hi, K);
+    if (v && arcClear(o.x, o.y, v, tx, K.g)) return v;
+  }
+  return null;
+}
+function fireShot(u) {
+  const kind = u.atkDef.shot, s = aimAt(u, targetOf(u)) || u.aimSol;
+  if (!s) return;
+  const ang = Math.atan2(s.vy, s.vx) + (rng() - 0.5) * (kind === 'star' ? 0.07 : 0.05), sp = Math.hypot(s.vx, s.vy);
+  const o = shotOrigin(u, u.face, kind);
+  shots.push({ kind, x: o.x + Math.cos(ang) * 0.4, y: o.y + Math.sin(ang) * 0.4, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, owner: u.side, stuck: 0, ttl: 0, rolled: [0, 0], ang, spin: 0, dead: false, crit: u.ambush });
+  u.ambush = false;
+}
+
+// ---------------------------------------------------------------- blade exchanges
+// When two blades meet, the fight goes into a short choreographed exchange instead of a trade of hits:
+// strike, block, strike, block, with sparks at every contact. It ends one of three ways, all decided by the
+// fight's seed: a fighter breaks it with a ready skill, one wins it (faster weapons and better acrobats win
+// more often, and good acrobats may vault over the top), or both are thrown apart.
+const DUEL_GAP = { sword: 1.4, daggers: 1.15, spear: 1.8, hammer: 1.55 };
+const DUEL_STRIKE = {
+  high: { w: { fx: -0.1, fy: -0.36, wa: -2.3, wb: -2, lean: -0.08 }, a: { fx: 0.44, fy: -0.06, wa: -0.45, wb: -0.3, lean: 0.3 } },
+  low: { w: { fx: -0.06, fy: 0.36, wa: 2.2, wb: 2, lean: 0.28 }, a: { fx: 0.46, fy: 0.22, wa: 0.4, wb: 0.3, lean: 0.36 } },
+  thrust: { w: { fx: -0.12, fy: 0.2, wa: -0.05, wb: 0, lean: -0.1 }, a: { fx: 0.56, fy: 0.12, wa: -0.05, wb: 0, lean: 0.42 } },
+};
+const DUEL_BLOCK = {
+  high: { fx: 0.3, fy: -0.22, wa: -1.25, wb: -1.2, bx: 0.2, by: -0.1, lean: -0.16 },
+  low: { fx: 0.32, fy: 0.26, wa: 1.05, wb: 1.1, bx: 0.2, by: 0.3, lean: -0.08 },
+  thrust: { fx: 0.3, fy: 0.04, wa: -1.45, wb: -1.4, bx: 0.22, by: 0.05, lean: -0.22 },
+};
+const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98, spin: 1.1, feint: 0.6, shove: 0.9 };
+// Each weapon has its own mix of strikes in an exchange.
+const DUEL_MIX = {
+  sword: ['high', 'low', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
+  daggers: ['thrust', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
+  spear: ['thrust', 'thrust', 'thrust', 'high', 'low', 'shove'],
+  hammer: ['high', 'low', 'high', 'spin', 'shove'],
+};
+// How the defender answers each strike: a block rings off the blade, a dodge just whistles past.
+const DUEL_ANSWER = {
+  high: ['block', 'block', 'duck'], low: ['block', 'block', 'hop'], thrust: ['block', 'lean'],
+  spin: ['block', 'duck'], feint: ['block', 'hop'], shove: ['stagger'],
+};
+const DUEL_DODGE = {
+  duck: { hipH: 0.4, lean: 0.55, head: 0.35, fx: 0.2, fy: 0.3, wa: 0.6, wb: 0.8, bx: 0.1, by: 0.3 },
+  hop: { hipH: 0.66, lean: -0.1, fx: 0.25, fy: -0.1, wa: -1.2, wb: -1.2, ffx: 0.2, ffy: 0.35, bfx: -0.1, bfy: 0.45 },
+  lean: { hipH: 0.64, lean: -0.5, head: -0.3, fx: 0.15, fy: 0.1, wa: -1.0, wb: -1.0, bx: -0.2, by: 0.1 },
+  stagger: { hipH: 0.62, lean: -0.35, head: -0.25, fx: 0.1, fy: -0.1, wa: -1.3, bx: -0.3, by: -0.1 },
+};
+const DUEL_EXTRA = {
+  spin: { w: { fx: -0.3, fy: 0.1, wa: 2.8, lean: 0.3 }, a: { fx: 0.5, fy: -0.05, wa: 0.0, lean: 0.35 } },
+  feint: { w: { fx: -0.1, fy: -0.4, wa: -2.3, lean: -0.08 }, a: { fx: 0.46, fy: 0.24, wa: 0.45, lean: 0.4 } },
+  shove: { w: { lean: -0.1, ffx: -0.05, ffy: 0.4, fx: 0.2, fy: 0.1, wa: -1.2 }, a: { lean: -0.3, ffx: 0.75, ffy: 0.15, fx: 0.15, fy: 0.05, wa: -1.3 } },
+};
+const jitter = (o, k) => { const r = {}; for (const key in o) r[key] = o[key] + (key === 'wa' || key === 'wb' ? (vr() - 0.5) * 0.5 : (vr() - 0.5) * 0.1) * k; return r; };
+const isBlade = (u) => !isRanged(u);
+function canDuel(a, b) {
+  return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) &&
+    Math.abs(a.b.y - b.b.y) < 0.9 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
+}
+function startDuel(a, b) {
+  const n = 4 + Math.floor(rng() * 4), types = Object.keys(DUEL_STRIKE), beats = [];
+  let s = rng() < 0.5 ? a : b;
+  for (let i = 0; i < n; i++) {
+    const mix = DUEL_MIX[s.w] || types, type = mix[Math.floor(vr() * mix.length)];
+    const answer = DUEL_ANSWER[type][Math.floor(vr() * DUEL_ANSWER[type].length)];
+    beats.push({ s, type, answer, len: Math.max(9, 15 - i) + (type === 'spin' || type === 'feint' ? 3 : 0) });
+    // sometimes the same fighter presses two strikes in a row
+    if (vr() > 0.25) s = s === a ? b : a;
+  }
+  // most exchanges lock blades halfway through: crossed, pushing, sparks grinding
+  if (rng() < 0.7) beats.splice(Math.floor(n / 2), 0, { s: beats[Math.floor(n / 2)].s, type: 'bind', len: 30 });
+  // how it ends
+  let fin = null;
+  for (const u of rng() < 0.5 ? [a, b] : [b, a]) {
+    if (!fin && u.skill && u.skCd <= 0 && rng() < 0.5) fin = { kind: 'skill', u, at: Math.max(3, beats.length - 1 - Math.floor(rng() * 2)) };
+  }
+  if (!fin) {
+    if (rng() < 0.2) fin = { kind: 'draw' };
+    else {
+      const edge = (a.acro - b.acro) * 0.05;
+      const w = rng() < 0.5 + edge ? a : b;
+      fin = { kind: w.acro >= 2 && rng() < 0.45 ? 'vault' : 'cut', u: w };
+    }
+  }
+  world.duel = { a, b, beats, i: 0, f: 0, fin, mid: (a.b.x + b.b.x) / 2, gap: Math.max(DUEL_GAP[a.w], DUEL_GAP[b.w]) };
+  for (const u of [a, b]) {
+    const o = u === a ? b : a;
+    u.state = 'duel'; u.face = Math.sign(o.b.x - u.b.x) || u.face; u.skName = null;
+    u.ai.macro = null; u.ai.path.length = 0; u.backflip = false; u.flipT = 0; u.dpose = null;
+  }
+  const mx = world.duel.mid, my = a.b.y - 1.05;
+  sparks(mx, my, 0, 16); ring(mx, my, 1.1, 'spark');
+  world.hs = Math.max(world.hs, 6); world.punch = 1; sfxShake(5);
+  world.stats[0].clash++;
+  if (world.stats[0].clash === 1) log('Blades locked.', -1);
+}
+function stepDuel() {
+  const D = world.duel, beat = D.beats[D.i], s = beat.s, d = s === D.a ? D.b : D.a;
+  if (D.a.state !== 'duel' || D.b.state !== 'duel') { world.duel = null; return; }
+  const f = ++D.f, hitF = 6, bind = beat.type === 'bind';
+  // the striker drives forward a little on each beat and the defender gives ground; in a lock they shove back and forth
+  if (bind) D.mid += Math.sin(f * 0.45) * 0.025;
+  else if (f < hitF) D.mid += s.face * 0.03;
+  const gap = bind ? D.gap * 0.72 : D.gap;
+  for (const u of [D.a, D.b]) {
+    const tx = D.mid - u.face * gap / 2;
+    u.b.vx = Math.max(-7, Math.min(7, (tx - u.b.x) * 10));
+    if (!u.b.gr) u.b.vy = Math.min(u.b.vy, 3.5);   // an exchange in the air drifts down slowly
+  }
+  if (bind) {
+    const shake = Math.sin(f * 1.7) * 0.03;
+    for (const u of [D.a, D.b]) {
+      u.dpose = { hipH: 0.56, lean: 0.38, head: 0.05, fx: 0.42 + shake, fy: -0.08, wa: -1.3, wb: -1.25, bx: 0.3, by: 0.0, ffx: 0.52, bfx: -0.52, ka: 0.5 };
+      u.duelSwing = false;
+    }
+    if (f % 5 === 0) {
+      const cx = D.mid, cy = s.b.y - 1.45;
+      sparks(cx, cy, 0, 3); if (f % 10 === 0) { ring(cx, cy, 0.35, 'spark'); sfxShake(1.5); }
+    }
+    if (f === 2) { world.hs = Math.max(world.hs, 4); world.punch = 1; }
+    if (f >= beat.len) { D.f = 0; if (++D.i >= D.beats.length) finishDuel(); }
+    return;
+  }
+  const type = beat.type, st = DUEL_STRIKE[type] || DUEL_EXTRA[type], hitAt = hitF + (type === 'spin' || type === 'feint' ? 3 : 0);
+  if (f === 1) { beat.sj = jitter(st.a, 1); beat.dj = jitter(beat.answer === 'block' ? DUEL_BLOCK[DUEL_STRIKE[type] ? type : type === 'spin' ? 'high' : type === 'feint' ? 'low' : 'thrust'] : DUEL_DODGE[beat.answer], 1); }
+  // a feint shows high, then cuts low
+  const windPose = type === 'feint' && f > 3 ? DUEL_STRIKE.low.w : st.w;
+  s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitAt ? 0.35 : 0.7 }, f < hitAt ? windPose : beat.sj);
+  const dodging = beat.answer !== 'block' && f >= hitAt - 3;
+  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: dodging ? 0.6 : 0.5 }, beat.answer === 'block' || dodging ? beat.dj : DUEL_BLOCK.high);
+  s.spinT = type === 'spin' && f >= hitAt - 4 && f <= hitAt + 2 ? (f - (hitAt - 4)) / 6 : 0;
+  s.duelSwing = f >= hitAt - 1 && f <= hitAt + 2;
+  d.duelSwing = false;
+  if (beat.answer === 'hop' && f === hitAt - 3 && d.b.gr) { d.b.vy = -9; d.b.gr = false; }
+  if (f === hitAt) {
+    const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[type];
+    if (beat.answer === 'block') {
+      sparks(cx, cy, -s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, type === 'high' ? -0.9 : type === 'low' ? 0.9 : 0, 0.9, 'spark');
+      world.hs = Math.max(world.hs, 2); sfxShake(2);
+    } else if (beat.answer === 'stagger') {
+      D.mid += s.face * 0.35; dust(d.b.x, d.b.y, 3, 0.4); sfxShake(2); world.hs = Math.max(world.hs, 2);
+    } else {
+      // a clean miss: the blade whistles past
+      streak(cx, cy, s.face > 0 ? 0 : Math.PI, 1.3, TEAM[s.side]); streak(cx, cy + 0.12, s.face > 0 ? 0 : Math.PI, 0.9, 'spark');
+    }
+  }
+  if (D.fin.kind === 'skill' && D.i === D.fin.at && f === 3) { breakDuel(D.fin.u); return; }
+  if (f >= beat.len) {
+    D.f = 0;
+    if (++D.i >= D.beats.length) finishDuel();
+  }
+}
+function endDuel() {
+  const D = world.duel;
+  world.duel = null; world.duelCd = world.t + 75;
+  for (const u of [D.a, D.b]) if (u.state === 'duel') { u.state = 'free'; u.react = 0; u.dpose = null; u.duelSwing = false; }
+  return D;
+}
+function stagger(u, frames, push) {
+  u.state = 'stun'; u.stunT = frames; u.tumble = false; u.b.vx = push; u.flash = 4;
+}
+function finishDuel() {
+  const D = endDuel(), { a, b, fin } = D;
+  if (fin.kind === 'draw') {
+    for (const u of [a, b]) stagger(u, 14, -u.face * 7);
+    const mx = (a.b.x + b.b.x) / 2, my = a.b.y - 1.05;
+    sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark');
+    world.hs = Math.max(world.hs, 9); sfxShake(6);
+    return;
+  }
+  const w = fin.u, l = w === a ? b : a, fin2 = WEAP[w.w].atk === 'slash1' ? 'slash3' : WEAP[w.w].atk === 'stab1' ? 'stab3' : WEAP[w.w].atk;
+  if (fin.kind === 'vault') {
+    // flip over the top and come down behind
+    stagger(l, 34, 0);
+    w.b.vy = -15; w.b.vx = w.face * 7.5; w.b.gr = false; w.flipT = w.flipMax = 20; w.flipDir = 1;
+    w.react = 0; streak(w.b.x, w.b.y - 1, -Math.PI / 2, 1, TEAM[w.side]);
+    log(w.side ? `${rivalName()} vaulted over your guard.` : 'Your fighter vaulted over the rival\'s guard.', w.side);
+    return;
+  }
+  // the winner's finisher gets through a guard that's out of position
+  stagger(l, ATK[fin2].w + 6, 0);
+  w.face = Math.sign(l.b.x - w.b.x) || w.face; startAtk(w, fin2);
+  world.punch = 1;
+  log(w.side ? `${rivalName()} won the exchange.` : 'Your fighter won the exchange.', w.side);
+}
+function breakDuel(u) {
+  const D = endDuel(), o = u === D.a ? D.b : D.a;
+  if (u.skill === 'blink') {
+    stagger(o, 20, 0);
+    if (!blinkTo(u, o, 'behind')) stagger(o, 12, -o.face * 5);
+  } else if (u.skill === 'parry') {
+    u.state = 'skill'; u.skName = 'parry'; u.sf = 4; u.skCd = SKILL.parry.cd;
+    parrySuccess(u, o, (u.b.x + o.b.x) / 2, u.b.y - 1.05);
+  } else if (u.skill === 'darksight') {
+    stagger(o, 14, -o.face * 3);
+    startSkill(u, 'cast');
+  } else {
+    // the hook wraps the other blade and yanks the fighter off its feet
+    u.skCd = SKILL.hook.cd; world.stats[u.side].skill++;
+    const dir = Math.sign(u.b.x - o.b.x) || 1;
+    o.state = 'stun'; o.stunT = 32; o.tumble = true; o.bounced = false; o.spin = -0.22;
+    o.b.vx = dir * 4; o.b.vy = -9; o.b.gr = false;
+    callout(o, 'HOOKED', u.side); sparks(o.b.x, o.b.y - 1, dir, 10);
+    world.hs = Math.max(world.hs, 6); sfxShake(5);
+    hurt(o, HOOK.dmg, 'hit', u.side);
+  }
+  log(u.side ? `${rivalName()} broke the exchange with ${SKILL[u.skill].name}.` : `Your fighter broke the exchange with ${SKILL[u.skill].name}.`, u.side);
+}
+
+// ---------------------------------------------------------------- effects
+const sfxShake = (n) => { world.shake = Math.max(world.shake, n); };
+function sparks(x, y, dir, n, c) {
+  for (let i = 0; i < n; i++) {
+    const a = (dir ? (dir > 0 ? 0 : Math.PI) + (Math.random() - 0.5) * 1.9 : Math.random() * 6.283);
+    const sp = 6 + Math.random() * 13;
+    parts.push({ k: 's', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: 0, max: 9 + Math.random() * 10, c: c || 'spark' });
+  }
+}
+const ring = (x, y, r1, c) => parts.push({ k: 'r', x, y, r1, life: 0, max: 12, c });
+const streak = (x, y, ang, len, c) => parts.push({ k: 'f', x, y, ang, len, life: 0, max: 7, c });
+function dust(x, y, n, spread) {
+  for (let i = 0; i < n; i++) parts.push({ k: 'd', x: x + (Math.random() - 0.5) * spread, y: y - 0.05, vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 1.3, r: 0.07 + Math.random() * 0.09, life: 0, max: 18 + Math.random() * 14 });
+}
+const popText = (x, y, txt, c, size) => parts.push({ k: 't', x, y, vy: -2.4, txt, c, size, life: 0, max: 42 });
+// A move name shouted over a fighter's head, fighting-game style. It rides along with the fighter.
+function callout(u, txt, side = u.side) {
+  for (const p of parts) if (p.k === 'c' && p.u === u) p.life = Math.max(p.life, p.max - 6);
+  parts.push({ k: 'c', u, txt, c: TEAM[side], life: 0, max: 46 });
+}
+// Blink leaves a marquee selection where the fighter was and where it lands.
+const selection = (x, y, side) => parts.push({ k: 'm', x0: x - 0.46, y0: y - H - 0.28, x1: x + 0.46, y1: y + 0.06, c: TEAM[side], life: 0, max: 20 });
+function pixels(x, y, side, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, sp = 2 + Math.random() * 5;
+    parts.push({ k: 'q', x: x + (Math.random() - 0.5) * 0.5, y: y + (Math.random() - 0.5) * 1.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, s: 0.06 + Math.random() * 0.07, c: Math.random() < 0.5 ? TEAM[side] : 'ink', life: 0, max: 12 + Math.random() * 10 });
+  }
+}
+function smoke(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * 6.283, sp = 0.8 + Math.random() * 2.6;
+    parts.push({ k: 'o', x: x + (Math.random() - 0.5) * 0.5, y: y - 0.2 - Math.random() * 1.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * 0.6 - 0.6, r: 0.14 + Math.random() * 0.16, life: 0, max: 24 + Math.random() * 16 });
+  }
+}
+function stepParts() {
+  for (const p of parts) {
+    p.life++;
+    if (p.k === 's') { p.x += p.vx * DT; p.y += p.vy * DT; p.vy += 30 * DT; p.vx *= 0.9; p.vy *= 0.9; }
+    else if (p.k === 'd') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.93; p.r += 0.006; }
+    else if (p.k === 't') { p.y += p.vy * DT; p.vy *= 0.9; }
+    else if (p.k === 'q') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.86; p.vy *= 0.86; }
+    else if (p.k === 'o') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.92; p.vy *= 0.92; p.r += 0.012; }
+  }
+  parts = parts.filter((p) => p.life < p.max);
+}
+
+function log(txt, side) {
+  world.log.push({ t: world.t, txt, side });
+  renderTicker();
+}
+
+// ---------------------------------------------------------------- combat resolution
+function hurt(u, d, src, by) {
+  if (u.state === 'dead' || world.over || world.demo) return;
+  u.hp = Math.max(0, u.hp - d);
+  const st = world.stats;
+  if (src === 'hit') st[by].dealt += d;
+  else if (src === 'trap') st[by].trap += d;
+  else if (src === 'zone') st[u.side].zone += d;
+  if (d >= 1) popText(u.b.x, u.b.y - H - 0.35, String(Math.round(d)), TEAM[u.side], 0.5);
+  if (u.hidden && d >= 1) reveal(u);
+  if (u.hp <= 0) kill(u);
+}
+function kill(u) {
+  u.state = 'dead';
+  u.b.vx *= 1.3; u.b.vy = Math.min(u.b.vy, 0) - 4;
+  u.rag = makeRag(u); u.hidden = 0; u.skName = null;
+  if (world.duel) endDuel();
+  world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true;
+  if (!headless) music.ko();
+  world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11);
+  log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
+}
+function applyHit(att, def, d, dirX, crit) {
+  if (def.iT > 0 || def.state === 'dead' || def.state === 'down' || def.state === 'getup') return;
+  const hx = def.b.x - dirX * 0.2, hy = def.b.y - 0.95;
+  if (d.box && parrying(def) && facingPoint(def, att.b.x)) { att.hitDone = true; parrySuccess(def, att); return; }
+  if (d.melee && def.state === 'atk' && def.atkDef.melee && def.phase === 'a' && def.face === -att.face && !def.hitDone) {
+    def.hitDone = true;
+    if (canDuel(att, def)) { startDuel(att, def); return; }
+    for (const x of [att, def]) {
+      x.state = 'stun'; x.stunT = 12; x.tumble = false; x.b.vx = -x.face * 7; x.ai.macro = null; x.ai.path.length = 0;
+    }
+    const mx = (att.b.x + def.b.x) / 2, my = Math.min(att.b.y, def.b.y) - 1.05;
+    sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark');
+    world.hs = Math.max(world.hs, 9); sfxShake(6);
+    if (!world.stats[0].bounce++) log('Clash. Blades met and both fighters bounced off.', -1);
+    return;
+  }
+  // A blade fighter squared up to a swing can catch it and turn it into an exchange.
+  const guarding = (def.state === 'free' && def.react <= 0) || (def.state === 'atk' && def.phase === 'w' && def.atkDef.melee);
+  const onGuard = def.guardT > 0 && def.state === 'free' && facingPoint(def, att.b.x) && !d.plunge && !d.slam;
+  if (d.melee && !crit && !att.ambush && (onGuard || (!d.air && guarding && def.b.gr && facingPoint(def, att.b.x))) && !isRanged(def)) {
+    if (canDuel(att, def) && (onGuard || rng() < (def.w === att.w ? 0.55 : 0.4))) { def.guardT = 0; att.hitDone = true; startDuel(def, att); return; }
+    if (onGuard) {
+      // a clean block: sparks off the blade, both fighters pushed apart, and the guard drops
+      att.hitDone = true; def.guardT = 0;
+      const bx = (att.b.x + def.b.x) / 2, by = def.b.y - 1.1;
+      sparks(bx, by, -dirX, 12); ring(bx, by, 0.7, 'spark');
+      def.b.vx = dirX * 4; att.b.vx = -dirX * 3; world.hs = Math.max(world.hs, 4); sfxShake(3);
+      if (!world.stats[def.side].blocks++) log(def.side ? `${rivalName()} blocked.` : 'Your fighter blocked.', def.side);
+      return;
+    }
+  }
+  att.hitLanded = true;
+  crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
+  const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
+  if (!armor) {
+    if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
+    def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
+    def.b.vx = dirX * d.kb[0]; def.b.vy = d.kb[1]; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
+    def.face = -dirX;
+    if (d.tumble) { def.tumble = true; def.bounced = false; def.spin = -0.26; } else def.tumble = false;
+  } else def.b.vx += dirX * 1.5;
+  def.flash = 6;
+  const big = d.big || crit;
+  sparks(hx, hy, dirX, big ? 16 : 9); ring(hx, hy, big ? 1.2 : 0.7, TEAM[att.side]);
+  streak(hx, hy, dirX > 0 ? -0.5 : Math.PI + 0.5, big ? 1.9 : 1.2, 'spark');
+  world.hs = Math.max(world.hs, d.hs + (crit ? 5 : 0)); sfxShake(big ? 8 : 3);
+  if (big) world.punch = 1;
+  if (d.slam || crit) world.impact = Math.max(world.impact, 2);
+  // Juggle protection: each extra hit on a fighter already sent flying does less, and the third lets it escape.
+  // Ground combos don't count; spikes do.
+  const flying = def.state === 'stun' && def.tumble, j = flying ? def.juggle : 0;
+  if (flying) def.juggle++;
+  if (j >= 2) def.iT = Math.max(def.iT, 30);
+  const dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j);
+  if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
+    log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
+  }
+  if (crit) {
+    callout(att, 'CRIT'); ring(hx, hy, 1.8, 'spark');
+    world.stats[att.side].crit += dmg;
+    if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
+  }
+  hurt(def, dmg, 'hit', att.side);
+}
+function spikeHit(u, i) {
+  const owner = A.spikes[i], c = i % COLS, b = u.b;
+  world.trace.push(`${clockStr(world.t)} ${u.side ? 'R' : 'B'} hit ${owner ? 'R' : 'B'} spike c${c} known=${u.known.has(i)} st=${u.state} vx=${b.vx.toFixed(1)} vy=${b.vy.toFixed(1)} macro=${!!u.ai.macro}`);
+  u.spikeCd = 45; u.juggle++;
+  // Throw the victim clear, preferably back the way it came, so spikes punish once instead of juggling.
+  const r = Math.floor(i / COLS), back = -Math.sign(b.vx) || -u.face;
+  let land = c + back;
+  search: for (const d of [1, 2, 3]) for (const s of [back, -back]) {
+    const cc = c + s * d, j = r * COLS + cc;
+    if (standable(cc, r) && A.spikes[j] < 0 && A.pads[j] !== u.side) { land = cc; break search; }
+  }
+  b.vy = -14; b.vx = Math.max(-8, Math.min(8, (land + 0.5 - b.x) / 0.48)); b.gr = false; b.jumping = false;
+  u.state = 'stun'; u.stunT = 30; u.tumble = true; u.bounced = true; u.spin = -0.22; u.skName = null;
+  u.ai.macro = null; u.ai.path.length = 0; u.backflip = false; u.flash = 6;
+  if (u.hook && u.hook.phase === 'out') u.hook.phase = 'back';
+  sparks(c + 0.5, Math.floor(i / COLS) + 0.8, 0, 14, TEAM[owner]); ring(c + 0.5, Math.floor(i / COLS) + 0.8, 1, TEAM[owner]);
+  world.hs = Math.max(world.hs, 6); sfxShake(6);
+  if (!u.known.has(i)) {
+    u.known.add(i); u.ai.replan = 0;
+    popText(b.x, b.y - H - 0.8, '!', TEAM[u.side], 0.9);
+    if (owner !== u.side) {
+      world.stats[u.side].found++;
+      log(u.side ? `${rivalName()} stepped on your spikes. Now it knows they are there.` : 'You stepped on the rival\'s spikes. Your fighter will avoid them now.', owner);
+    }
+  }
+  hurt(u, 10, 'trap', owner);
+}
+
+function atkStep(u) {
+  const d = u.atkDef, b = u.b;
+  u.af++;
+  if (u.af === d.w) {
+    u.phase = 'a';
+    if (d.lunge) b.vx = u.face * d.lunge * (world.demo ? 0.4 : 1);
+    if (d.hop) { b.vy = d.hop; b.gr = false; }
+    if (d.shot) fireShot(u);
+    if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
+    if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
+  }
+  if (d.plunge && u.phase === 'a' && !b.gr) b.vy = Math.max(b.vy, 20);
+  if (u.af === d.w + d.a) u.phase = 'r';
+  if (u.atkName === 'aslash') u.rot = 2 * Math.PI * Math.min(1, u.af / (d.w + d.a));
+  if (u.atkName === 'stab3' && u.af >= d.w) u.rot = 2 * Math.PI * Math.min(1, (u.af - d.w) / (d.a + 5));
+  if (u.atkName === 'hammer' && u.af === d.w + 2) { dust(b.x + u.face * 1.5, b.y, 6, 0.8); sfxShake(4); if (b.gr) shockwave(u, d.shock, b.x + u.face * 1.2); }
+  if (u.atkName === 'thrust' && u.af === d.w) streak(b.x + u.face * 1.6, b.y - 0.95, u.face > 0 ? 0 : Math.PI, 1.3, 'spark');
+  if (d.shot && u.phase === 'w' && u.af % 4 === 0) { const s = aimAt(u, targetOf(u)); if (s) u.aimSol = s; }
+  if (u.af >= d.w + d.a + d.r) {
+    if (d.next) { startAtk(u, d.next); return; }
+    u.state = 'free'; u.react = u.w === 'hammer' ? 10 : 5;
+    u.cd = d.cd || 0; u.ambush = false;
+  }
+}
+
+function act(u) {
+  const b = u.b;
+  if (u.state === 'dead') return;
+  if (u.iT > 0) u.iT--;
+  if (u.cd > 0) u.cd--;
+  if (u.flash > 0) u.flash--;
+  if (u.spikeCd > 0) u.spikeCd--;
+  if (u.rollCd > 0) u.rollCd--;
+  if (u.twirlT > 0) u.twirlT--;
+  else if (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 && !world.over && vr() < 0.006) { const e = foe(u); if (!e || Math.abs(e.b.x - b.x) > 4) u.twirlT = 40; }
+  if (u.landT > 0) u.landT--;
+  if (u.flipT > 0) u.flipT--;
+  if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
+  if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
+  if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
+  u.fade = approach(u.fade, u.hidden ? 1 : 0, u.hidden ? 0.12 : 0.2);
+  let ctl = false, dir = 0, press = false, hold = false, fr = 1;
+  switch (u.state) {
+    case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
+    case 'atk': atkStep(u); if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; } break;
+    case 'skill': skillStep(u); break;
+    case 'roll':
+      // a roll keeps its speed, then scrubs it off at the end; rolling off a ledge just becomes a fall
+      fr = u.rollT > 5 ? 0.12 : 1.2;
+      if (--u.rollT <= 0 || (!b.gr && u.rollT < u.rollMax - 2)) { u.state = 'free'; u.react = Math.min(u.react, 2); }
+      break;
+    case 'stun':
+      u.stunT--; fr = 0.5;
+      if (u.tumble) u.rot += u.spin;
+      if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; u.recover = true; }
+      break;
+    case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
+    case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
+  }
+  const vyBefore = b.vy;
+  const ev = physStep(b, dir, press, hold, world.demo ? -2 : u.side, ctl, fr);   // pads stay still during demos
+  if (ev & EV_JUMP) dust(b.x, b.y + 0.02, 3, 0.4);
+  if (ev & EV_WJ) {
+    // kick off the wall: puff at the wall, spin away from it
+    const wx = b.x + b.wjSide * (W / 2 + 0.25);
+    dust(wx, b.y - 0.5, 4, 0.3); streak(wx, b.y - 0.8, b.wjSide > 0 ? Math.PI : 0, 0.7, TEAM[u.side]);
+    u.face = -b.wjSide; u.flipT = u.flipMax = 16; u.flipDir = -1; u.backflip = false;
+    if (!world.demo) world.stats[u.side].acro++;
+  }
+  if (ev & EV_DJ) {
+    ring(b.x, b.y + 0.05, 0.55, TEAM[u.side]); dust(b.x, b.y, 3, 0.3);
+    u.flipT = u.flipMax = 20; u.flipDir = 1; u.backflip = false;
+    if (!world.demo) world.stats[u.side].acro++;
+  }
+  if (ev & EV_WR) { dust(b.x + b.wrSide * W / 2, b.y, 3, 0.2); u.face = b.wrSide; if (!world.demo) world.stats[u.side].acro++; }
+  if (ev & EV_MANTLE) { u.flipT = u.flipMax = 12; u.flipDir = 1; }
+  if (b.wr > 0 && world.t % 5 === 0) dust(b.x + b.wrSide * W / 2, b.y - 0.2, 1, 0.1);
+  if (u.state === 'free' && !b.gr) {
+    if (b.wr > 0) u.face = b.wrSide;
+    else if (b.onWall && b.vy > 0 && u.in.dir === b.onWall) { u.face = -b.onWall; if (world.t % 4 === 0) dust(b.x + b.onWall * W / 2, b.y - 1.1, 1, 0.1); }
+  }
+  if (ev & EV_PAD) {
+    A.padAnim[b.pad] = 1; dust(b.x, b.y, 5, 0.6); ring(b.x, b.y - 0.1, 0.9, TEAM[u.side]);
+    world.stats[u.side].pads++;
+    u.ai.macro = null;
+    if (u.state === 'free') u.padLaunched = true;
+  } else if (ev & EV_LAND) {
+    dust(b.x, b.y, vyBefore > 14 ? 5 : 2, 0.5);
+    u.padStrike = false;
+    if (vyBefore > 9) u.landT = 9;
+    u.flipT = 0;
+    // a parkour roll out of a big drop keeps the momentum going
+    if (u.state === 'free' && u.acro >= 1 && vyBefore > 17 && Math.abs(b.vx) > 4 && !u.ai.macro) startRoll(u, Math.sign(b.vx), 12);
+    if (u.tumble) {
+      if (b.landV > 12 && !u.bounced) { b.vy = -b.landV * 0.38; b.gr = false; u.bounced = true; sfxShake(3); dust(b.x, b.y, 6, 1); }
+      else {
+        u.tumble = false; u.state = 'down'; u.downT = 28; u.iT = 28 + 14 + 16; b.vx *= 0.4; sfxShake(2);
+        u.rot = wrap(u.rot); u.rotDriven = false;
+      }
+    }
+    if (u.state === 'atk' && u.atkDef.plunge && u.phase !== 'r') landPlunge(u);
+    else if (u.state === 'atk' && u.atkDef.air) { u.state = 'free'; u.react = 8; u.ai.replan = 0; }
+    if (u.backflip) { u.backflip = false; }
+  }
+  if ((ev & EV_WALL) && u.tumble && Math.abs(b.wallV) > 7) {
+    b.vx = -b.wallV * 0.42;
+    sparks(b.x + Math.sign(b.wallV) * W / 2, b.y - 0.8, -Math.sign(b.wallV), 8); sfxShake(5); world.hs = Math.max(world.hs, 3);
+    hurt(u, 3, 'wall', 1 - u.side);
+  }
+  if (u.state !== 'dead' && b.spike >= 0 && u.spikeCd <= 0 && u.state !== 'down' && u.state !== 'getup') spikeHit(u, b.spike);
+  if (u.state !== 'dead' && inZone(b.x)) {
+    hurt(u, 0.3, 'zone', 1 - u.side);
+    if (world.t % 6 === 0) sparks(b.x, b.y - 0.8, 0, 2, 'red');
+  }
+  if (u.backflip && !b.gr && u.rot > -2 * Math.PI) u.rot -= 0.2;
+  if (b.gr && Math.abs(b.vx) > 5 && u.state === 'free' && world.t % 7 === 0) dust(b.x - Math.sign(b.vx) * 0.2, b.y, 1, 0.2);
+}
+
+// A plunge hits the floor: a crouched landing, and for the hammer a shockwave along the ground.
+function landPlunge(u) {
+  const d = u.atkDef, b = u.b;
+  u.phase = 'r'; u.af = d.w + d.a;
+  dust(b.x, b.y, d.shock ? 12 : 6, d.shock ? 2.4 : 0.9); sfxShake(d.shock ? 8 : 4);
+  if (d.shock) shockwave(u, d.shock, b.x);
+}
+// A shockwave runs along the floor. It hits anyone standing on it, and a roll doesn't get under it.
+function shockwave(u, sh, x) {
+  const b = u.b;
+  ring(x, b.y - 0.1, sh.r, TEAM[u.side]); ring(x, b.y - 0.1, sh.r * 0.6, 'spark');
+  for (const s2 of [-1, 1]) streak(x + s2 * 1.1, b.y - 0.1, s2 > 0 ? 0 : Math.PI, 1.2, 'spark');
+  world.hs = Math.max(world.hs, 4); world.impact = Math.max(world.impact, 1);
+  const e = foe(u);
+  if (e && e.state !== 'dead' && e.b.gr && !u.hitDone && Math.abs(e.b.x - x) < sh.r && Math.abs(e.b.y - b.y) < 0.7) {
+    if (e.state === 'roll') e.iT = 0;
+    u.hitDone = true; applyHit(u, e, sh, Math.sign(e.b.x - b.x) || u.face);
+  }
+}
+
+function resolveHits() {
+  for (const u of U) {
+    if (u.state !== 'atk' || u.phase !== 'a' || u.hitDone) continue;
+    const d = u.atkDef;
+    if (!d.box) continue;
+    const e = U[1 - u.side], hb = worldBox(u.b.x, u.b.y, u.face, d.box);
+    if (d.melee) {
+      for (const a of shots) {
+        if (a.owner === u.side || a.stuck || a.dead) continue;
+        if (a.x > hb[0] - 0.15 && a.x < hb[2] + 0.15 && a.y > hb[1] - 0.15 && a.y < hb[3] + 0.15) {
+          a.owner = u.side; a.vx = u.face * Math.abs(a.vx) * 1.1; a.vy = -Math.abs(a.vy) * 0.3 - 2.5; a.rolled = [1, 1];
+          sparks(a.x, a.y, u.face, 12); ring(a.x, a.y, 0.8, 'spark');
+          world.hs = Math.max(world.hs, 5); sfxShake(3);
+          world.stats[u.side].deflect++;
+          const what = a.kind === 'arrow' ? 'an arrow' : 'a star';
+          log(u.side ? `${rivalName()} knocked ${what} out of the air.` : `You knocked ${what} out of the air.`, u.side);
+        }
+      }
+    }
+    if (e.state === 'dead') continue;
+    if (overlap(hb, hurtbox(e))) { u.hitDone = true; applyHit(u, e, d, u.face); }
+  }
+}
+
+function stepShots() {
+  for (const a of shots) {
+    const K = SHOT[a.kind];
+    if (a.stuck) { if (++a.ttl > (a.kind === 'star' ? 100 : 150)) a.dead = true; continue; }
+    if (++a.ttl > 400) { a.dead = true; continue; }
+    a.spin += Math.sign(a.vx) * 0.55;
+    for (let k = 0; k < 2 && !a.dead && !a.stuck; k++) {
+      a.x += a.vx * DT / 2; a.y += a.vy * DT / 2; a.vy += K.g * DT / 2;
+      if (solidAt(Math.floor(a.x), Math.floor(a.y))) {
+        a.stuck = 1; a.ttl = 0; a.x -= a.vx * DT * 0.2; a.y -= a.vy * DT * 0.2;
+        sparks(a.x, a.y, -Math.sign(a.vx), 3, 'ink');
+        break;
+      }
+      const t = world.demo ? null : U[1 - a.owner];
+      if (!t || t.state === 'dead' || t.iT > 0 || lying(t)) continue;
+      if (a.x > t.b.x - W / 2 - 0.06 && a.x < t.b.x + W / 2 + 0.06 && a.y > t.b.y - H - 0.05 && a.y < t.b.y) {
+        if (parrying(t) && facingPoint(t, a.x)) {
+          // Parried shots go back where they came from.
+          a.owner = t.side; a.vx = -a.vx * 1.15; a.vy = -Math.abs(a.vy) * 0.4 - 2; a.rolled = [1, 1]; a.crit = false;
+          parrySuccess(t, null, a.x, a.y);
+          break;
+        }
+        applyHit(U[a.owner], t, K.hit, Math.sign(a.vx) || 1, a.crit);
+        a.dead = true;
+      }
+    }
+    if (!a.stuck) a.ang = Math.atan2(a.vy, a.vx);
+  }
+  shots = shots.filter((a) => !a.dead);
+}
+
+// ---------------------------------------------------------------- pose & skeleton
+function poseTarget(u) {
+  const b = u.b, w = u.w, st = u.state, T = Object.assign({}, STANCE[w]);
+  T.kb = 0.22; T.ka = 0.24; T.kl = 0.3; T.d = 0.55;
+  const spd = Math.abs(b.vx), fwd = b.vx * u.face, t = world.t + u.side * 37;
+  T.hipH += Math.sin(t * 0.07) * 0.012;
+  let atkPose = null;
+  if (st === 'free' || st === 'atk') {
+    if (b.gr && spd > 0.9 && st === 'free') {
+      Object.assign(T, RUN[w]);
+      if (fwd < 0) { T.lean = -0.08; T.hipH = 0.68; }
+      if (w === 'sword') { T.bx = 0.18 + Math.sin(u.gait) * 0.2; T.by = 0.22 - Math.abs(Math.sin(u.gait)) * 0.05; }
+    }
+    if (!b.gr && st === 'free') Object.assign(T, AIR[w]);
+    if (st === 'atk') {
+      atkPose = ((u.poseVar ? ATK_POSE_ALT : ATK_POSE)[u.atkName] || ATK_POSE[u.atkName])[u.phase] || {};
+      Object.assign(T, atkPose);
+      if (u.phase === 'a') { T.ka = 0.62; T.kb = 0.4; T.d = 0.35; } else if (u.phase === 'w') T.ka = 0.32; else T.ka = 0.14;
+      if (u.atkDef.shot === 'arrow') {
+        const s = u.aimSol;
+        if (s) T.ai = Math.atan2(s.vy, s.vx * u.face);
+        T.draw = u.phase === 'w' ? Math.min(1, u.af / (u.atkDef.w - 3)) : 0;
+        T.ka = u.phase === 'a' ? 0.7 : 0.35;
+      }
+    }
+    if (world.over && world.winner === u.side && world.overT > 50) Object.assign(T, WIN[w]);
+  } else if (st === 'stun') {
+    Object.assign(T, { lean: -0.45, head: -0.35, fx: -0.05, fy: -0.2, bx: -0.25, by: -0.1, hipH: 0.66 });
+    if (u.tumble) Object.assign(T, { lean: 0.1, head: 0.2, fx: 0.2, fy: -0.35, bx: -0.3, by: -0.3, ffx: 0.35, ffy: 0.35, bfx: -0.1, bfy: 0.55 });
+    T.kb = 0.35; T.ka = 0.3; T.d = 0.5;
+  } else if (st === 'down') {
+    Object.assign(T, { drop: 0.62, lean: 0, head: 0.1, fx: 0.25, fy: 0.3, bx: -0.1, by: 0.35, ffx: 0.3, ffy: 0.7, bfx: 0.1, bfy: 0.72 });
+    T.kb = 0.2;
+  } else if (st === 'getup') {
+    Object.assign(T, { drop: 0, hipH: 0.5, lean: 0.45 }); T.kb = 0.25;
+  } else if (st === 'duel') {
+    if (u.dpose) { Object.assign(T, u.dpose); T.ka = u.dpose.ka; T.kb = 0.4; T.d = 0.4; }
+    T.ffy = T.hipH; T.bfy = T.hipH;
+  } else if (st === 'skill') {
+    const sp = SK_POSE[u.skName];
+    if (u.skName === 'hook') {
+      const ph = u.sf <= 8 ? 'w' : u.hook && u.hook.phase !== 'back' ? 'a' : 'r';
+      Object.assign(T, sp[ph]); T.ka = ph === 'a' ? 0.6 : 0.32;
+    } else { Object.assign(T, sp); T.ka = 0.5; T.kb = 0.35; }
+  }
+  // Waiting with nothing in reach: now and then twirl the weapon.
+  if (st === 'free' && b.gr && spd < 0.5 && u.twirlT > 0) {
+    const k = 1 - u.twirlT / 40;
+    if (w === 'bow') T.ai = 0.9 - Math.sin(k * Math.PI) * 1.6;
+    else { T.wa = STANCE[w].wa - k * 2 * Math.PI; T.wb = STANCE[w].wb + k * 2 * Math.PI; T.fx += 0.08; T.fy -= 0.1; }
+    T.ka = 0.5;
+  }
+  // On guard: blade up across the body, weight back.
+  if (st === 'free' && u.guardT > 0 && b.gr) Object.assign(T, DUEL_BLOCK.high, { hipH: 0.6, lean: -0.05 });
+  // Sneaking in Dark Sight: lower and leaning in.
+  if (u.hidden && (st === 'free' || st === 'skill') && b.gr) { T.hipH -= 0.07; T.lean += 0.14; T.head += 0.1; }
+  if (st === 'down' || (st === 'stun' && u.tumble) || st === 'duel') return T;
+  if (b.gr) {
+    if (st === 'free' && spd > 0.9) {
+      u.gait += spd * DT * 2.3 * (fwd < 0 ? -1 : 1);
+      const s = Math.min(1, spd / 6) * 0.38, g = u.gait;
+      T.ffx = Math.sin(g) * s + 0.04; T.bfx = -Math.sin(g) * s + 0.04;
+      T.ffy = T.hipH - Math.max(0, Math.cos(g)) * 0.24; T.bfy = T.hipH - Math.max(0, -Math.cos(g)) * 0.24;
+      T.hipH -= Math.abs(Math.cos(g)) * 0.035;
+      T.kl = 0.55; T.d = 0.4;
+    } else { T.ffy = T.hipH; T.bfy = T.hipH; }
+  } else if (b.vy < 0) { T.ffx = 0.22; T.ffy = T.hipH * 0.5; T.bfx = -0.08; T.bfy = T.hipH * 0.62; }
+  else { T.ffx = 0.2; T.ffy = T.hipH * 0.92; T.bfx = -0.24; T.bfy = T.hipH * 0.8; }
+  if (atkPose) for (const k of LEGK) if (k in atkPose) T[k] = atkPose[k];
+  // Acrobatics set the legs too, so they come last.
+  if (st === 'roll' || (st === 'free' && u.flipT > 0)) {
+    Object.assign(T, TUCK); T.drop = st === 'roll' ? 0.32 : 0;
+    T.kb = 0.5; T.kl = 0.6; T.ka = 0.45; T.d = 0.4;
+  } else if (st === 'free' && !b.gr && b.wr > 0) {
+    // running up the wall: the body leans back (see poseStep) and the feet cycle against the wall
+    const g = world.t * 0.62;
+    Object.assign(T, { hipH: 0.64, lean: 0.25, head: -0.25, fx: 0.18 + Math.sin(g) * 0.2, fy: 0.2, bx: 0.1 - Math.sin(g) * 0.2, by: 0.22 });
+    T.ffx = 0.34 + Math.sin(g) * 0.22; T.ffy = 0.5 - Math.max(0, Math.cos(g)) * 0.25;
+    T.bfx = 0.34 - Math.sin(g) * 0.22; T.bfy = 0.5 - Math.max(0, -Math.cos(g)) * 0.25;
+    T.kl = 0.7; T.d = 0.35;
+  } else if (st === 'free' && !b.gr && b.onWall && b.vy > 0 && u.in.dir === b.onWall) {
+    // sliding down a wall with its back to it, one hand and one foot on the wall
+    Object.assign(T, WALL_SLIDE[w] || {}, WALL_SLIDE.base);
+  }
+  if (u.landT > 0 && b.gr && st === 'free') {
+    const k = u.landT / 9;
+    T.hipH -= 0.2 * k; T.lean += 0.2 * k; T.head -= 0.1 * k; T.ffy = T.hipH; T.bfy = T.hipH; T.kb = 0.5;
+  }
+  return T;
+}
+const TUCK = { hipH: 0.46, lean: 0.85, head: 0.45, fx: 0.22, fy: 0.1, bx: 0.14, by: 0.16, ffx: 0.22, ffy: 0.2, bfx: 0.04, bfy: 0.26, wb: 1.2 };
+const WALL_SLIDE = {
+  base: { hipH: 0.6, lean: -0.22, head: 0.12, bx: -0.44, by: -0.02, ffx: 0.2, ffy: 0.46, bfx: -0.3, bfy: 0.4 },
+  sword: { fx: 0.26, fy: 0.08, wa: -1.1 },
+  spear: { fx: 0.24, fy: 0.2, wa: -0.4 },
+  hammer: { fx: 0.12, fy: 0.05, wa: -2.0 },
+  stars: { fx: 0.3, fy: 0.05 },
+  bow: { ai: 0.2 },
+};
+function poseStep(u) {
+  if (u.state === 'dead') return;
+  const T = poseTarget(u), p = u.pose.p, v = u.pose.v;
+  for (const k of PK) {
+    const g = LEGK.has(k) ? T.kl : ARMK.has(k) ? T.ka : T.kb;
+    v[k] = v[k] * T.d + (T[k] - p[k]) * g;
+    p[k] += v[k];
+  }
+  if (u.flipT > 0 && u.state === 'free') u.rot = u.flipDir * 2 * Math.PI * (1 - u.flipT / u.flipMax);
+  if (u.state === 'duel' && u.spinT > 0) u.rot = 2 * Math.PI * Math.min(1, u.spinT);
+  if (u.state === 'roll') u.rot = 2 * Math.PI * Math.min(1, (u.rollMax - u.rollT) / (u.rollMax - 3));
+  const driven = (u.state === 'stun' && u.tumble) || u.backflip || u.state === 'roll' || (u.flipT > 0 && u.state === 'free') || (u.state === 'duel' && u.spinT > 0) ||
+    (u.state === 'atk' && (u.atkName === 'aslash' || (u.atkName === 'stab3' && u.af >= u.atkDef.w)));
+  if (driven) u.rotDriven = true;
+  else {
+    if (u.rotDriven) { u.rot = wrap(u.rot); u.rotDriven = false; }
+    const tr = u.state === 'down' ? -1.45 : u.b.wr > 0 ? -0.5 : 0;
+    u.rotV = u.rotV * 0.6 + (tr - u.rot) * 0.2; u.rot += u.rotV;
+  }
+}
+
+function ik(a, t, l1, l2, s) {
+  let dx = t.x - a.x, dy = t.y - a.y, d = Math.hypot(dx, dy) || 1e-4;
+  const mx = l1 + l2 - 1e-3;
+  if (d > mx) { dx *= mx / d; dy *= mx / d; d = mx; }
+  const ca = Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d)));
+  const ang = Math.atan2(dy, dx) + s * Math.acos(ca);
+  return { j: { x: a.x + Math.cos(ang) * l1, y: a.y + Math.sin(ang) * l1 }, e: { x: a.x + dx, y: a.y + dy } };
+}
+function weaponGeom(w, hf, hb, wd, draw, wdb = wd) {
+  const pr = { x: -wd.y, y: wd.x };
+  const at = (o, k, q = 0) => ({ x: o.x + wd.x * k + pr.x * q, y: o.y + wd.y * k + pr.y * q });
+  if (w === 'sword') return { pommel: at(hf, -0.1), tip: at(hf, 0.82), g1: at(hf, 0.07, 0.1), g2: at(hf, 0.07, -0.1), base: at(hf, 0.15) };
+  if (w === 'daggers') {
+    const bk = (k, q = 0) => ({ x: hb.x + wdb.x * k - wdb.y * q, y: hb.y + wdb.y * k + wdb.x * q });
+    return { pommel: at(hf, -0.07), base: at(hf, 0.06), tip: at(hf, 0.47), g1: at(hf, 0.05, 0.075), g2: at(hf, 0.05, -0.075), bp: bk(-0.07), bb: bk(0.06), bt: bk(0.47), bg1: bk(0.05, 0.075), bg2: bk(0.05, -0.075) };
+  }
+  if (w === 'spear') return { butt: at(hf, -0.95), neck: at(hf, 1.06), tip: at(hf, 1.36), h1: at(hf, 1.15, 0.08), h2: at(hf, 1.15, -0.08), base: at(hf, 0.6) };
+  if (w === 'stars') return { s1: at(hf, 0.02), s2: hb };
+  if (w === 'hammer') return { end: at(hf, -0.36), neck: at(hf, 0.6), c1: at(hf, 0.6, 0.21), c2: at(hf, 0.86, 0.21), c3: at(hf, 0.86, -0.21), c4: at(hf, 0.6, -0.21), base: at(hf, 0.35), tip: at(hf, 0.88) };
+  const drawn = draw > 0.04;
+  return { t1: at(hf, -0.14, 0.45), t2: at(hf, -0.14, -0.45), ctl: at(hf, 0.22), nock: drawn ? hb : at(hf, -0.12), a1: drawn ? hb : null, a2: drawn ? at(hb, 0.74) : null };
+}
+function skel(u) {
+  const p = u.pose.p, f = u.face, b = u.b, rot = u.rot, drop = p.drop;
+  const hip = { x: 0, y: -p.hipH };
+  const sl = Math.sin(p.lean), cl = Math.cos(p.lean);
+  const neck = { x: hip.x + sl * 0.5, y: hip.y - cl * 0.5 };
+  const hl = p.lean + p.head;
+  const head = { x: neck.x + Math.sin(hl) * 0.21, y: neck.y - Math.cos(hl) * 0.21 };
+  const knot = { x: head.x - Math.cos(hl) * 0.13, y: head.y - Math.sin(hl) * 0.13 };
+  const sh = { x: neck.x - sl * 0.07, y: neck.y + cl * 0.07 };
+  let wd, hfT, hbT;
+  const draw = Math.max(0, Math.min(1, p.draw));
+  if (u.w === 'bow') {
+    wd = { x: Math.cos(p.ai), y: Math.sin(p.ai) };
+    hfT = { x: sh.x + wd.x * 0.53, y: sh.y + wd.y * 0.53 };
+    hbT = draw > 0.04 ? { x: hfT.x - wd.x * (0.1 + 0.42 * draw), y: hfT.y - wd.y * (0.1 + 0.42 * draw) } : { x: sh.x + p.bx, y: sh.y + p.by };
+  } else {
+    wd = { x: Math.cos(p.wa), y: Math.sin(p.wa) };
+    hfT = { x: sh.x + p.fx, y: sh.y + p.fy };
+    // Two-handed weapons put the back hand on the haft, unless that hand is busy throwing a hook.
+    const grip = u.w === 'hammer' ? 0.26 : u.w === 'spear' ? 0.42 : 0;
+    hbT = grip && u.skName !== 'hook' ? { x: hfT.x - wd.x * grip, y: hfT.y - wd.y * grip } : { x: sh.x + p.bx, y: sh.y + p.by };
+  }
+  const a1 = ik(sh, hfT, 0.31, 0.31, 1), a2 = ik(sh, hbT, 0.31, 0.31, 1);
+  const l1 = ik(hip, { x: hip.x + p.ffx, y: hip.y + p.ffy }, 0.41, 0.41, -1), l2 = ik(hip, { x: hip.x + p.bfx, y: hip.y + p.bfy }, 0.41, 0.41, -1);
+  const wg = weaponGeom(u.w, a1.e, a2.e, wd, draw, { x: Math.cos(p.wb), y: Math.sin(p.wb) });
+  const c = Math.cos(rot), s = Math.sin(rot);
+  const tf = (q) => { if (!q) return null; const x0 = q.x, y0 = q.y + 0.8; return { x: b.x + (x0 * c - y0 * s) * f, y: b.y + (x0 * s + y0 * c) - 0.8 + drop }; };
+  const wp = {};
+  for (const k in wg) wp[k] = tf(wg[k]);
+  return {
+    hip: tf(hip), neck: tf(neck), head: tf(head), knot: tf(knot), sh: tf(sh),
+    ef: tf(a1.j), hf: tf(a1.e), eb: tf(a2.j), hb: tf(a2.e), kf: tf(l1.j), ff: tf(l1.e), kb: tf(l2.j), bf: tf(l2.e),
+    wp, w: u.w, held: heldStars(u),
+  };
+}
+// Which hands still hold a star (the thrown one reappears once the volley is over).
+function heldStars(u) {
+  if (u.w !== 'stars' || u.state !== 'atk') return 3;
+  if (u.atkName === 'throw' || u.atkName === 'athrow') return u.phase === 'w' ? 3 : 2;
+  if (u.atkName === 'throw2' || u.atkName === 'athrow2') return u.phase === 'w' ? 2 : 0;
+  return 3;
+}
+
+// Ragdoll: the skeleton's joints become verlet points when a fighter goes down for good.
+const RAG_KEYS = ['head', 'neck', 'hip', 'ef', 'hf', 'eb', 'hb', 'kf', 'ff', 'kb', 'bf', 'sh'];
+function makeRag(u) {
+  const S = skel(u), b = u.b;
+  const P2 = RAG_KEYS.map((k) => ({ x: S[k].x, y: S[k].y, px: S[k].x - b.vx * DT * (0.85 + Math.random() * 0.3), py: S[k].y - b.vy * DT * (0.85 + Math.random() * 0.3) }));
+  const L = (a, c) => ({ a, b: c, l: Math.hypot(P2[a].x - P2[c].x, P2[a].y - P2[c].y) });
+  return { P: P2, C: [L(0, 1), L(1, 2), L(11, 3), L(3, 4), L(11, 5), L(5, 6), L(2, 7), L(7, 8), L(2, 9), L(9, 10), L(0, 2), L(1, 11)], w: u.w, side: u.side };
+}
+function ragStep(r) {
+  const g = P.g * DT * DT;
+  for (const p of r.P) {
+    const vx = (p.x - p.px) * 0.99, vy = (p.y - p.py) * 0.99;
+    p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + g;
+  }
+  for (let it = 0; it < 4; it++) {
+    for (const c of r.C) {
+      const a = r.P[c.a], b = r.P[c.b], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1e-4, k = (d - c.l) / d * 0.5;
+      a.x += dx * k; a.y += dy * k; b.x -= dx * k; b.y -= dy * k;
+    }
+    for (const p of r.P) {
+      if (!solidAt(Math.floor(p.x), Math.floor(p.y))) continue;
+      if (!solidAt(Math.floor(p.x), Math.floor(p.py))) { p.y = p.py; p.x = p.px + (p.x - p.px) * 0.5; }
+      else if (!solidAt(Math.floor(p.px), Math.floor(p.y))) { p.x = p.px; }
+      else { p.x = p.px; p.y = p.py; }
+    }
+  }
+}
+function ragSkel(r) {
+  const q = {};
+  RAG_KEYS.forEach((k, i) => { q[k] = { x: r.P[i].x, y: r.P[i].y }; });
+  const dx = q.hf.x - q.ef.x, dy = q.hf.y - q.ef.y, d = Math.hypot(dx, dy) || 1;
+  const bx = q.hb.x - q.eb.x, by = q.hb.y - q.eb.y, bd = Math.hypot(bx, by) || 1;
+  q.wp = weaponGeom(r.w, q.hf, q.hb, { x: dx / d, y: dy / d }, 0, { x: bx / bd, y: by / bd });
+  q.knot = q.head; q.w = r.w; q.held = 3;
+  return q;
+}
+
+function scarfStep(u, S) {
+  const n = 7, seg = 0.12, a = S.knot;
+  if (!u.scarf) { u.scarf = []; for (let i = 0; i < n; i++) u.scarf.push({ x: a.x - i * seg * u.face, y: a.y, px: a.x - i * seg * u.face, py: a.y }); }
+  const sc = u.scarf;
+  sc[0].x = a.x; sc[0].y = a.y;
+  const wind = -(u.b.vx || 0) * 0.0025;
+  for (let i = 1; i < n; i++) {
+    const p = sc[i], vx = (p.x - p.px) * 0.86, vy = (p.y - p.py) * 0.86;
+    p.px = p.x; p.py = p.y;
+    p.x += vx + wind + Math.sin(world.t * 0.15 + i) * 0.002; p.y += vy + 0.006;
+  }
+  for (let it = 0; it < 3; it++) for (let i = 1; i < n; i++) {
+    const a1 = sc[i - 1], b1 = sc[i], dx = b1.x - a1.x, dy = b1.y - a1.y, d = Math.hypot(dx, dy) || 1e-4, k = (d - seg) / d;
+    if (i === 1) { b1.x -= dx * k; b1.y -= dy * k; } else { a1.x += dx * k * 0.5; a1.y += dy * k * 0.5; b1.x -= dx * k * 0.5; b1.y -= dy * k * 0.5; }
+  }
+}
+function trailStep(u, S) {
+  for (const t of u.trail) t.age++;
+  const on = (u.state === 'duel' && u.duelSwing) || (u.state === 'atk' && u.atkDef.trail && (u.phase === 'a' || (u.phase === 'w' && u.af >= u.atkDef.w - 2) || (u.phase === 'r' && u.af < u.atkDef.w + u.atkDef.a + 3)));
+  const [bs, ts] = u.state === 'atk' && u.atkDef.back && S.wp.bb ? [S.wp.bb, S.wp.bt] : [S.wp.base, S.wp.tip];
+  if (on && bs) u.trail.push({ bx: bs.x, by: bs.y, tx: ts.x, ty: ts.y, age: 0 });
+  u.trail = u.trail.filter((t) => t.age < 7);
+}
+
+// ---------------------------------------------------------------- world
+function newWorld(seed) {
+  return {
+    t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
+    hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
+  };
+}
+// Short-lived visuals that belong to a fighter: blink afterimages.
+function fxStep(u) {
+  for (const g of u.ghosts) g.age++;
+  if (u.ghosts.length) u.ghosts = u.ghosts.filter((g) => g.age < g.max);
+}
+function simStep() {
+  const w = world;
+  if (w.intro > 0) w.intro--;
+  w.t++;
+  if (!w.over) {
+    w.zone = Math.min(SQ_MAX, 1 + Math.max(0, w.t / 60 - SQ_START) * SQ_SPEED);
+    if (w.t === SQ_START * 60) log('The walls are closing in. Nobody can hide at home now.', -1);
+    for (const u of U) think(u);
+  }
+  if (world.duel) stepDuel();
+  for (const u of U) act(u);
+  resolveHits();
+  stepShots();
+  for (const u of U) stepHook(u);
+  for (const u of U) {
+    if (u.state === 'dead') { ragStep(u.rag); continue; }
+    poseStep(u); fxStep(u);
+    const S = skel(u);
+    scarfStep(u, S); trailStep(u, S);
+  }
+  for (let i = 0; i < A.padAnim.length; i++) if (A.padAnim[i] > 0.01) A.padAnim[i] *= 0.86;
+  stepParts();
+  if (w.impact > 0) w.impact--;
+  if (w.over) {
+    w.overT++;
+    if (w.overT === (w.ko ? 130 : 40)) showResult();
+  } else if (w.t >= TIME_CAP * 60) {
+    w.over = true; w.ko = false; w.overT = 0;
+    if (!headless) music.ko();
+    w.winner = U[0].hp === U[1].hp ? -1 : U[0].hp > U[1].hp ? 0 : 1;
+    log('Time.', -1);
+  }
+  for (const u of U) { if (u.hpShow > u.hp) u.hpShow = Math.max(u.hp, u.hpShow - (w.t % 2 ? 0.6 : 0)); }
+}
+
+// ---------------------------------------------------------------- builds & rivals
+const B = (c, r) => ({ t: 'block', c, r }), S_ = (c, r) => ({ t: 'spikes', c, r }), PD = (c, r) => ({ t: 'pad', c, r });
+const row = (c0, c1, r) => Array.from({ length: c1 - c0 + 1 }, (_, i) => B(c0 + i, r));
+const TEMPLATES = [
+  [B(4, 8), B(5, 8), B(6, 8), PD(3, 10), S_(7, 10), S_(8, 10)],
+  [B(3, 7), B(4, 7), B(5, 7), B(5, 6), PD(6, 10), S_(7, 10), S_(8, 10)],
+  [B(6, 10), B(6, 9), S_(5, 10), S_(4, 10), PD(7, 10)],
+  [B(5, 10), B(6, 10), B(6, 9), B(7, 10), B(7, 9), B(7, 8), S_(8, 10)],
+  [B(7, 10), B(7, 9), B(7, 8), S_(6, 10), PD(5, 10), B(3, 8)],
+  [...row(3, 8, 8), S_(6, 10), B(1, 8)],
+  [B(4, 7), B(5, 7), B(7, 8), B(8, 8), PD(3, 10), S_(6, 10)],
+  [B(5, 6), B(6, 6), B(7, 6), PD(7, 10), S_(4, 10), S_(5, 10)],
+].map((t) => (SPIKES_ON ? t : t.filter((p) => p.t !== 'spikes')));
+// The ladder. Each rival brings its own half, weapon and skill.
+const RIVALS = [
+  { name: 'Quill', weapon: 'bow', skill: 'blink', acro: 2, t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
+  { name: 'Lull', weapon: 'bow', skill: 'darksight', acro: 1, t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
+  { name: 'Pike', weapon: 'spear', skill: 'parry', acro: 2, t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
+  { name: 'Gaff', weapon: 'spear', skill: 'hook', acro: 2, t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
+  { name: 'Moth', weapon: 'daggers', skill: 'darksight', acro: 3, t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
+  { name: 'Anvil', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
+  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
+  { name: 'Tack', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
+];
+const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
+const builds = [{ weapon: 'sword', skill: 'blink', acro: 2, pieces: TEMPLATES[0].slice() }, null];
+let rivalIx = 0;
+const rivalName = () => (builds[1] && builds[1].name) || 'The rival';
+function setRival(ix) {
+  rivalIx = (ix + RIVALS.length) % RIVALS.length;
+  const r = RIVALS[rivalIx];
+  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
+}
+
+// ---------------------------------------------------------------- canvas & camera
+const $ = (s) => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d'), stage = $('#stage');
+let DPR = 1, CW = 300, CH = 300;
+const cam = { x: 6, y: 6, z: 30, init: false };
+function resize() {
+  const r = stage.getBoundingClientRect();
+  DPR = Math.min(2.5, window.devicePixelRatio || 1);
+  CW = Math.max(1, r.width); CH = Math.max(1, r.height);
+  cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+}
+new ResizeObserver(resize).observe(stage);
+resize();
+
+function camTarget() {
+  if (mode === 'build' || mode === 'rival') {
+    const z = Math.min(CW / 11.6, CH / ROWS);
+    const vw = CW / z;
+    return { z, x: vw >= COLS ? COLS / 2 : mode === 'build' ? vw / 2 : COLS - vw / 2, y: ROWS / 2 };
+  }
+  const pts = U.map((u) => (u.state === 'dead' ? u.rag.P[2] : { x: u.b.x, y: u.b.y - 0.8 }));
+  let x0 = Math.min(...pts.map((p) => p.x)), x1 = Math.max(...pts.map((p) => p.x));
+  let y0 = Math.min(...pts.map((p) => p.y)), y1 = Math.max(...pts.map((p) => p.y));
+  if (world.ko && world.slowT > 0) { const l = U.find((u) => u.state === 'dead').rag.P[2]; x0 = x1 = l.x; y0 = y1 = l.y; }
+  const zFit = Math.min(CW / COLS, CH / ROWS), zMax = Math.min(CW / 6.5, CH / 5.5) * (world.duel ? 1.2 : 1);
+  let z = world.duel ? Math.min(CW / (x1 - x0 + 4), CH / (y1 - y0 + 4)) : Math.min(CW / (x1 - x0 + 6), CH / (y1 - y0 + 5));
+  z = Math.max(zFit, Math.min(zMax, z));
+  const hw = CW / z / 2, hh = CH / z / 2;
+  const cx = hw * 2 >= COLS ? COLS / 2 : Math.max(hw, Math.min(COLS - hw, (x0 + x1) / 2));
+  const cy = hh * 2 >= ROWS ? ROWS / 2 : Math.max(hh, Math.min(ROWS - hh, (y0 + y1) / 2 - 0.3));
+  return { z, x: cx, y: cy };
+}
+function updateCamera() {
+  const t = camTarget();
+  if (!cam.init) { Object.assign(cam, t); cam.init = true; return; }
+  const k = mode === 'fight' ? (world.duel ? 0.14 : 0.08) : 0.2;
+  cam.z += (t.z - cam.z) * k; cam.x += (t.x - cam.x) * k; cam.y += (t.y - cam.y) * k;
+}
+const toScreen = (x, y) => ({ x: (x - cam.x) * cam.z + CW / 2, y: (y - cam.y) * cam.z + CH / 2 });
+
+// ---------------------------------------------------------------- drawing
+function col(pal, c) { return pal[c] || c; }
+function stroke(pts, color, w) {
+  ctx.strokeStyle = color; ctx.lineWidth = w; ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+}
+function drawArena(pal) {
+  ctx.fillStyle = pal.bg; ctx.fillRect(0, 0, COLS, ROWS);
+  ctx.fillStyle = pal.tintB; ctx.fillRect(1, 1, 8, 10);
+  ctx.fillStyle = pal.tintR; ctx.fillRect(11, 1, 8, 10);
+  ctx.save(); ctx.beginPath(); ctx.rect(9, 1, 2, 10); ctx.clip();
+  ctx.strokeStyle = pal.hatch; ctx.lineWidth = 0.06; ctx.beginPath();
+  for (let k = -12; k < 3; k += 0.35) { ctx.moveTo(9 + k, 1); ctx.lineTo(9 + k + 10, 11); }
+  ctx.stroke(); ctx.restore();
+  if (mode === 'build') {
+    ctx.strokeStyle = pal.grid; ctx.lineWidth = 0.025; ctx.beginPath();
+    for (let c = BMIN; c <= BMAX + 1; c++) { ctx.moveTo(c, 1); ctx.lineTo(c, 11); }
+    for (let r = 1; r <= 11; r++) { ctx.moveTo(BMIN, r); ctx.lineTo(BMAX + 1, r); }
+    ctx.stroke();
+  }
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const i = r * COLS + c;
+    if (!A.solid[i]) continue;
+    const o = A.owner[i];
+    ctx.fillStyle = o === 0 ? pal.blockB : o === 1 ? pal.blockR : pal.tile;
+    ctx.fillRect(c - 0.001, r - 0.001, 1.002, 1.002);
+    if (!solidAt(c, r - 1)) { ctx.fillStyle = o === 0 ? pal.blue : o === 1 ? pal.red : pal.tileHi; ctx.fillRect(c, r, 1, 0.07); }
+  }
+  for (let i = 0; i < A.spikes.length; i++) if (A.spikes[i] >= 0) drawSpikes(i % COLS, Math.floor(i / COLS), A.spikes[i], pal);
+  for (let i = 0; i < A.pads.length; i++) if (A.pads[i] >= 0) drawPad(i, A.pads[i], pal);
+}
+function drawSpikes(c, r, side, pal) {
+  const y0 = r + 1, h = 0.42;
+  ctx.fillStyle = pal.ink; ctx.beginPath();
+  for (let k = 0; k < 4; k++) { const x = c + 0.1 + k * 0.2; ctx.moveTo(x, y0); ctx.lineTo(x + 0.1, y0 - h); ctx.lineTo(x + 0.2, y0); }
+  ctx.fill();
+  ctx.fillStyle = pal[TEAM[side]]; ctx.beginPath();
+  for (let k = 0; k < 4; k++) { const x = c + 0.1 + k * 0.2; ctx.moveTo(x + 0.065, y0 - h * 0.66); ctx.lineTo(x + 0.1, y0 - h); ctx.lineTo(x + 0.135, y0 - h * 0.66); }
+  ctx.fill();
+}
+function drawPad(i, side, pal) {
+  const c = i % COLS, r = Math.floor(i / COLS), a = A.padAnim[i], y0 = r + 1;
+  const top = y0 - 0.3 - a * 0.4;
+  ctx.fillStyle = pal.ink; ctx.fillRect(c + 0.14, y0 - 0.09, 0.72, 0.09);
+  ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.05; ctx.beginPath();
+  const n = 4;
+  for (let k = 0; k <= n; k++) { const y = y0 - 0.09 + (top - y0 + 0.09) * (k / n); ctx.lineTo(c + (k % 2 ? 0.68 : 0.32), y); }
+  ctx.stroke();
+  ctx.fillStyle = pal[TEAM[side]]; ctx.fillRect(c + 0.08, top - 0.09, 0.84, 0.1);
+  ctx.globalAlpha = 0.45; ctx.strokeStyle = pal[TEAM[side]]; ctx.lineWidth = 0.05; ctx.beginPath();
+  ctx.moveTo(c + 0.35, top - 0.22); ctx.lineTo(c + 0.5, top - 0.36); ctx.lineTo(c + 0.65, top - 0.22); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+function drawSqueeze() {
+  const z = world.zone;
+  if (z <= 1.001) return;
+  ctx.fillStyle = 'rgba(214,63,43,0.17)';
+  ctx.fillRect(1, 1, z - 1, 10); ctx.fillRect(COLS - z, 1, z - 1, 10);
+  for (const x of [z, COLS - z]) {
+    for (const [w, c] of [[0.09, 'rgba(255,90,60,0.55)'], [0.03, '#fff1e8']]) {
+      ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x, 1);
+      for (let y = 1.4; y <= 11; y += 0.4) ctx.lineTo(x + (Math.random() - 0.5) * 0.1, y);
+      ctx.stroke();
+    }
+  }
+}
+// mono draws the whole figure in one color or pattern: used for afterimages and for Dark Sight.
+const monoCache = new Map();
+function monoPal(c) {
+  let m = monoCache.get(c);
+  if (!m) { m = {}; for (const k in PAL) m[k] = c; monoCache.set(c, m); }
+  return m;
+}
+// Dark Sight draws the fighter as a transparent layer: the checkerboard every image editor shows behind nothing.
+let checker = null;
+function checkerPattern() {
+  if (!checker) {
+    const c = document.createElement('canvas'); c.width = c.height = 16;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff'; g.fillRect(0, 0, 16, 16);
+    g.fillStyle = '#b9beb8'; g.fillRect(0, 0, 8, 8); g.fillRect(8, 8, 8, 8);
+    checker = ctx.createPattern(c, 'repeat');
+    checker.setTransform(new DOMMatrix([0.1 / 8, 0, 0, 0.1 / 8, 0, 0]));
+  }
+  return checker;
+}
+function drawFig(S, side, pal, flash, mono) {
+  if (mono) pal = monoPal(mono);
+  const ink = flash ? pal[TEAM[side]] : pal.ink, far = flash ? pal[TEAM[side]] : pal.far, team = pal[TEAM[side]];
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const lw = 0.095;
+  drawBackWeapon(S, side, pal, far);
+  stroke([S.hip, S.kb, S.bf], far, lw);
+  stroke([S.sh, S.eb, S.hb], far, lw);
+  if (S.scarf) {
+    for (let i = 1; i < S.scarf.length; i++) stroke([S.scarf[i - 1], S.scarf[i]], team, 0.085 * (1 - i / S.scarf.length * 0.7));
+  }
+  stroke([S.hip, S.neck], ink, lw * 1.08);
+  stroke([S.hip, S.kf, S.ff], ink, lw);
+  ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(S.head.x, S.head.y, 0.155, 0, Math.PI * 2); ctx.fill();
+  const hx = S.head.x - S.neck.x, hy = S.head.y - S.neck.y, hd = Math.hypot(hx, hy) || 1;
+  const px = -hy / hd, py = hx / hd, bx = S.head.x + hx / hd * 0.02, by = S.head.y + hy / hd * 0.02;
+  stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
+  drawWeapon(S, side, pal, ink);
+  stroke([S.sh, S.ef, S.hf], ink, lw);
+}
+// The off-hand dagger or star sits behind the body, in the far-limb color.
+function drawBackWeapon(S, side, pal, far) {
+  const w = S.wp;
+  if (S.w === 'daggers') {
+    stroke([w.bp, w.bb], far, 0.06);
+    stroke([w.bb, w.bt], far, 0.08);
+    stroke([w.bb, w.bt], pal.steel, 0.03);
+    stroke([w.bg1, w.bg2], far, 0.06);
+  } else if (S.w === 'stars' && (S.held & 2)) drawStar(w.s2.x, w.s2.y, 0.13, 0.4, far, pal[TEAM[side]]);
+}
+function drawStar(x, y, r, ang, fill, core) {
+  ctx.fillStyle = fill; ctx.beginPath();
+  for (let i = 0; i < 8; i++) {
+    const a = ang + i * Math.PI / 4, rr = i % 2 ? r * 0.34 : r;
+    ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = core; ctx.beginPath(); ctx.arc(x, y, r * 0.22, 0, 6.283); ctx.fill();
+}
+function drawWeapon(S, side, pal, ink) {
+  const w = S.wp, team = pal[TEAM[side]];
+  if (S.w === 'sword') {
+    stroke([w.pommel, S.hf], ink, 0.07);
+    stroke([S.hf, w.tip], ink, 0.1);
+    stroke([S.hf, w.tip], pal.steel, 0.045);
+    stroke([w.g1, w.g2], ink, 0.075);
+  } else if (S.w === 'daggers') {
+    stroke([w.pommel, w.base], ink, 0.06);
+    stroke([w.base, w.tip], ink, 0.085);
+    stroke([w.base, w.tip], pal.steel, 0.034);
+    stroke([w.g1, w.g2], ink, 0.065);
+  } else if (S.w === 'spear') {
+    stroke([w.butt, w.neck], ink, 0.058);
+    ctx.fillStyle = ink; ctx.beginPath();
+    ctx.moveTo(w.neck.x, w.neck.y); ctx.lineTo(w.h1.x, w.h1.y); ctx.lineTo(w.tip.x, w.tip.y); ctx.lineTo(w.h2.x, w.h2.y); ctx.closePath(); ctx.fill();
+    stroke([w.neck, w.tip], pal.steel, 0.022);
+    // tassel hangs straight down from the neck of the blade
+    stroke([w.neck, { x: w.neck.x - 0.03, y: w.neck.y + 0.2 }], team, 0.05);
+    stroke([w.neck, { x: w.neck.x + 0.05, y: w.neck.y + 0.17 }], team, 0.04);
+  } else if (S.w === 'hammer') {
+    stroke([w.end, w.neck], ink, 0.07);
+    ctx.fillStyle = ink; ctx.beginPath();
+    ctx.moveTo(w.c1.x, w.c1.y); ctx.lineTo(w.c2.x, w.c2.y); ctx.lineTo(w.c3.x, w.c3.y); ctx.lineTo(w.c4.x, w.c4.y); ctx.closePath(); ctx.fill();
+    stroke([w.c1, w.c4], team, 0.05);
+  } else if (S.w === 'stars') {
+    if (S.held & 1) drawStar(w.s1.x, w.s1.y, 0.14, 0, ink, team);
+  } else {
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.065; ctx.beginPath();
+    ctx.moveTo(w.t1.x, w.t1.y); ctx.quadraticCurveTo(w.ctl.x, w.ctl.y, w.t2.x, w.t2.y); ctx.stroke();
+    stroke([w.t1, w.nock, w.t2], pal.far, 0.018);
+    if (w.a1) drawArrowShape(w.a1.x, w.a1.y, w.a2.x, w.a2.y, pal, side, ink);
+  }
+}
+function drawArrowShape(x0, y0, x1, y1, pal, side, ink) {
+  const dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+  stroke([{ x: x0, y: y0 }, { x: x1, y: y1 }], ink, 0.035);
+  ctx.fillStyle = ink; ctx.beginPath();
+  ctx.moveTo(x1 + ux * 0.12, y1 + uy * 0.12); ctx.lineTo(x1 - uy * 0.06, y1 + ux * 0.06); ctx.lineTo(x1 + uy * 0.06, y1 - ux * 0.06); ctx.fill();
+  stroke([{ x: x0 + ux * 0.02, y: y0 + uy * 0.02 }, { x: x0 + ux * 0.16, y: y0 + uy * 0.16 }], pal[TEAM[side]], 0.08);
+}
+function drawTrail(u, pal) {
+  const t = u.trail;
+  if (t.length < 2) return;
+  const c = pal[TEAM[u.side]];
+  for (let i = 1; i < t.length; i++) {
+    const a = t[i - 1], b = t[i], al = Math.max(0, 1 - b.age / 7) * 0.4;
+    ctx.globalAlpha = al; ctx.fillStyle = c; ctx.beginPath();
+    ctx.moveTo(a.bx, a.by); ctx.lineTo(a.tx, a.ty); ctx.lineTo(b.tx, b.ty); ctx.lineTo(b.bx, b.by); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = al * 2; stroke([{ x: a.tx, y: a.ty }, { x: b.tx, y: b.ty }], c, 0.05);
+  }
+  ctx.globalAlpha = 1;
+}
+function drawParts(pal) {
+  for (const p of parts) {
+    const k = 1 - p.life / p.max;
+    if (p.k === 's') { ctx.lineCap = 'round'; stroke([{ x: p.x, y: p.y }, { x: p.x - p.vx * 0.025, y: p.y - p.vy * 0.025 }], col(pal, p.c), 0.06 * k + 0.01); }
+    else if (p.k === 'd') { ctx.globalAlpha = 0.35 * k; ctx.fillStyle = pal.far; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+    else if (p.k === 'r') { ctx.globalAlpha = k; ctx.strokeStyle = col(pal, p.c); ctx.lineWidth = 0.07 * k; ctx.beginPath(); ctx.arc(p.x, p.y, 0.1 + (p.r1 - 0.1) * (1 - k * k), 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+    else if (p.k === 'f') {
+      const L = p.len * (0.6 + 0.4 * (1 - k)), cx = Math.cos(p.ang), sy = Math.sin(p.ang);
+      ctx.globalAlpha = k; ctx.fillStyle = col(pal, p.c); ctx.beginPath();
+      ctx.moveTo(p.x - cx * L, p.y - sy * L); ctx.lineTo(p.x - sy * 0.09 * k, p.y + cx * 0.09 * k);
+      ctx.lineTo(p.x + cx * L, p.y + sy * L); ctx.lineTo(p.x + sy * 0.09 * k, p.y - cx * 0.09 * k); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    } else if (p.k === 'q') { ctx.fillStyle = col(pal, p.c); const q = p.s * (0.4 + 0.6 * k); ctx.fillRect(p.x - q / 2, p.y - q / 2, q, q); }
+    else if (p.k === 'o') { ctx.globalAlpha = 0.3 * k; ctx.fillStyle = pal.far; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+    else if (p.k === 'm') {
+      // marching ants
+      const a = Math.min(1, k * 3);
+      ctx.globalAlpha = a; ctx.lineWidth = 0.04; ctx.lineCap = 'butt';
+      ctx.strokeStyle = pal.steel; ctx.setLineDash([]); ctx.strokeRect(p.x0, p.y0, p.x1 - p.x0, p.y1 - p.y0);
+      ctx.strokeStyle = pal.ink; ctx.setLineDash([0.11, 0.11]); ctx.lineDashOffset = -p.life * 0.02;
+      ctx.strokeRect(p.x0, p.y0, p.x1 - p.x0, p.y1 - p.y0);
+      ctx.setLineDash([]); ctx.lineCap = 'round';
+      const hs = 0.07; ctx.fillStyle = col(pal, p.c);
+      for (const [x, y] of [[p.x0, p.y0], [p.x1, p.y0], [p.x0, p.y1], [p.x1, p.y1]]) ctx.fillRect(x - hs / 2, y - hs / 2, hs, hs);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+function drawHook(u, S, pal) {
+  const h = u.hook, o = S.hb, c = pal[TEAM[u.side]];
+  const dx = h.x - o.x, dy = h.y - o.y, d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+  const sag = h.phase === 'back' ? Math.min(0.5, d * 0.12) : h.phase === 'out' ? 0.08 : 0;
+  ctx.lineCap = 'butt';
+  for (const [col2, w, dash] of [[pal.ink, 0.07, [0.1, 0.05]], [c, 0.03, [0.05, 0.1]]]) {
+    ctx.strokeStyle = col2; ctx.lineWidth = w; ctx.setLineDash(dash); ctx.beginPath();
+    ctx.moveTo(o.x, o.y); ctx.quadraticCurveTo((o.x + h.x) / 2, (o.y + h.y) / 2 + sag, h.x, h.y); ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.lineCap = 'round';
+  // the hook: a shank with two barbs curling back toward the thrower
+  const px = -uy, py = ux, t = { x: h.x + ux * 0.12, y: h.y + uy * 0.12 };
+  stroke([h, t], pal.ink, 0.07);
+  for (const sgn of [1, -1]) {
+    ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.055; ctx.beginPath();
+    ctx.moveTo(t.x, t.y);
+    ctx.quadraticCurveTo(t.x + px * sgn * 0.16, t.y + py * sgn * 0.16, t.x - ux * 0.14 + px * sgn * 0.13, t.y - uy * 0.14 + py * sgn * 0.13);
+    ctx.stroke();
+  }
+}
+function drawParry(u, pal) {
+  const b = u.b, f = u.face, on = u.sf <= 16, k = on ? Math.min(1, u.sf / 3) : Math.max(0, 1 - (u.sf - 16) / 6);
+  const cx = b.x + f * 0.15, cy = b.y - 0.95, r = 0.55 + 0.35 * k, a0 = f > 0 ? 0 : Math.PI;
+  ctx.globalAlpha = k * (on ? 0.85 + 0.15 * Math.sin(u.sf * 1.3) : 1);
+  for (const [c, w] of [[pal[TEAM[u.side]], 0.09], [pal.steel, 0.03]]) {
+    ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy, r, a0 - 1.05, a0 + 1.05); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawCallouts(pal) {
+  for (const p of parts) {
+    if (p.k !== 'c') continue;
+    const u = p.u, anchor = u.state === 'dead' ? u.rag.P[0] : { x: u.b.x, y: u.b.y - H };
+    const s = toScreen(anchor.x, anchor.y - 0.95 - Math.min(p.life, 20) * 0.012);
+    const k = 1 - p.life / p.max, pop = p.life < 6 ? 1.45 - p.life * 0.075 : 1;
+    const size = Math.max(15, cam.z * 0.52) * pop;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, k * 4);
+    ctx.translate(s.x, s.y); ctx.transform(1, 0, -0.2, 1, 0, 0);
+    ctx.font = `900 ${size}px ${DISPLAY_FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = size * 0.2; ctx.strokeStyle = pal.ink; ctx.strokeText(p.txt, 0, 0);
+    ctx.fillStyle = pal[p.c] || p.c; ctx.fillText(p.txt, 0, 0);
+    ctx.restore();
+  }
+}
+function screenText(txt, x, y, size, fill, strokeC, align = 'center', alpha = 1) {
+  ctx.globalAlpha = alpha;
+  ctx.font = `900 ${size}px ${DISPLAY_FONT}`;
+  ctx.textAlign = align; ctx.textBaseline = 'middle';
+  if (strokeC) { ctx.lineWidth = Math.max(2, size * 0.12); ctx.strokeStyle = strokeC; ctx.lineJoin = 'round'; ctx.strokeText(txt, x, y); }
+  ctx.fillStyle = fill; ctx.fillText(txt, x, y);
+  ctx.globalAlpha = 1;
+}
+let flashCell = null;
+const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue('--display');
+function drawUnit(u, pal) {
+  if (u.state === 'dead') { drawFig(ragSkel(u.rag), u.side, pal, false); return; }
+  const S = skel(u); S.scarf = u.scarf;
+  for (const g of u.ghosts) {
+    if (g.age < 0) continue;
+    ctx.globalAlpha = 0.5 * (1 - g.age / g.max);
+    drawFig(g.S, u.side, pal, false, pal[TEAM[u.side]]);
+  }
+  ctx.globalAlpha = 1;
+  if (u.hook) drawHook(u, S, pal);
+  const f = u.fade;
+  if (f < 0.99) { ctx.globalAlpha = 1 - f; drawFig(S, u.side, pal, u.flash > 0 && u.flash % 2 === 0); }
+  if (f > 0.01) { ctx.globalAlpha = f * 0.95; drawFig(S, u.side, pal, false, checkerPattern()); }
+  ctx.globalAlpha = 1;
+  if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
+}
+function render() {
+  const pal = world && world.impact > 0 ? PAL_INV : PAL;
+  updateCamera();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = pal.out; ctx.fillRect(0, 0, cv.width, cv.height);
+  let sx = 0, sy = 0;
+  if (world.shake > 0.2) {
+    if (!REDUCED) { sx = (Math.random() - 0.5) * 2 * world.shake; sy = (Math.random() - 0.5) * 2 * world.shake; }
+    world.shake *= 0.86;
+  }
+  world.punch *= 0.88;
+  const z = cam.z * (1 + (REDUCED ? 0 : world.punch * 0.05));
+  ctx.setTransform(z * DPR, 0, 0, z * DPR, (CW / 2 - cam.x * z + sx) * DPR, (CH / 2 - cam.y * z + sy) * DPR);
+  drawArena(pal);
+  if (mode === 'fight') drawSqueeze();
+  if (mode === 'rival') { ctx.fillStyle = pal.fog; ctx.fillRect(0, 0, 9, ROWS); }
+  if (mode === 'build') {
+    ctx.fillStyle = pal.fog; ctx.fillRect(11, 0, COLS - 11, ROWS);
+    if (flashCell && flashCell.t > 0) { ctx.fillStyle = `rgba(214,63,43,${0.5 * flashCell.t / 30})`; ctx.fillRect(flashCell.c, flashCell.r, 1, 1); flashCell.t--; }
+  }
+  for (const a of shots) if (a.stuck) {
+    if (a.kind === 'star') drawStar(a.x, a.y, 0.14, a.spin, pal.ink, pal[TEAM[a.owner]]);
+    else drawArrowShape(a.x - Math.cos(a.ang) * 0.62, a.y - Math.sin(a.ang) * 0.62, a.x, a.y, pal, a.owner, pal.ink);
+  }
+  for (const u of U) drawTrail(u, pal);
+  const order = U.slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead')).reverse();
+  for (const u of order) drawUnit(u, pal);
+  for (const a of shots) if (!a.stuck) {
+    const ux = Math.cos(a.ang), uy = Math.sin(a.ang);
+    ctx.globalAlpha = 0.25; stroke([{ x: a.x - ux * 1.4, y: a.y - uy * 1.4 }, { x: a.x - ux * (a.kind === 'star' ? 0.2 : 0.5), y: a.y - uy * (a.kind === 'star' ? 0.2 : 0.5) }], pal[TEAM[a.owner]], 0.05); ctx.globalAlpha = 1;
+    if (a.crit) { ctx.globalAlpha = 0.5; ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.05; ctx.beginPath(); ctx.arc(a.x, a.y, 0.22, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+    if (a.kind === 'star') drawStar(a.x, a.y, 0.16, a.spin, pal.ink, pal[TEAM[a.owner]]);
+    else drawArrowShape(a.x - ux * 0.62, a.y - uy * 0.62, a.x, a.y, pal, a.owner, pal.ink);
+  }
+  drawParts(pal);
+
+  // screen-space layer
+  ctx.setTransform(DPR, 0, 0, DPR, sx * DPR, sy * DPR);
+  for (const p of parts) if (p.k === 't') {
+    const s = toScreen(p.x, p.y), k = 1 - p.life / p.max;
+    screenText(p.txt, s.x, s.y, Math.max(14, p.size * cam.z), pal[p.c] || p.c, pal.bg, 'center', Math.min(1, k * 2));
+  }
+  drawCallouts(pal);
+  const lblSize = Math.max(10, cam.z * 0.34);
+  if (mode === 'build') {
+    const s = toScreen(10, 1.7);
+    screenText('NO-MAN\'S-LAND', s.x, s.y, lblSize, pal.label, null);
+    const s2 = toScreen(5, 1.7);
+    screenText('YOUR HALF', s2.x, s2.y, lblSize, pal.label, null);
+  } else if (mode === 'rival') {
+    const s = toScreen(10, 1.7), s2 = toScreen(15, 1.7);
+    screenText('NO-MAN\'S-LAND', s.x, s.y, lblSize, pal.label, null);
+    screenText(`${rivalName().toUpperCase()}'S HALF`, s2.x, s2.y, lblSize, pal.label, null);
+  } else if (world.t < 240) {
+    const a = Math.min(1, (240 - world.t) / 60);
+    const s1 = toScreen(5, 1.7), s2 = toScreen(15, 1.7);
+    screenText('YOUR HALF', s1.x, s1.y, lblSize, pal.label, null, 'center', a);
+    screenText(`${rivalName().toUpperCase()}'S HALF`, s2.x, s2.y, lblSize, pal.label, null, 'center', a);
+  }
+  if (mode === 'fight') {
+    if (world.intro > 0) {
+      const k = world.intro / 55, size = Math.min(CW * 0.22, CH * 0.3) * (1 + (1 - k) * 0.15);
+      screenText('FIGHT', CW / 2, CH * 0.45, size, pal.ink, pal.bg, 'center', Math.min(1, k * 3));
+    }
+    if (world.over && world.overT < 110) {
+      const k = world.overT / 110, size = Math.min(CW * 0.26, CH * 0.34) * (1.25 - Math.min(1, world.overT / 12) * 0.25);
+      screenText(world.ko ? 'K.O.' : 'TIME', CW / 2, CH * 0.42, size, world.impact > 0 ? pal.ink : PAL.red, pal.bg, 'center', Math.min(1, (1 - k) * 3));
+    }
+  }
+}
+
+// ---------------------------------------------------------------- music
+// Each fight plays a random Wildfrost track (never the same one twice in a row). It carries on through a
+// rematch if it's still playing, fades out with a KO's slow motion, and fades out on the build and rival screens.
+const MUSIC = {
+  tracks: ['Spirit Call', 'Serpent', "Winter's Wrath", 'Tundra Heart', 'March of the Pengoons', 'Luminice Dance', 'Trapped Spirits', 'The Wooly Snail']
+    .map((t) => `Music/Wildfrost OST - ${t}.mp3`),
+  volume: 0.55,
+};
+const MUSIC_KEY = 'homeTurf.music';
+let headless = false;   // headless test fights stay silent
+const music = {
+  on: (() => { try { return localStorage.getItem(MUSIC_KEY) !== 'off'; } catch { return true; } })(),
+  el: null, ctx: null, gain: null, filter: null, track: -1, want: false, fading: false, stopT: 0,
+  init() {
+    if (this.el) return;
+    const el = this.el = new Audio();
+    el.loop = true; el.preload = 'auto';
+    // Web Audio gives smooth fades (iOS ignores element volume) and the KO filter sweep. Pages opened straight
+    // from disk can't route a file through it, so they fall back to plain volume changes.
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx || location.protocol === 'file:') return;
+    try {
+      const ctx = new Ctx();
+      this.filter = ctx.createBiquadFilter(); this.filter.type = 'lowpass'; this.filter.frequency.value = 20000;
+      this.gain = ctx.createGain(); this.gain.gain.value = 0;
+      ctx.createMediaElementSource(el).connect(this.filter).connect(this.gain).connect(ctx.destination);
+      this.ctx = ctx;
+    } catch { this.ctx = null; this.filter = null; this.gain = null; }
+  },
+  ramp(param, to, secs) { const t = this.ctx.currentTime; param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); param.linearRampToValueAtTime(to, t + secs); },
+  level(to, secs) {
+    if (this.gain) this.ramp(this.gain.gain, to, secs); else this.el.volume = to;
+    if (this.filter && to > 0) this.ramp(this.filter.frequency, 20000, 0.05);
+    clearTimeout(this.stopT);
+    if (to === 0) this.stopT = setTimeout(() => this.el.pause(), secs * 1000 + 80);
+  },
+  // A new fight: keep the current track if it's still going, otherwise start a different random one.
+  begin() {
+    this.want = true;
+    if (!this.on) return;
+    this.init();
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.el.paused || this.fading || this.track < 0) {
+      let i = Math.floor(Math.random() * MUSIC.tracks.length);
+      if (i === this.track) i = (i + 1) % MUSIC.tracks.length;
+      this.track = i;
+      this.el.src = encodeURI(MUSIC.tracks[i]);
+      this.el.currentTime = 0;
+    }
+    this.fading = false;
+    const p = this.el.play();
+    if (p) p.catch(() => {});
+    this.level(MUSIC.volume, 0.12);
+  },
+  // KO: the music sinks under the slow motion and fades away.
+  ko() {
+    if (!this.el || this.el.paused) return;
+    this.fading = true;
+    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(420, t + 2.2); }
+    this.level(0, 3.2);
+  },
+  stop(secs = 0.7) { this.want = false; if (this.el) { this.fading = true; this.level(0, secs); } },
+  toggle() {
+    this.on = !this.on;
+    try { localStorage.setItem(MUSIC_KEY, this.on ? 'on' : 'off'); } catch { /* not remembered */ }
+    $('#sndBtn').setAttribute('aria-pressed', String(this.on));
+    if (this.on && this.want && mode === 'fight' && !world.over) this.begin();
+    else if (!this.on && this.el) { this.fading = true; this.level(0, 0.25); }
+  },
+};
+$('#sndBtn').setAttribute('aria-pressed', String(music.on));
+$('#sndBtn').addEventListener('click', () => music.toggle());
+document.addEventListener('visibilitychange', () => {
+  if (!music.el) return;
+  if (document.hidden) music.el.pause();
+  else if (music.want && music.on && !music.fading) { const p = music.el.play(); if (p) p.catch(() => {}); }
+});
+
+// ---------------------------------------------------------------- UI
+const ui = {
+  phase: $('#phase'), hud: $('#hud'), clock: $('#clock'), wB: $('#wB'), wR: $('#wR'), nR: $('#nR'),
+  fillB: $('#hpB .fill'), chipB: $('#hpB .chip'), fillR: $('#hpR .fill'), chipR: $('#hpR .chip'),
+  sk: [$('#skB'), $('#skR')],
+  toast: $('#toast'), result: $('#result'), resK: $('#resKicker'), resT: $('#resTitle'), resS: $('#resStats'),
+  buildPanel: $('#buildPanel'), fightPanel: $('#fightPanel'), rivalPanel: $('#rivalPanel'), ticker: $('#ticker'), budget: $('#budget'),
+  live: $('#liveActions'), end: $('#endActions'), speed: $('#speedBtn'), seed: $('#seedLbl'), hint: $('#loadHint'), fight: $('#fightBtn'),
+};
+const SKILL_ICON = {
+  blink: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="4.5" width="8" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 1.8"/><rect x="12" y="4.5" width="8" height="13" fill="currentColor"/><path d="M8 11 H15" stroke="#2358d6" stroke-width="2"/></svg>',
+  darksight: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="2.5" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/><g fill="currentColor"><rect x="2.5" y="2.5" width="5.7" height="5.7"/><rect x="13.8" y="2.5" width="5.7" height="5.7"/><rect x="8.2" y="8.2" width="5.7" height="5.7"/><rect x="2.5" y="13.8" width="5.7" height="5.7"/><rect x="13.8" y="13.8" width="5.7" height="5.7"/></g></svg>',
+  parry: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M12 2.5 A 9 9 0 0 1 12 19.5" fill="none" stroke="#2358d6" stroke-width="2.6"/><path d="M7.5 19 V3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M4 15.5 H11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
+  hook: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2.5 19.5 L10 12" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.4 1.6"/><path d="M10 12 L15 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M15 7 C 18.5 4 21 8.5 17.5 11.5 M15 7 C 12 3.5 7.5 6 10 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
+const ACRO_DESC = [
+  'Runs and jumps, nothing fancy.',
+  'Roll: tumbles through swings and shots without being hit.',
+  'Wall jump: slides down walls and kicks off them, and climbs a wall by kicking back and forth.',
+  'Wall run: runs straight up a wall and flips over the ledge at the top.',
+  'Air flip: a second jump in mid-air, with a flip.',
+];
+const acroMoves = (lv) => (lv ? ACRO_MOVES.slice(1, lv + 1).join(', ') : 'none');
+const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill].name : 'No skill'} · Acro ${bd.acro || 0}`;
+
+// Weapon and skill chips are generated from the tables so the numbers on them never drift.
+$('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
+$('#acro').innerHTML = ACRO_MOVES.map((m, i) => `<button data-a="${i}" aria-pressed="false" aria-label="Acrobatics ${i}: ${m}">${m}</button>`).join('');
+$('#skills').innerHTML = SKILLS.map((k) => `<button class="opt tool skill" data-s="${k}" aria-pressed="false"><span class="ic"><span class="sk-ic">${SKILL_ICON[k]}</span><small>${SKILL[k].stat}</small></span><b>${SKILL[k].name}</b></button>`).join('');
+
+let tool = 'block', toastT = 0;
+function toast(msg) {
+  ui.toast.textContent = msg; ui.toast.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { ui.toast.hidden = true; }, 2400);
+}
+const HOME_HINT = SPIKES_ON
+  ? 'Your fighter knows where your spikes are. The rival finds them by stepping on them. Pads launch only the fighter who built them.'
+  : 'Blocks shape the routes both fighters take. Pads launch only the fighter who built them, so they\'re shortcuts only you can use.';
+if (!SPIKES_ON) { document.querySelector('#tools [data-t="spikes"]').remove(); document.getElementById('tools').classList.add('three'); }
+function refreshBuildUI() {
+  for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
+  for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
+  for (const b of document.querySelectorAll('#tools .opt')) b.setAttribute('aria-pressed', String(b.dataset.t === tool));
+  const lv = builds[0].acro || 0;
+  for (const b of document.querySelectorAll('#acro button')) { const i = +b.dataset.a; b.classList.toggle('on', i >= 1 && i <= lv); b.setAttribute('aria-pressed', String(i === lv)); }
+  $('#acroLbl').textContent = `Level ${lv} of 4`;
+  const s = spent(builds[0].pieces);
+  ui.budget.textContent = `${s} / ${BUDGET} pts`;
+  ui.budget.classList.toggle('full', s >= BUDGET);
+  ui.fight.textContent = `Fight ${rivalName()}`;
+}
+function renderTicker() {
+  if (!world || !world.log.length) { ui.ticker.innerHTML = '<li class="empty">Nothing yet.</li>'; return; }
+  ui.ticker.innerHTML = '';
+  for (const e of world.log.slice(-3).reverse()) {
+    const li = document.createElement('li');
+    li.className = e.side >= 0 ? `s${e.side}` : '';
+    const t = document.createElement('time'); t.textContent = clockStr(e.t);
+    const sw = document.createElement('i'); sw.className = 'sw';
+    const sp = document.createElement('span'); sp.textContent = e.txt;
+    li.append(t, sw, sp); ui.ticker.append(li);
+  }
+}
+const skShown = [{}, {}];
+function updateHud() {
+  if (mode !== 'fight') return;
+  const [b, r] = U;
+  ui.fillB.style.width = `${b.hp}%`; ui.chipB.style.width = `${b.hpShow}%`;
+  ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`;
+  ui.clock.textContent = clockStr(world.over ? world.t - world.overT : world.t);
+  ui.clock.classList.toggle('sq', world.zone > 1.001 && !world.over);
+  for (const u of U) {
+    const el = ui.sk[u.side], was = skShown[u.side];
+    if (!u.skill) { el.hidden = true; continue; }
+    el.hidden = false;
+    const k = 1 - u.skCd / SKILL[u.skill].cd, ready = u.skCd <= 0 && u.state !== 'dead';
+    if (was.k !== k) { el.querySelector('.skb i').style.width = `${Math.max(0, Math.min(1, k)) * 100}%`; was.k = k; }
+    if (was.ready !== ready) { el.classList.toggle('ready', ready); was.ready = ready; }
+    if (was.k0 !== undefined && k < was.k0 - 0.3) { el.classList.remove('fired'); void el.offsetWidth; el.classList.add('fired'); }
+    was.k0 = k;
+  }
+}
+
+// ---- record against each rival, kept in this browser only
+const RECORD_KEY = 'homeTurf.record.v1';
+function loadRecord() { try { return JSON.parse(localStorage.getItem(RECORD_KEY)) || {}; } catch { return {}; } }
+function saveRecord(name, won) {
+  try {
+    const r = loadRecord(), e = r[name] || { w: 0, l: 0 };
+    if (won) e.w++; else e.l++;
+    r[name] = e; localStorage.setItem(RECORD_KEY, JSON.stringify(r));
+  } catch { /* storage unavailable: the record just isn't kept */ }
+}
+
+function showResult() {
+  const w = world.winner, st = world.stats, name = rivalName();
+  ui.resT.textContent = w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
+  ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
+  ui.resK.textContent = world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
+  const mySpikes = A.spikes.filter((o) => o === 0).length, theirSpikes = A.spikes.filter((o) => o === 1).length;
+  const rows = [];
+  if (st[0].trap + st[1].trap) rows.push(['Traps dealt', `you ${Math.round(st[0].trap)} · ${name} ${Math.round(st[1].trap)}`]);
+  if (mySpikes + theirSpikes) rows.push(['Spikes found', `${name} found ${st[1].found} of ${mySpikes} · you found ${st[0].found} of ${theirSpikes}`]);
+  if (st[0].skill + st[1].skill) rows.push(['Skills used', `you ${st[0].skill} · ${name} ${st[1].skill}`]);
+  if (st[0].crit + st[1].crit) rows.push(['Critical damage', `you ${Math.round(st[0].crit)} · ${name} ${Math.round(st[1].crit)}`]);
+  if (st[0].parry + st[1].parry) rows.push(['Parries', `you ${st[0].parry} · ${name} ${st[1].parry}`]);
+  if (st[0].hooks + st[1].hooks) rows.push(['Hooks landed', `you ${st[0].hooks} · ${name} ${st[1].hooks}`]);
+  if (st[0].deflect + st[1].deflect) rows.push(['Shots knocked down', `you ${st[0].deflect} · ${name} ${st[1].deflect}`]);
+  if (st[0].pads + st[1].pads) rows.push(['Pad launches', `you ${st[0].pads} · ${name} ${st[1].pads}`]);
+  if (st[0].clash) rows.push(['Blade exchanges', String(st[0].clash)]);
+  if (st[0].rolls + st[1].rolls + st[0].acro + st[1].acro) rows.push(['Acrobatics', `you ${st[0].rolls + st[0].acro} moves · ${name} ${st[1].rolls + st[1].acro}`]);
+  ui.resS.innerHTML = '';
+  for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; ui.resS.append(dt, dd); }
+  ui.result.hidden = false; ui.live.hidden = true; ui.end.hidden = false;
+  ui.phase.textContent = 'Result';
+  if (w >= 0 && !world.recorded) { world.recorded = true; saveRecord(name, w === 0); }
+}
+
+// ---- demos: fighters show off their weapon and skill on the build and rival screens
+function demoWorld() {
+  world = newWorld(1); world.intro = 0; world.demo = true;
+  shots = []; parts = [];
+}
+function demoUnit(side, bd) {
+  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0);
+  u.nav = buildNav(side, u.b.speed, COLS, u.acro);
+  const mid = u.nav.idx[10 * COLS + (side ? 10 : 9)];
+  u.navOk = mid >= 0 ? reach(u.nav, mid, true) : new Uint8Array(u.nav.nodes.length).fill(1);
+  u.skCd = 0;
+  return u;
+}
+const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'] };
+function demoSteps(u, what) {
+  if (what === 'weapon') return WEAPON_DEMO[u.w].map((x) => (typeof x === 'number' ? { wait: x } : { atk: x }));
+  if (what === 'acro') {
+    const wall = u.side ? 1 : -1;   // the arena wall right behind the spawn
+    return [
+      [],
+      [{ roll: -wall }, { wait: 30 }, { roll: wall }],
+      [{ macro: { dir: wall, hold: 18, delay: 0, wj: 1 } }],
+      [{ macro: { dir: wall, hold: 40, delay: 0, wj: 1 } }],
+      [{ macro: { dir: -wall, hold: 18, delay: 0, dj: 17 } }, { wait: 30 }, { macro: { dir: wall, hold: 40, delay: 0, wj: 1 } }],
+    ][u.acro];
+  }
+  if (!u.skill) return [];
+  if (u.skill === 'blink') return [{ blink: 1 }, { wait: 50 }, { blink: -1 }];
+  if (u.skill === 'darksight') return [{ skill: 'cast' }, { wait: 120 }, { reveal: 1 }];
+  if (u.skill === 'parry') return [{ skill: 'parry' }];
+  return [{ skill: 'hook' }];
+}
+function playDemo(u, what, loop) {
+  u.demo = { steps: loop ? [{ wait: 45 }, ...demoSteps(u, 'weapon'), { wait: 70 }, ...demoSteps(u, 'skill'), { wait: 70 }, ...demoSteps(u, 'acro'), { wait: 80 }] : demoSteps(u, what), i: 0, t: 0, loop, home: u.b.x };
+  if (!loop && u.hidden) reveal(u);
+}
+function runDemo(u) {
+  const d = u.demo;
+  if (!d || u.state === 'dead') return;
+  const s = d.steps[d.i];
+  if (!s) { if (d.loop) { d.i = 0; d.t = 0; } else u.demo = null; return; }
+  if (u.state === 'atk') {
+    // keep the combo going: the next hit starts where the AI would chain it
+    const n = d.steps[d.i + 1], ad = u.atkDef;
+    if (n && n.atk && ad.chain === n.atk && u.phase === 'r' && u.af >= ad.w + ad.a + (ad.fast ? 1 : 3)) { d.i++; startAtk(u, n.atk); }
+    return;
+  }
+  if (u.ai.macro) {
+    // acrobatics demo: run the macro exactly as a fighter would
+    const m = u.ai.macro, f = u.ai.mf++;
+    macroInput(u.ai.ms, m, u.b, u.in);
+    if (!u.b.gr) u.ai.air = true;
+    if ((u.ai.air && u.b.gr && f > 1) || f > 170) { u.ai.macro = null; u.in.dir = 0; u.in.press = false; u.in.hold = false; }
+    return;
+  }
+  if (u.state !== 'free' || !u.b.gr) return;
+  if (s.wait !== undefined) {
+    // drift back to the spawn between moves, then face the other half
+    const off = d.home - u.b.x;
+    u.in.dir = Math.abs(off) > 0.15 ? Math.sign(off) : 0;
+    u.face = u.in.dir || (u.side ? -1 : 1);
+    if (++d.t >= s.wait && !u.in.dir) { d.i++; d.t = 0; }
+    return;
+  }
+  u.in.dir = 0;
+  d.i++; d.t = 0;
+  if (s.atk) { u.face = u.side ? -1 : 1; startAtk(u, s.atk); }
+  else if (s.skill) {
+    u.face = u.side ? -1 : 1;
+    startSkill(u, s.skill);
+    if (s.skill === 'parry') u.demoParry = 7;
+  } else if (s.reveal) reveal(u);
+  else if (s.roll) { u.rollCd = 0; startRoll(u, s.roll); }
+  else if (s.macro) { startMacro(u, s.macro); u.in.dir = 0; }
+  else if (s.blink) {
+    const dir = (u.side ? -1 : 1) * s.blink;
+    for (const dx of [2.6, 2.2, 1.8, 3]) {
+      const x = u.b.x + dir * dx;
+      if (!boxSolid(x - W / 2, u.b.y - H, x + W / 2, u.b.y) && settle(u, x, u.b.y)) { doBlink(u, x, u.b.y, x + (u.side ? -1 : 1)); break; }
+    }
+  }
+}
+function demoStep() {
+  world.t++;
+  for (const u of U) {
+    runDemo(u);
+    if (u.demoParry && u.state === 'skill' && u.sf === u.demoParry) { u.demoParry = 0; parrySuccess(u, null); }
+    act(u);
+    poseStep(u); fxStep(u);
+    const S = skel(u);
+    scarfStep(u, S); trailStep(u, S);
+  }
+  stepShots();
+  for (const u of U) stepHook(u);
+  for (let i = 0; i < A.padAnim.length; i++) if (A.padAnim[i] > 0.01) A.padAnim[i] *= 0.86;
+  stepParts();
+  if (world.impact > 0) world.impact--;
+}
+
+// ---- screens
+function showPanel(which) {
+  for (const [k, el] of [['build', ui.buildPanel], ['fight', ui.fightPanel], ['rival', ui.rivalPanel]]) el.hidden = k !== which;
+  const el = { build: ui.buildPanel, fight: ui.fightPanel, rival: ui.rivalPanel }[which];
+  el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
+}
+function enterRival() {
+  mode = 'rival';
+  music.stop();
+  const bd = builds[1], r = RIVALS[rivalIx], rec = loadRecord()[bd.name];
+  A = makeArena([null, bd]);
+  demoWorld();
+  U = [demoUnit(1, bd)];
+  playDemo(U[0], null, true);
+  ui.hud.hidden = true; ui.result.hidden = true;
+  showPanel('rival');
+  ui.phase.textContent = 'Scouting';
+  $('#rvCount').textContent = `Rival ${rivalIx + 1} of ${RIVALS.length}`;
+  const recEl = $('#rvRecord');
+  recEl.textContent = rec ? (rec.w ? `Beaten · ${rec.w}–${rec.l}` : `Unbeaten · 0–${rec.l}`) : 'Not fought yet';
+  recEl.classList.toggle('won', !!(rec && rec.w));
+  const nm = $('#rvName');
+  nm.textContent = bd.name; nm.classList.remove('slam'); void nm.offsetWidth; nm.classList.add('slam');
+  $('#rvTag').textContent = r.tag;
+  $('#rvW').textContent = WEAP[bd.weapon].name; $('#rvWs').textContent = WEAP[bd.weapon].stat; $('#rvWd').textContent = WEAP[bd.weapon].desc;
+  $('#rvSi').innerHTML = SKILL_ICON[bd.skill]; $('#rvS').textContent = SKILL[bd.skill].name; $('#rvSs').textContent = SKILL[bd.skill].stat; $('#rvSd').textContent = SKILL[bd.skill].desc;
+  $('#rvTip').textContent = r.tip;
+  const pips = [1, 2, 3, 4].map((i) => `<i class="${i <= (bd.acro || 0) ? 'on' : ''}"></i>`).join('');
+  $('#rvAcro').innerHTML = `<span class="acro-pips" aria-hidden="true">${pips}</span>Level ${bd.acro || 0}: ${acroMoves(bd.acro || 0)}`;
+  $('#rvYou').textContent = loadout(builds[0]);
+  $('#rvFight').textContent = `Fight ${bd.name}`;
+}
+function enterBuild() {
+  mode = 'build';
+  music.stop();
+  A = makeArena([builds[0], null]);
+  demoWorld();
+  U = [demoUnit(0, builds[0])];
+  ui.hud.hidden = true; ui.result.hidden = true;
+  showPanel('build');
+  ui.phase.textContent = 'Build your half';
+  ui.hint.textContent = HOME_HINT;
+  refreshBuildUI();
+}
+function startFight(seed, replay = false) {
+  mode = 'fight';
+  fightSeed = seed;
+  if (!builds[1]) setRival(rivalIx);
+  A = makeArena(builds);
+  world = newWorld(seed);
+  world.recorded = replay;   // a replay is the same fight again, so it doesn't count toward the record
+  U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0));
+  for (const u of U) {
+    u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
+    const mid = u.nav.idx[10 * COLS + (u.side ? 10 : 9)];
+    u.navOk = reach(u.nav, mid, true);
+    u.react = 8 + Math.floor(rng() * 10);
+  }
+  shots = []; parts = [];
+  ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
+  skShown[0] = {}; skShown[1] = {};
+  for (const u of U) { const el = ui.sk[u.side]; el.classList.remove('fired', 'ready'); if (u.skill) el.querySelector('.skn').textContent = SKILL[u.skill].name; }
+  ui.hud.hidden = false; ui.result.hidden = true;
+  showPanel('fight');
+  ui.live.hidden = false; ui.end.hidden = true;
+  ui.phase.textContent = `vs ${rivalName()}`;
+  ui.seed.textContent = `Seed ${seed}`;
+  renderTicker(); updateHud();
+  if (!headless) music.begin();
+}
+const newSeed = () => 1 + Math.floor(Math.random() * 99999);
+
+function applyTool(c, r) {
+  const bd = builds[0];
+  if (c === 9 || c === 10) { toast('No-man\'s-land stays open.'); return; }
+  if (c >= 11) { toast('That half belongs to the rival.'); return; }
+  if (c < BMIN || c > BMAX || r < 1 || r > 10) return;
+  if (c === SPAWN_C && (r === 10 || r === 9)) { toast('Your fighter spawns here.'); flashCell = { c, r, t: 30 }; return; }
+  let next = bd.pieces.filter((p) => !(p.c === c && p.r === r));
+  const had = bd.pieces.find((p) => p.c === c && p.r === r);
+  if (tool === 'erase') {
+    if (!had) return;
+    if (had.t === 'block') next = next.filter((p) => !(p.c === c && p.r === r - 1 && p.t !== 'block'));
+  } else {
+    if (had && had.t === tool) return;
+    if (tool !== 'block') {
+      const below = r + 1 === 11 || next.some((p) => p.c === c && p.r === r + 1 && p.t === 'block');
+      if (!below) { toast(tool === 'pad' ? 'A pad needs solid ground under it.' : 'Spikes need solid ground under them.'); flashCell = { c, r, t: 30 }; return; }
+    }
+    if (had && had.t === 'block') next = next.filter((p) => !(p.c === c && p.r === r - 1 && p.t !== 'block'));
+    next.push({ t: tool, c, r });
+    if (spent(next) > BUDGET) { toast(`Out of points. ${BUDGET} per half.`); flashCell = { c, r, t: 30 }; return; }
+  }
+  const v = validate({ weapon: bd.weapon, pieces: next });
+  if (!v.ok) { toast(v.msg); flashCell = { c, r, t: 30 }; return; }
+  bd.pieces = next;
+  A = makeArena([bd, null]);
+  const u = U[0];
+  u.nav = buildNav(0, u.b.speed, COLS, u.acro);
+  u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true);
+  refreshBuildUI();
+}
+
+let painting = false, lastCell = '';
+function cellAt(ev) {
+  const r = cv.getBoundingClientRect();
+  const x = (ev.clientX - r.left - CW / 2) / cam.z + cam.x, y = (ev.clientY - r.top - CH / 2) / cam.z + cam.y;
+  return { c: Math.floor(x), r: Math.floor(y) };
+}
+cv.addEventListener('pointerdown', (ev) => {
+  if (mode !== 'build') return;
+  painting = true; cv.setPointerCapture(ev.pointerId);
+  const { c, r } = cellAt(ev); lastCell = `${c},${r}`; applyTool(c, r);
+});
+cv.addEventListener('pointermove', (ev) => {
+  if (!painting || mode !== 'build' || (tool !== 'block' && tool !== 'erase')) return;
+  const { c, r } = cellAt(ev), k = `${c},${r}`;
+  if (k !== lastCell) { lastCell = k; applyTool(c, r); }
+});
+const endPaint = () => { painting = false; };
+cv.addEventListener('pointerup', endPaint); cv.addEventListener('pointercancel', endPaint);
+
+$('#weapons').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.opt'); if (!b) return;
+  const w = b.dataset.w;
+  const v = validate({ weapon: w, pieces: builds[0].pieces });
+  if (!v.ok) { toast(`${WEAP[w].name} can't make those jumps. Change your half first.`); return; }
+  builds[0].weapon = w;
+  U = [demoUnit(0, builds[0])];
+  playDemo(U[0], 'weapon');
+  ui.hint.textContent = `${WEAP[w].name}: ${WEAP[w].desc}`;
+  refreshBuildUI();
+});
+$('#skills').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.opt'); if (!b) return;
+  const k = b.dataset.s;
+  builds[0].skill = k;
+  const u = U[0];
+  u.skill = k; u.skCd = 0;
+  if (u.state === 'free') playDemo(u, 'skill');
+  ui.hint.textContent = `${SKILL[k].name}: ${SKILL[k].desc}`;
+  refreshBuildUI();
+});
+$('#acro').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  const lv = +b.dataset.a;
+  builds[0].acro = lv;
+  U = [demoUnit(0, builds[0])];
+  playDemo(U[0], 'acro');
+  ui.hint.textContent = ACRO_DESC[lv];
+  refreshBuildUI();
+});
+$('#tools').addEventListener('click', (ev) => { const b = ev.target.closest('.opt'); if (!b) return; tool = b.dataset.t; refreshBuildUI(); });
+$('#clearBtn').addEventListener('click', () => { builds[0].pieces = []; A = makeArena([builds[0], null]); const u = U[0]; u.nav = buildNav(0, u.b.speed, COLS, u.acro); u.navOk = reach(u.nav, u.nav.idx[10 * COLS + 9], true); refreshBuildUI(); });
+$('#fightBtn').addEventListener('click', () => startFight(newSeed()));
+$('#scoutBtn').addEventListener('click', enterRival);
+$('#rvEdit').addEventListener('click', enterBuild);
+$('#rvFight').addEventListener('click', () => startFight(newSeed()));
+$('#rvPrev').addEventListener('click', () => { setRival(rivalIx - 1); enterRival(); });
+$('#rvNext').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
+$('#editBtn').addEventListener('click', enterBuild);
+$('#edit2Btn').addEventListener('click', enterBuild);
+$('#replayBtn').addEventListener('click', () => startFight(fightSeed, true));
+$('#rematchBtn').addEventListener('click', () => startFight(newSeed()));
+$('#nextBtn').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
+$('#speedBtn').addEventListener('click', () => { speedMul = speedMul === 1 ? 2 : 1; ui.speed.textContent = `Speed ${speedMul}×`; });
+
+// ---------------------------------------------------------------- loop
+let last = performance.now(), acc = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (mode === 'fight') {
+    acc += dt * speedMul * (world.slowT > 0 ? 0.3 : 1);
+    let n = 0;
+    while (acc >= DT && n < 12) {
+      acc -= DT; n++;
+      if (world.slowT > 0) world.slowT--;
+      if (world.hs > 0) { world.hs--; if (world.impact > 0) world.impact--; continue; }
+      simStep();
+    }
+    updateHud();
+  } else {
+    acc += dt;
+    let n = 0;
+    while (acc >= DT && n < 6) {
+      acc -= DT; n++;
+      if (world.slowT > 0) world.slowT--;
+      if (world.hs > 0) { world.hs--; continue; }
+      demoStep();
+    }
+  }
+  render();
+  requestAnimationFrame(frame);
+}
+
+// Headless hook: run a whole fight without rendering (used for testing balance and AI).
+window.__homeTurf = {
+  fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
+    const saved = [builds[0], builds[1]];
+    builds[0] = blue; builds[1] = red;
+    headless = true; startFight(seed);
+    let f = 0;
+    while (f++ < maxFrames && !(world.over && world.overT > 5)) {
+      if (world.hs > 0) { world.hs--; continue; }
+      simStep();
+      if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
+    }
+    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
+    builds[0] = saved[0]; builds[1] = saved[1]; headless = false;
+    return res;
+  },
+  // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).
+  play(seed, blue, red) { if (blue) builds[0] = blue; if (red) builds[1] = red; startFight(seed); },
+  step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
+  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, validate, get world() { return world; }, get units() { return U; },
+};
+
+setRival(0);
+enterRival();
+requestAnimationFrame(frame);
+})();
+</script>
+<!-- artifact:end -->
+</body>
+</html>
