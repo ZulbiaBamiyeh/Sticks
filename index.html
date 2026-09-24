@@ -277,7 +277,7 @@
   #doll .col { display: flex; flex-direction: column; justify-content: center; gap: 8px; pointer-events: auto; }
   .slot { position: relative; width: var(--slot, 62px); height: var(--slot, 62px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
     background: rgba(243, 244, 240, 0.92); border: 2px solid var(--line); border-radius: 6px; color: var(--ink); cursor: pointer; padding: 0; font: inherit; }
-  .slot svg { width: 26px; height: 26px; display: block; }
+  .slot svg { width: 30px; height: 30px; display: block; }
   #doll.wide #dollL { display: grid; grid-template-columns: repeat(2, var(--slot)); align-content: center; gap: 14px 8px; }
   #doll.tiny .slot small { display: none; }
   #doll.tiny .slot svg { width: 22px; height: 22px; }
@@ -360,13 +360,13 @@
   .hc-fam { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
   .odds { display: flex; gap: 10px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
   .drops { display: flex; flex-wrap: wrap; gap: 4px; }
-  .drops i { display: grid; place-items: center; width: 26px; height: 26px; border: 1.5px solid var(--line); border-radius: 5px; background: #fff; }
-  .drops i svg { width: 17px; height: 17px; }
+  .drops i { display: grid; place-items: center; width: 30px; height: 30px; border: 1.5px solid var(--line); border-radius: 5px; background: #fff; }
+  .drops i svg { width: 22px; height: 22px; }
   .drops i.key { border: 2px solid #b5651d; }
   .drops i.relic { border: 2px solid #c9961a; background: #fbf4df; }
   .icard { display: grid; gap: 4px; border: 2px solid var(--rc); border-radius: 8px; padding: 10px 12px; background: #f3f4f0; }
   .ihead { display: flex; align-items: center; gap: 10px; }
-  .iic svg { width: 26px; height: 26px; display: block; }
+  .iic svg { width: 36px; height: 36px; display: block; }
   .ihead .nm { display: block; font: 900 17px/1.05 var(--display); letter-spacing: 0.02em; color: var(--nc, var(--rc)); }
   .ihead small { font-size: 11px; font-weight: 700; color: var(--ink-2); text-transform: capitalize; }
   .icard.key { box-shadow: inset 0 0 0 1px #b5651d; }
@@ -409,7 +409,7 @@
   .bag { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .bslot { aspect-ratio: 1; border: 2px solid var(--rc, var(--line)); border-radius: 6px; background: #f3f4f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; overflow: hidden; }
   .bslot.empty { border-style: dashed; border-color: var(--line); background: none; }
-  .bslot svg { width: 20px; height: 20px; }
+  .bslot svg { width: 26px; height: 26px; }
   .bslot small { font-size: 8px; font-weight: 800; line-height: 1; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bslot.on { box-shadow: 0 0 0 2px var(--ink); }
   .dcard { display: flex; gap: 14px; align-items: center; border: 2px solid var(--ink); border-radius: 8px; padding: 12px; }
@@ -1093,7 +1093,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
-    dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
+    look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
     onHit: trinket ? [TRINKET[trinket]] : [],
     b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
@@ -4471,6 +4471,7 @@ function runBuild(equip, pieces = [], boons = null) {
   const w = equip.weapon;
   if (w) { const [min, max] = instRange(w); stats.wpn = { min, max, base: WTYPE[ITEM[w.item].weapon].base }; }
   const get = (s, k) => (equip[s] ? ITEM[equip[s].item][k] : null);
+  stats.look = gearLook(equip);
   if (boons) { stats.hp += boons.hpFlat; stats.hpMult = boons.hpMult; stats.skillHaste += boons.skillHaste; }
   return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: fams };
 }
@@ -4992,11 +4993,118 @@ function checkerPattern() {
   }
   return checker;
 }
+// ---- worn gear: what you have on shows on the figure, as ZereshkStory's hero shows it. Headgear, a torso
+// piece or a cape, and boots, each in its item's shape and its family's accent. Drawn in a frame that follows
+// the figure: forward is the way it faces, up runs along the neck (or the spine).
+function gearLook(equip) {
+  const pick = (s) => { const inst = equip[s]; if (!inst) return null; const it = ITEM[inst.item]; const sh = artShape(it); return sh ? { k: sh[0], x: sh[1], a: (it.family && FAM_ACC[it.family]) || '#2358d6' } : null; };
+  return { head: pick('head'), core: equip.core && equip.core.item !== 'linen_shirt' ? pick('core') : null, feet: equip.feet && equip.feet.item !== 'worn_shoes' ? pick('feet') : null };
+}
+function gearFrame(o, from, f) {
+  const ux = o.x - from.x, uy = o.y - from.y, d = Math.hypot(ux, uy) || 1;
+  ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(Math.atan2(ux / d, -uy / d)); ctx.scale(f, 1);
+  return d;
+}
+const gpoly = (pts, fill, strokeC, w) => {
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const [x, y] of pts.slice(1)) ctx.lineTo(x, y); ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (strokeC) { ctx.strokeStyle = strokeC; ctx.lineWidth = w; ctx.stroke(); }
+};
+const gline = (pts, c, w) => { ctx.strokeStyle = c; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const [x, y] of pts.slice(1)) ctx.lineTo(x, y); ctx.stroke(); };
+// the cape goes behind everything
+function drawGearBack(S, pal, ink, mono) {
+  const c = S.look && S.look.core;
+  if (!c || !['cloak', 'mantle', 'wings'].includes(c.k)) return;
+  const a = mono || c.a, L = gearFrame(S.neck, S.hip, S.face || 1), t = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000, fl = Math.sin(t * 3) * 0.03;
+  if (c.k === 'cloak') {
+    gpoly([[0.04, -0.02], [-0.1, 0.02], [-0.3 + fl, L + 0.34], [-0.02, L + 0.3], [0.04, L]], ink);
+    gline([[-0.06, 0.06], [-0.22 + fl, L + 0.28]], a, 0.035);
+  } else if (c.k === 'mantle') {
+    gpoly([[0.08, -0.02], [-0.14, 0.0], [-0.24 + fl, 0.3], [0.1, 0.22]], ink);
+    gline([[-0.12, 0.04], [-0.2 + fl, 0.26]], a, 0.03);
+  } else {
+    const w = [[0.02, 0.02], [-0.3, -0.12 + fl], [-0.46, 0.08 + fl], [-0.36, 0.16], [-0.4, 0.3 + fl], [-0.26, 0.3], [-0.24, 0.44 + fl], [-0.02, 0.34]];
+    gpoly(w, ink); gline([[-0.02, 0.06], [-0.34, 0.1 + fl]], a, 0.03);
+  }
+  ctx.restore();
+}
+// the torso piece sits over the spine, under the near arm
+function drawGearTorso(S, pal, ink, mono) {
+  const c = S.look && S.look.core;
+  if (!c || ['cloak', 'mantle', 'wings'].includes(c.k)) return;
+  const a = mono || c.a, paper = mono || pal.steel, L = gearFrame(S.neck, S.hip, S.face || 1);
+  // solid ink, like the figure and the creatures: a paper shine and the family's accent on top
+  const wide = c.k === 'plate' ? 0.14 : 0.11, body = [[-wide + 0.02, 0.02], [wide, 0.02], [wide + 0.01, L], [-wide, L]];
+  if (c.k === 'robe') { gpoly([[-0.11, L - 0.05], [0.12, L - 0.05], [0.2, L + 0.32], [-0.18, L + 0.32]], ink); gline([[-0.18, L + 0.29], [0.2, L + 0.29]], a, 0.04); }
+  gpoly(body, ink);
+  gline([[wide - 0.035, 0.08], [wide - 0.03, L * 0.55]], paper, 0.022);
+  if (c.k === 'plate') { gline([[-wide, L * 0.5], [wide, L * 0.5]], a, 0.05); gline([[-wide + 0.02, 0.03], [wide, 0.03]], a, 0.03); }
+  else if (c.k === 'mail') for (let i = 0; i < 3; i++) gline([[-0.09, 0.12 + i * 0.11], [-0.03, 0.16 + i * 0.11], [0.03, 0.12 + i * 0.11], [0.1, 0.16 + i * 0.11]], a, 0.022);
+  else if (c.k === 'vest') { gline([[0.1, 0.05], [0.11, L]], a, 0.035); }
+  else gline([[-0.11, L - 0.08], [0.12, L - 0.08]], a, 0.045);
+  ctx.restore();
+}
+function drawGearFeet(S, pal, ink, far, mono) {
+  const b = S.look && S.look.feet;
+  if (!b) return;
+  const a = mono || b.a, f = S.face || 1;
+  for (const [knee, foot, col] of [[S.kb, S.bf, far], [S.kf, S.ff, ink]]) {
+    const k = b.k === 'shoe' || b.k === 'slipper' ? 0.72 : 0.48, top = { x: knee.x + (foot.x - knee.x) * k, y: knee.y + (foot.y - knee.y) * k };
+    const w = b.k === 'heavy' ? 0.17 : 0.13;
+    stroke([top, foot, { x: foot.x + f * 0.1, y: foot.y }], col, w);
+    const dx = foot.x - knee.x, dy = foot.y - knee.y, d = Math.hypot(dx, dy) || 1, px = -dy / d * 0.08, py = dx / d * 0.08;
+    stroke([{ x: top.x - px, y: top.y - py }, { x: top.x + px, y: top.y + py }], a, 0.05);
+    if (b.k === 'winged' && col === ink) { gearFrame(top, foot, f); gpoly([[-0.06, 0.02], [-0.3, -0.12], [-0.24, 0.0], [-0.3, 0.06], [-0.06, 0.08]], a); ctx.restore(); }
+    if (b.k === 'slipper') { ctx.fillStyle = a; ctx.beginPath(); ctx.arc(foot.x + f * 0.14, foot.y - 0.06, 0.035, 0, 6.283); ctx.fill(); }
+  }
+}
+function drawGearHead(S, pal, ink, mono) {
+  const h = S.look && S.look.head;
+  if (!h) return;
+  const a = mono || h.a, paper = mono || pal.steel;
+  gearFrame(S.head, S.neck, S.face || 1);
+  const dome = (r, fill, sc, w) => { ctx.beginPath(); ctx.arc(0, 0, r, Math.PI, 2 * Math.PI); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (sc) { ctx.strokeStyle = sc; ctx.lineWidth = w; ctx.stroke(); } };
+  const k = h.k;
+  if (k === 'hood' || k === 'cowl') {
+    ctx.beginPath(); ctx.arc(0, 0, 0.215, -Math.PI / 3, -Math.PI * 1.25, true); ctx.lineTo(-0.14, 0.32); ctx.lineTo(-0.02, 0.14); ctx.closePath(); ctx.fillStyle = ink; ctx.fill();
+    ctx.strokeStyle = a; ctx.lineWidth = 0.045; ctx.beginPath(); ctx.arc(0, 0, 0.2, -Math.PI / 3, -Math.PI * 0.85, true); ctx.stroke();
+    if (k === 'cowl') { gpoly([[-0.02, -0.19], [-0.02, -0.42], [0.1, -0.18]], ink); gpoly([[-0.14, -0.14], [-0.26, -0.36], [-0.04, -0.2]], ink); }
+  } else if (k === 'helm' || k === 'brow' || k === 'crest') {
+    dome(0.2, ink);
+    gline([[0.21, 0.0], [-0.21, 0.0]], ink, 0.045);
+    ctx.strokeStyle = paper; ctx.lineWidth = 0.025; ctx.beginPath(); ctx.arc(0, 0, 0.14, Math.PI * 1.55, Math.PI * 1.85); ctx.stroke();
+    ctx.strokeStyle = a; ctx.lineWidth = 0.05; ctx.beginPath(); ctx.arc(0, 0, 0.2, Math.PI * 1.3, Math.PI * 1.55); ctx.stroke();
+    if (k === 'brow') { gpoly([[0.1, -0.15], [0.34, -0.36], [0.15, -0.09]], ink); gpoly([[-0.1, -0.15], [-0.32, -0.38], [-0.15, -0.09]], ink); }
+    if (k === 'crest') { ctx.fillStyle = a; ctx.beginPath(); ctx.moveTo(0.02, -0.19); ctx.quadraticCurveTo(-0.05, -0.38, -0.36, -0.2); ctx.quadraticCurveTo(-0.15, -0.22, -0.08, -0.17); ctx.closePath(); ctx.fill(); }
+  } else if (k === 'cap') {
+    dome(0.18, ink); gline([[0.02, -0.01], [0.3, 0.01]], ink, 0.045);
+    ctx.fillStyle = a; ctx.beginPath(); ctx.arc(0, -0.19, 0.035, 0, 6.283); ctx.fill();
+  } else if (k === 'hat' || k === 'hood_lantern') {
+    gpoly([[-0.12, -0.1], [-0.1, -0.27], [0.1, -0.27], [0.12, -0.1]], ink);
+    gline([[-0.12, -0.14], [0.12, -0.14]], a, 0.04);
+    gline([[-0.3, -0.1], [0.3, -0.1]], ink, 0.045);
+    if (k === 'hood_lantern') { gline([[0.3, -0.08], [0.3, 0.04]], ink, 0.02); gpoly([[0.26, 0.04], [0.34, 0.04], [0.33, 0.13], [0.27, 0.13]], a); }
+  } else if (k === 'circlet') {
+    gline([[-0.16, -0.05], [0.155, -0.1]], a, 0.035);
+    ctx.fillStyle = a; ctx.strokeStyle = ink; ctx.lineWidth = 0.015; ctx.beginPath(); ctx.arc(0.14, -0.1, 0.04, 0, 6.283); ctx.fill(); ctx.stroke();
+  } else if (k === 'crown') {
+    const pts = h.x ? [[-0.15, -0.1], [-0.15, -0.3], [-0.1, -0.2], [-0.06, -0.36], [-0.02, -0.21], [0.03, -0.37], [0.07, -0.21], [0.11, -0.34], [0.15, -0.2], [0.15, -0.1]]
+      : [[-0.15, -0.1], [-0.15, -0.32], [-0.07, -0.21], [0, -0.36], [0.07, -0.21], [0.15, -0.32], [0.15, -0.1]];
+    gpoly(pts, paper, ink, 0.03);
+    ctx.fillStyle = a; ctx.beginPath(); ctx.arc(0, -0.16, 0.035, 0, 6.283); ctx.fill();
+  } else if (k === 'mask' || k === 'plague') {
+    ctx.beginPath(); ctx.arc(0, 0, 0.17, -Math.PI / 2, Math.PI / 2); ctx.closePath(); ctx.fillStyle = k === 'plague' ? ink : paper; ctx.fill(); ctx.strokeStyle = ink; ctx.lineWidth = 0.03; ctx.stroke();
+    if (k === 'plague') gpoly([[0.12, -0.03], [0.42, 0.12], [0.1, 0.1]], ink);
+    ctx.fillStyle = a; ctx.beginPath(); ctx.arc(0.09, -0.03, 0.035, 0, 6.283); ctx.fill();
+  }
+  ctx.restore();
+}
 function drawFig(S, side, pal, flash, mono) {
   if (mono) pal = monoPal(mono);
   const ink = flash ? pal[TEAM[side]] : pal.ink, far = flash ? pal[TEAM[side]] : pal.far, team = pal[TEAM[side]];
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const lw = 0.095;
+  drawGearBack(S, pal, ink, mono);
   drawBackWeapon(S, side, pal, far);
   stroke([S.hip, S.kb, S.bf], far, lw);
   stroke([S.sh, S.eb, S.hb], far, lw);
@@ -5005,7 +5113,10 @@ function drawFig(S, side, pal, flash, mono) {
   }
   stroke([S.hip, S.neck], ink, lw * 1.08);
   stroke([S.hip, S.kf, S.ff], ink, lw);
+  drawGearFeet(S, pal, ink, far, mono);
+  drawGearTorso(S, pal, ink, mono);
   ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(S.head.x, S.head.y, 0.155, 0, Math.PI * 2); ctx.fill();
+  drawGearHead(S, pal, ink, mono);
   const hx = S.head.x - S.neck.x, hy = S.head.y - S.neck.y, hd = Math.hypot(hx, hy) || 1;
   const px = -hy / hd, py = hx / hd, bx = S.head.x + hx / hd * 0.02, by = S.head.y + hy / hd * 0.02;
   stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
@@ -5192,8 +5303,8 @@ let flashCell = null;
 const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue('--display');
 function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
-  if (u.state === 'dead') { drawFig(ragSkel(u.rag), u.side, pal, false); return; }
-  const S = skel(u); S.scarf = u.scarf;
+  if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
+  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face;
   for (const g of u.ghosts) {
     if (g.age < 0) continue;
     ctx.globalAlpha = 0.5 * (1 - g.age / g.max);
@@ -5582,6 +5693,191 @@ const GEAR_ICON = {
   relic: '<path d="M11 2.5 L18.5 9 L11 19.5 L3.5 9 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 9 H18.5 M8 9 L11 19.5 L14 9" fill="none" stroke="#c9961a" stroke-width="1.6" stroke-linejoin="round"/>',
 };
 const gearSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true">${GEAR_ICON[k]}</svg>`;
+// ---- item art: a small ink drawing per item, in the same line as the slot and skill icons. The shape
+// comes from the item's kind and name (a hood, a crown, a bell, a vial…), each family paints one part in
+// its own accent, and keystones and relics get a mark of their own. 32×32, ink is currentColor.
+const FAM_ACC = {
+  gel: '#2fa58a', wing: '#7057cf', scale: '#2f8a2f', silk: '#8f7fc4', tide: '#1a9bb0', iron: '#6b7682',
+  toxic: '#6aa21a', frost: '#4fb2de', storm: '#e0a000', blood: '#c0304a', ember: '#eb6834', molten: '#b8461b',
+};
+const PAPER_C = '#f4f6f8';
+const pth = (d, fill = 'currentColor', stroke = 'none', w = 1.5, extra = '') => `<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round"${extra}/>`;
+const ln = (d, c = 'currentColor', w = 2) => pth(d, 'none', c, w);
+const circ = (x, y, r, fill = 'currentColor', stroke = 'none', w = 1.5) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="${w}"/>`;
+const paperP = (d, w = 1.6) => pth(d, PAPER_C, 'currentColor', w);
+// a stable small number from an item id, for picking between look-alike variants
+const artHash = (s) => { let h = 7; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h; };
+const has = (name, ...words) => words.some((w) => name.includes(w));
+
+const ART_WEAPON = {
+  sword(v, a) {
+    const blade = [
+      'M9 21 L24.5 5.5 L27.5 4.5 L26.5 7.5 L11 23 Z',                  // straight
+      'M9 21 C 15 17 21 12 27 4.5 C 24 12 18 19 11 23 Z',               // sabre
+      'M8.5 20.5 L20 9 L27 7.5 L25.5 14.5 L11.5 23.5 Z',                // cleaver
+    ][v % 3];
+    return paperP(blade) + ln('M6 18.5 L13.5 26', 'currentColor', 3) + ln('M4 28 L8.5 23.5', a, 3.4) + circ(3.4, 28.6, 1.9);
+  },
+  daggers(v, a) {
+    const one = v % 2 ? 'M6 25 C 9 19 13 15 18.5 12 C 15 17 11 21 8 27 Z' : 'M6.5 25.5 L17 15 L19 14 L18 16 L8.5 26.5 Z';
+    return paperP(one) + `<g transform="matrix(-1 0 0 1 32 0)">${paperP(one)}</g>` + ln('M4.5 22.5 L9.5 27.5', 'currentColor', 2.6) + ln('M27.5 22.5 L22.5 27.5', 'currentColor', 2.6)
+      + ln('M3 29 L5.5 26.5', a, 3) + ln('M29 29 L26.5 26.5', a, 3);
+  },
+  spear(v, a) {
+    const head = [
+      'M21 11 L25 4 L28 3.5 L27.5 6.5 L21 11 Z M21 11 L23.5 5.5',
+      'M19 13 L22.5 9.5 M18.5 8 C 19 10.5 21.5 13 24 13.5 M18.5 8 L17.5 5.5 M24 13.5 L26.5 14.5 M22.5 9.5 L28 4',
+      'M21 11 L25 4 L28 3.5 L27.5 6.5 Z M24.5 8 C 27.5 9 28 12 26 14',
+    ][v % 3];
+    return ln(v % 3 === 1 ? 'M4 28 L19 13' : 'M4 28 L21.5 10.5', 'currentColor', 2.4) + (v % 3 === 1 ? ln(head, 'currentColor', 2.2) : paperP(head)) + ln(v % 3 === 1 ? 'M14.5 17.5 L17 15' : 'M17 15 L19.5 12.5', a, 3.4);
+  },
+  hammer(v, a) {
+    const head = [
+      paperP('M14 9 L20 3 L29 12 L23 18 Z') + ln('M17.5 7.5 L24.5 14.5', a, 2.4),
+      circ(22, 10, 5.6, PAPER_C, 'currentColor', 1.6) + ln('M22 2.5 V4.5 M22 15.5 V17.5 M14.5 10 H16.5 M27.5 10 H29.5 M16.8 4.8 L18 6 M26 14 L27.2 15.2 M27.2 4.8 L26 6 M18 14 L16.8 15.2', 'currentColor', 1.6) + circ(22, 10, 1.8, a),
+      paperP('M15 8 L20 3 L25.5 8.5 L20.5 13.5 Z') + pth('M23 11 L29.5 14 L26 17.5 Z') + ln('M17.5 5.5 L23 11', a, 2.2),
+    ][v % 3];
+    return ln('M4.5 28 L19.5 13', 'currentColor', 2.6) + head + ln('M5 27.5 L8 24.5', a, 3.2);
+  },
+  bow(v, a) {
+    const arc = ['M9 3.5 C 22 6 22 26 9 28.5', 'M8 3 C 18 3 25 10 24.5 16 C 25 22 18 29 8 29', 'M9 4 C 15 5 13 11 17 16 C 13 21 15 27 9 28'][v % 3];
+    return ln(arc, 'currentColor', 2.6) + ln('M9 3.5 V28.5', 'currentColor', 1) + ln('M5 16 H26', 'currentColor', 1.6) + paperP('M26 16 L22.5 13.5 L22.5 18.5 Z', 1.2)
+      + ln('M5 16 L3 14 M5 16 L3 18', a, 1.6) + ln(v % 3 === 1 ? 'M23.5 13 V19' : 'M18.5 13.5 V18.5', a, 3);
+  },
+  stars(v, a) {
+    const s = [
+      'M16 3 L19 13 L29 16 L19 19 L16 29 L13 19 L3 16 L13 13 Z',
+      'M16 3 L18.5 11.5 L27.3 9.5 L21 16 L27.3 22.5 L18.5 20.5 L16 29 L13.5 20.5 L4.7 22.5 L11 16 L4.7 9.5 L13.5 11.5 Z',
+      null,
+    ][v % 3];
+    if (!s) return circ(16, 16, 11, PAPER_C, 'currentColor', 1.8) + circ(16, 16, 5.5, 'none', 'currentColor', 1.8) + ln('M16 5 V9 M16 23 V27 M5 16 H9 M23 16 H27', 'currentColor', 1.6) + circ(16, 16, 2.4, a);
+    return paperP(s) + circ(16, 16, 2.8, a);
+  },
+};
+const ART_HEAD = {
+  hood: (a) => pth('M5.5 27 C 5 12 9 4.5 16 4.5 C 23 4.5 27 12 26.5 27 Z') + pth('M10.5 24 C 10 15 12.5 11 16 11 C 19.5 11 22 15 21.5 24 Z', PAPER_C) + ln('M10.5 24 C 10 15 12.5 11 16 11 C 19.5 11 22 15 21.5 24', a, 1.8),
+  cowl: (a) => ART_HEAD.hood(a) + pth('M8 10 L5 2.5 L12 7 Z') + pth('M24 10 L27 2.5 L20 7 Z'),
+  helm: (a) => paperP('M6 25 V15 C 6 8 10.5 5 16 5 C 21.5 5 26 8 26 15 V25 Z', 1.8) + pth('M9 16 H23 V19 H9 Z') + ln('M16 5 V13', a, 2.4) + ln('M6 25 H26', 'currentColor', 2.4),
+  brow: (a) => ART_HEAD.helm(a) + pth('M7 12 C 3.5 11 2 8 2.5 4.5 C 5 7 7 8 9.5 8.5 Z') + pth('M25 12 C 28.5 11 30 8 29.5 4.5 C 27 7 25 8 22.5 8.5 Z'),
+  cap: (a) => pth('M6 21 C 6 11 10 7 16 7 C 22 7 26 11 26 21 Z') + ln('M3.5 22 H28.5', 'currentColor', 2.6) + ln('M8 16 C 12 14 20 14 24 16', a, 2.2) + circ(16, 6.5, 2, a),
+  hat: (a) => pth('M2.5 22 C 8 18.5 24 18.5 29.5 22 C 24 25 8 25 2.5 22 Z') + paperP('M9 20 C 9 11 11.5 6 16 6 C 20.5 6 23 11 23 20') + ln('M9.5 17 H22.5', a, 2.4),
+  crest: (a) => ART_HEAD.helm(a) + pth('M13 6 C 13 2 18 1 21 3 C 18 3.5 17 5 18 6 Z', a),
+  circlet: (a) => ln('M4 18 C 8 13 24 13 28 18', 'currentColor', 2.6) + ln('M4 18 C 8 22 24 22 28 18', 'currentColor', 1.2) + pth('M16 9 L19.5 14 L16 19 L12.5 14 Z', a, 'currentColor', 1.2),
+  crown: (a, thorny) => paperP(thorny ? 'M5 25 L5 11 L9 16 L11.5 6 L14 14 L16 4 L18 14 L20.5 6 L23 16 L27 11 L27 25 Z' : 'M5 25 L5 10 L10.5 16 L16 6 L21.5 16 L27 10 L27 25 Z') + ln('M5 25 H27', 'currentColor', 2.6) + circ(16, 20, 2.4, a) + circ(10, 21, 1.4, a) + circ(22, 21, 1.4, a),
+  mask: (a) => pth('M5 9 C 11 6 21 6 27 9 C 27 18 23 25 16 27 C 9 25 5 18 5 9 Z') + pth('M9 13.5 C 10.5 12 13 12 14 14 C 12.5 15.5 10 15.5 9 13.5 Z M23 13.5 C 21.5 12 19 12 18 14 C 19.5 15.5 22 15.5 23 13.5 Z', a),
+  plague: (a) => pth('M4 12 C 6 5 14 4 17 9 L29 22 C 22 23 15 21 12 18 C 6 18 3 16 4 12 Z') + circ(9.5, 11, 2.6, PAPER_C, 'currentColor', 1.2) + circ(9.5, 11, 1.1, a) + ln('M12 18 L20 17.5', a, 1.4),
+  hood_lantern: (a) => ART_HEAD.hat(a) + ln('M16 22 V26', 'currentColor', 1.4) + pth('M13.5 26 H18.5 L17.5 30 H14.5 Z', a),
+};
+const ART_CORE = {
+  tunic: (a) => paperP('M10 4.5 L4 9 L6.5 15 L9.5 13.5 V28 H22.5 V13.5 L25.5 15 L28 9 L22 4.5 C 20 7 12 7 10 4.5 Z') + ln('M9.5 20 H22.5', a, 2.6),
+  robe: (a) => paperP('M11 4 L5 8.5 L8 14 L10 13 L7 29 H25 L22 13 L24 14 L27 8.5 L21 4 C 19 6.5 13 6.5 11 4 Z') + ln('M16 7 V29', a, 2.2) + ln('M10 16 H22', 'currentColor', 2),
+  cloak: (a) => pth('M11 4.5 C 8 12 5 20 3.5 28.5 H28.5 C 27 20 24 12 21 4.5 C 19 6 13 6 11 4.5 Z') + pth('M12.5 8 C 12 16 12.5 23 13 28.5 H19 C 19.5 23 20 16 19.5 8 Z', PAPER_C) + circ(16, 7, 2.2, a),
+  plate: (a) => paperP('M8 5 L4 8 L5 16 L8 15.5 L9 28 H23 L24 15.5 L27 16 L28 8 L24 5 C 21 7.5 11 7.5 8 5 Z', 1.8) + ln('M16 9 V27', 'currentColor', 1.4) + ln('M9 18 H23', a, 2.6) + circ(11.5, 11.5, 1.1) + circ(20.5, 11.5, 1.1) + circ(11.5, 24, 1.1) + circ(20.5, 24, 1.1),
+  mail: (a) => paperP('M10 4.5 L4.5 9 L7 14.5 L9.5 13.5 V28 H22.5 V13.5 L25 14.5 L27.5 9 L22 4.5 C 20 7 12 7 10 4.5 Z') + ln('M10 13 Q 12 15.5 14 13 Q 16 15.5 18 13 Q 20 15.5 22 13 M10 18 Q 12 20.5 14 18 Q 16 20.5 18 18 Q 20 20.5 22 18 M10 23 Q 12 25.5 14 23 Q 16 25.5 18 23 Q 20 25.5 22 23', a, 1.4),
+  vest: (a) => paperP('M9 4.5 L6 8 V28 H14 L16 12 L18 28 H26 V8 L23 4.5 L20 5.5 L16 12 L12 5.5 Z') + ln('M16 12 V28', 'currentColor', 1.2) + ln('M9 20 H14.5 M17.5 20 H23', a, 2.4),
+  mantle: (a) => pth('M4 13 C 8 5 24 5 28 13 C 26 16 22 16.5 16 15.5 C 10 16.5 6 16 4 13 Z') + paperP('M9 15.5 V28.5 H23 V15.5') + circ(16, 9.5, 2.2, a),
+  wings: (a) => pth('M16 8 C 12 4 5 4 2.5 9 C 5 9.5 6 12 5 15 C 8 14 10 16 9.5 19 C 12 17.5 14.5 18 16 20 Z') + pth('M16 8 C 20 4 27 4 29.5 9 C 27 9.5 26 12 27 15 C 24 14 22 16 22.5 19 C 20 17.5 17.5 18 16 20 Z') + paperP('M13 10 H19 V29 H13 Z', 1.4) + ln('M13 16 H19', a, 2),
+};
+const ART_FEET = {
+  boot: (a) => paperP('M9 3.5 H18 V17 C 22 17.5 28 19.5 28 25 V27 H5.5 V21 Z') + ln('M5.5 27.5 H28', 'currentColor', 2.8) + ln('M9 8 H18', a, 2.6),
+  heavy: (a) => paperP('M7.5 4 H19 V16 C 24 16 29 18.5 29 23.5 V26 H5 V20 Z', 1.8) + pth('M4.5 25 H29.5 V29 H4.5 Z') + ln('M7.5 9 H19 M7.5 13 H19', a, 2) + circ(12, 20, 1.1),
+  winged: (a) => ART_FEET.boot(a) + pth('M9 11 C 5 9 2.5 6 2 2.5 C 4.5 5 6 5.5 9 6 Z', a) + pth('M9 14.5 C 5.5 13.5 3 11.5 2.5 9 C 5 10.5 6.5 11 9 11 Z', a),
+  slipper: (a) => paperP('M4 23 C 4 17 10 15 16 16 C 21 16.5 25 16 28 12 C 30 14 29.5 18 27 20 C 24 23.5 18 26 11 26 H6 C 4.5 26 4 24.5 4 23 Z') + circ(28.5, 11.5, 1.8, a) + ln('M8 19 C 11 18 14 18.5 16 20', a, 2),
+  shoe: (a) => paperP('M5 16 C 5 13 8 12 12 12.5 L15 17 C 20 17 27 18.5 28 23.5 V25.5 H5 Z') + ln('M5 26 H28', 'currentColor', 2.6) + ln('M11 13 L14 17.5', a, 2),
+};
+const ART_TRINKET = {
+  charm: (a) => ln('M16 2.5 V8', 'currentColor', 1.6) + ln('M12.5 3 H19.5', 'currentColor', 1.6) + circ(16, 17, 8.5, PAPER_C, 'currentColor', 2) + pth('M16 11 L21 17 L16 23 L11 17 Z', a),
+  ring: (a) => circ(16, 19, 8.5, 'none', 'currentColor', 3) + pth('M12 9 L16 4 L20 9 L16 12.5 Z', a, 'currentColor', 1.2),
+  bell: (a) => paperP('M8 24 C 8 16 9 8 16 7 C 23 8 24 16 24 24 Z', 1.8) + ln('M5 24.5 H27', 'currentColor', 2.6) + circ(16, 27.5, 2.2, a) + ln('M16 7 V3.5', 'currentColor', 2),
+  vial: (a) => paperP('M12.5 3.5 H19.5 V10 C 24 12 26.5 16 26.5 20 C 26.5 26 22 29 16 29 C 10 29 5.5 26 5.5 20 C 5.5 16 8 12 12.5 10 Z') + pth('M7 20 C 12 18 20 22 25 19.5 C 25.5 25 21.5 27.5 16 27.5 C 10.5 27.5 6.5 25 7 20 Z', a) + pth('M11.5 2.5 H20.5 V5.5 H11.5 Z'),
+  fang: (a) => ln('M9 4 C 12 7 20 7 23 4', 'currentColor', 1.6) + paperP('M10 6 C 10 15 13 24 16 29 C 19 24 22 15 22 6 C 19 8 13 8 10 6 Z') + ln('M16 12 C 15 17 15.5 21 16 25', a, 1.8),
+  orb: (a) => circ(16, 16, 11, PAPER_C, 'currentColor', 2) + circ(16, 16, 6, a) + circ(13.5, 13.5, 1.8, PAPER_C),
+  coil: (a) => ln('M8 26 C 26 26 26 22 8 22 C 26 22 26 18 8 18 C 26 18 26 14 8 14 C 26 14 26 10 8 10', 'currentColor', 2.2) + pth('M6 26 H26 V29 H6 Z', a) + pth('M6 5 H26 V8 H6 Z'),
+  feather: (a) => pth('M24 3 C 12 6 6 16 7 27 C 17 25 26 15 24 3 Z', PAPER_C, 'currentColor', 1.6) + ln('M5 30 C 10 22 16 14 23 5', 'currentColor', 1.8) + ln('M10 22 L14 22.5 M12.5 17.5 L17 18 M15.5 13 L20 13', a, 1.6),
+  hourglass: (a) => ln('M6 3.5 H26 M6 28.5 H26', 'currentColor', 2.8) + paperP('M9 4 H23 C 23 10 17.5 13 16 16 C 17.5 19 23 22 23 28 H9 C 9 22 14.5 19 16 16 C 14.5 13 9 10 9 4 Z') + pth('M11 27 C 12 22.5 15 21 16 19.5 C 17 21 20 22.5 21 27 Z M12 9 H20 C 18.5 11.5 17 13 16 14 C 15 13 13.5 11.5 12 9 Z', a),
+  clover: (a) => ['M16 15 C 11 13 10 6 14 5.5 C 15.5 5.3 16 7 16 8 C 16 7 16.5 5.3 18 5.5 C 22 6 21 13 16 15', 'M16 15 C 11 17 10 24 14 24.5 C 15.5 24.7 16 23 16 22 C 16 23 16.5 24.7 18 24.5 C 22 24 21 17 16 15', 'M16 15 C 14 10 7 9 6.5 13 C 6.3 14.5 8 15 9 15 C 8 15 6.3 15.5 6.5 17 C 7 21 14 20 16 15', 'M16 15 C 18 10 25 9 25.5 13 C 25.7 14.5 24 15 23 15 C 24 15 25.7 15.5 25.5 17 C 25 21 18 20 16 15'].map((d) => pth(d, a, 'currentColor', 1.2)).join('') + ln('M16 15 C 17 21 18 25 21 29', 'currentColor', 1.8),
+  locket: (a) => ln('M8 3 C 10 9 22 9 24 3', 'currentColor', 1.4) + pth('M16 12 C 13 8 7 9 7 14.5 C 7 20 12 24 16 28 C 20 24 25 20 25 14.5 C 25 9 19 8 16 12 Z', PAPER_C, 'currentColor', 1.8) + pth('M16 15.5 C 14.5 13.5 11.5 14 11.5 16.5 C 11.5 19 14 21 16 23 C 18 21 20.5 19 20.5 16.5 C 20.5 14 17.5 13.5 16 15.5 Z', a),
+  heart: (a) => pth('M16 10 C 13 5 4.5 6 4.5 13 C 4.5 20 11 24.5 16 29 C 21 24.5 27.5 20 27.5 13 C 27.5 6 19 5 16 10 Z', PAPER_C, 'currentColor', 1.8) + pth('M16 14 L13 18 L16.5 20 L14 25', 'none', a, 1.8),
+  eye: (a) => pth('M2.5 16 C 8 7 24 7 29.5 16 C 24 25 8 25 2.5 16 Z', PAPER_C, 'currentColor', 1.8) + circ(16, 16, 5.5, a) + circ(16, 16, 2.4) + circ(14.3, 14.3, 1, PAPER_C),
+  mirror: (a) => pth('M16 3 C 22.5 3 25.5 7.5 25.5 12.5 C 25.5 17.5 22 21 16 21 C 10 21 6.5 17.5 6.5 12.5 C 6.5 7.5 9.5 3 16 3 Z') + pth('M16 6 C 20.5 6 22.5 9 22.5 12.5 C 22.5 16 20 18 16 18 C 12 18 9.5 16 9.5 12.5 C 9.5 9 11.5 6 16 6 Z', PAPER_C) + ln('M12 9.5 L14 7.5 M12 13 L17.5 7.5', a, 1.4) + ln('M16 21 V29', 'currentColor', 3) + ln('M12 29 H20', 'currentColor', 2.4),
+  idol: (a) => pth('M11 29 V20 C 8 19 7 15 9 12 C 9 7 12 4 16 4 C 20 4 23 7 23 12 C 25 15 24 19 21 20 V29 Z') + pth('M11.5 12 C 13 10.8 14.5 11 15 12.5 M17 12.5 C 17.5 11 19 10.8 20.5 12', 'none', PAPER_C, 1.4) + circ(16, 17, 2.5, a) + ln('M8 29.5 H24', 'currentColor', 2.4),
+  chalice: (a) => paperP('M6 4 H26 C 26 12 22 16.5 16 17 C 10 16.5 6 12 6 4 Z') + pth('M7.5 8 H24.5 C 24 12.5 21 15 16 15.5 C 11 15 8 12.5 7.5 8 Z', a) + ln('M16 17 V25', 'currentColor', 2.6) + ln('M10 27 C 12 25 20 25 22 27 Z', 'currentColor', 2.4),
+  censer: (a) => ln('M16 2.5 V8', 'currentColor', 1.4) + pth('M7 13 C 7 9 25 9 25 13 L23 22 C 21 26 11 26 9 22 Z') + ln('M7 14.5 H25', PAPER_C, 1.4) + pth('M11 27 C 13 25 19 25 21 27 V29 H11 Z') + ln('M12 8 C 10 5 13 3.5 12 1.5 M20 8 C 22 5 19 3.5 20 1.5', a, 1.6),
+  bottle: (a) => paperP('M12.5 3 H19.5 V9 C 23 10.5 24.5 13 24.5 16 V26 C 24.5 28 23 29 21 29 H11 C 9 29 7.5 28 7.5 26 V16 C 7.5 13 9 10.5 12.5 9 Z') + pth('M16.5 13 L12 20 H16 L14 26 L20 18 H16 L18.5 13 Z', a) + pth('M11.5 2 H20.5 V5 H11.5 Z'),
+  shell: (a) => paperP('M4 22 C 4 12 11 5 19 4 C 26 5 29 11 27 17 C 25 23 18 28 8 27 C 5 26.5 4 24.5 4 22 Z') + ln('M8 25 C 12 20 17 14 25 9 M7 21 C 11 15 16 10 21 6 M11 26.5 C 16 22 21 17 27 14', a, 1.4),
+  stone: (a) => pth('M5 20 C 4 13 9 7 16 7 C 23 7 28 12 27 19 C 26 25 20 27 15 26.5 C 9 26 5.5 24 5 20 Z') + ln('M11 13 L15 11 M20 20 L23.5 18', PAPER_C, 1.6) + circ(17, 16, 2.2, a),
+  spool: (a) => pth('M8 5 H24 V9 H8 Z M8 23 H24 V27 H8 Z') + paperP('M10 9 H22 V23 H10 Z', 1.4) + ln('M10 12 H22 M10 15 H22 M10 18 H22 M10 21 H22', a, 1.6) + ln('M22 16 C 27 17 28 22 25 27', a, 1.4),
+  pot: (a) => paperP('M9 10 C 5 13 5 25 10 28 H22 C 27 25 27 13 23 10 Z') + pth('M8.5 7 H23.5 V10.5 H8.5 Z') + pth('M8 19 C 12 17 20 21 24.5 18.5 C 25 23 23.5 26 21 27.5 H11 C 8.5 26 7 23 8 19 Z', a) + ln('M22 7 L27 2.5', 'currentColor', 1.6),
+  core_gear: (a) => pth('M14 3 H18 L18.7 6.2 L21.7 7.4 L24.5 5.6 L27.3 8.4 L25.5 11.2 L26.7 14.2 L30 15 V19 L26.7 19.8 L25.5 22.8 L27.3 25.6 L24.5 28.4 L21.7 26.6 L18.7 27.8 L18 31 H14 L13.3 27.8 L10.3 26.6 L7.5 28.4 L4.7 25.6 L6.5 22.8 L5.3 19.8 L2 19 V15 L5.3 14.2 L6.5 11.2 L4.7 8.4 L7.5 5.6 L10.3 7.4 L13.3 6.2 Z', 'currentColor', 'none', 1, ' transform="translate(0 -1)"') + circ(16, 16, 5.5, a) + circ(16, 16, 2.2, PAPER_C),
+  ribbon: (a) => pth('M16 13 C 11 6 4 7 5 12 C 6 16 12 15 16 13 Z M16 13 C 21 6 28 7 27 12 C 26 16 20 15 16 13 Z', a, 'currentColor', 1.4) + pth('M16 13 L11 28 L14 26.5 L15.5 29 L16 13 L17 29 L18.5 26.5 L21 28 Z') + circ(16, 13, 2.4),
+  jar: (a) => paperP('M9 8 C 6 10 6 14 7 18 C 7 25 10 29 16 29 C 22 29 25 25 25 18 C 26 14 26 10 23 8 Z') + pth('M8 16 C 12 14 20 17.5 24.5 15.5 C 25 23 21 27.5 16 27.5 C 11 27.5 7.5 24 8 16 Z', a) + pth('M7 5 H25 V8.5 H7 Z') + ln('M9 5 C 10 3 22 3 23 5', 'currentColor', 1.2),
+};
+// family motifs, drawn small in a corner so the icon still reads at a glance
+const FAM_MARK = {
+  gel: (a) => pth('M27 23 C 29.5 25.5 29 29.5 26 29.5 C 23 29.5 22.5 25.5 25 23 C 25.5 22 26.5 22 27 23 Z', a),
+  wing: (a) => pth('M22 28 C 23 24 26 23 30 23.5 C 28.5 25 29 26.5 30 27.5 C 27.5 27 26 28 26 30 C 25 28.5 23.5 28 22 28 Z', a),
+  scale: (a) => ln('M22 29 Q 24 26.5 26 29 Q 28 26.5 30 29 M24 25.5 Q 26 23 28 25.5', a, 1.4),
+  silk: (a) => ln('M22 23 L30 31 M26 22.5 V31 M22 27 H30 M23.5 25 C 25 26 26.5 26 28.5 25 M23.5 29 C 25 28 26.5 28 28.5 29', a, 1),
+  tide: (a) => circ(25, 27, 2.2, 'none', a, 1.3) + circ(29.2, 24.5, 1.3, 'none', a, 1.1) + circ(28.8, 29.5, 0.9, a),
+  iron: (a) => circ(24.5, 27.5, 1.6, a) + circ(29, 27.5, 1.6, a),
+  toxic: (a) => pth('M24 22 C 25.5 25 27 26 27 27.5 A 2.3 2.3 0 0 1 22.4 27.5 C 22.4 26 23 25 24 22 Z M29 25 C 29.8 26.6 30.5 27.2 30.5 28.2 A 1.4 1.4 0 0 1 27.7 28.2 C 27.7 27.4 28.2 26.6 29 25 Z', a),
+  frost: (a) => ln('M26 22 V31 M22.1 24.2 L29.9 28.8 M22.1 28.8 L29.9 24.2', a, 1.3),
+  storm: (a) => pth('M27.5 21 L23 27 H26 L24.5 31 L30 24.5 H27 Z', a),
+  blood: (a) => pth('M26 21.5 C 28 25 29.5 26.5 29.5 28 A 3.5 3.5 0 0 1 22.5 28 C 22.5 26.5 24 25 26 21.5 Z', a),
+  ember: (a) => pth('M26 31 C 23 31 22 28.5 23 26.5 C 23.8 25 25.2 24.2 24.8 21.5 C 27 22.5 29.5 25 29.5 27.8 C 29.5 30 28 31 26 31 Z', a),
+  molten: (a) => ln('M22 26 L25 28 L24 30.5 M25 28 L28.5 26.5 L30 29', a, 1.4),
+};
+// which drawing each item gets, from its kind and name
+function artShape(it) {
+  const n = it.name;
+  if (it.slot === 'head') {
+    if (has(n, 'Plague')) return ['plague']; if (has(n, 'Briar')) return ['crown', true]; if (has(n, 'Crown', 'Bulwark')) return ['crown'];
+    if (has(n, 'Lantern')) return ['hood_lantern']; if (has(n, 'Bell Hat')) return ['hat']; if (has(n, 'Crest')) return ['crest'];
+    if (has(n, 'Circlet')) return ['circlet']; if (has(n, 'Brow')) return ['brow']; if (has(n, 'Bat', 'Cowl')) return ['cowl'];
+    if (has(n, 'Hood')) return ['hood']; if (has(n, 'Cap')) return ['cap']; if (has(n, 'Mask')) return ['mask'];
+    return ['helm'];
+  }
+  if (it.slot === 'core') {
+    if (has(n, 'Plate', 'Juggernaut')) return ['plate']; if (has(n, 'Mail')) return ['mail']; if (has(n, 'Cloak')) return ['cloak'];
+    if (has(n, 'Robe', 'Coat', 'Heart')) return ['robe']; if (has(n, 'Vest', 'Silk')) return ['vest']; if (has(n, 'Mantle')) return ['mantle'];
+    if (has(n, 'Wings')) return ['wings']; return ['tunic'];
+  }
+  if (it.slot === 'feet') {
+    if (has(n, 'Heavy', 'Treads', 'Coil')) return ['heavy']; if (has(n, 'Wing', 'Glide', 'Float', 'Drift', 'Surge')) return ['winged'];
+    if (has(n, 'Slippers')) return ['slipper']; if (has(n, 'Shoes', 'Slick')) return ['shoe']; return ['boot'];
+  }
+  if (it.slot === 'trinket') {
+    const map = [['Clover', 'clover'], ['Hourglass', 'hourglass'], ['Glass Heart', 'heart'], ['Heart of Winter', 'heart'], ['Heart', 'heart'], ['Locket', 'locket'], ['Bell', 'bell'],
+      ['Vial', 'vial'], ['Fang', 'fang'], ['Tooth', 'fang'], ['Ring', 'ring'], ['Eye', 'eye'], ['Mirror', 'mirror'], ['Idol', 'idol'], ['Chalice', 'chalice'],
+      ['Censer', 'censer'], ['Bottled', 'bottle'], ['Conch', 'shell'], ['Stone', 'stone'], ['Spool', 'spool'], ['String', 'spool'], ['Ribbon', 'ribbon'],
+      ['Pearl', 'orb'], ['Pod', 'orb'], ['Core', 'core_gear'], ['Coil', 'coil'], ['Feather', 'feather'], ['Weight', 'feather'], ['Pot', 'pot'], ['Jelly', 'jar'], ['Quicksand', 'hourglass']];
+    for (const [w, k] of map) if (n.includes(w)) return [k];
+    return ['charm'];
+  }
+  return null;
+}
+const ART_CACHE = {};
+function itemArt(id) {
+  if (ART_CACHE[id]) return ART_CACHE[id];
+  const it = ITEM[id], a = (it.family && FAM_ACC[it.family]) || '#2358d6';
+  let body = '';
+  if (it.weapon) {
+    const names = { sword: ['Rusty', 'Gel Blade', 'Iron', 'Star'], daggers: ['Silk', 'Blood', 'Arc'], spear: ['Fang', 'Storm', 'Iron', 'Jelly'], hammer: ['Brute', 'Molten', 'Sludge'], bow: ['Wing', 'Icicle', 'Viper'], stars: ['Scale', 'Tide', 'Ember'] };
+    // named variants first (0 for the plainest), then a stable pick for the rest
+    const plain = names[it.weapon].some((w) => it.name.startsWith(w));
+    const v = plain ? 0 : 1 + (artHash(id) % 2);
+    body = ART_WEAPON[it.weapon](v, a);
+  } else if (it.skill) {
+    body = circ(16, 16, 14, 'none', a, 2) + `<g transform="translate(5 5)">${SKILL_ICON[it.skill].replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
+  } else {
+    const [k, x] = artShape(it), lib = it.slot === 'head' ? ART_HEAD : it.slot === 'core' ? ART_CORE : it.slot === 'feet' ? ART_FEET : ART_TRINKET;
+    body = lib[k](a, x);
+  }
+  if (it.family && !it.skill && !it.relic) body += FAM_MARK[it.family](a);
+  if (it.keystone) body += pth('M2 2 H9 L7.5 7 H3.5 Z', '#b5651d', 'none');   // a little keystone in the corner
+  if (it.relic) body += pth('M5.5 1.5 L8.5 5 L5.5 9 L2.5 5 Z', '#c9961a', 'currentColor', 1);
+  return (ART_CACHE[id] = `<svg viewBox="0 0 32 32" aria-hidden="true">${body}</svg>`);
+}
 const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
 const ACRO_DESC = [
   'Runs and jumps, nothing fancy.',
@@ -5836,6 +6132,7 @@ function demoWorld() {
 }
 function demoUnit(side, bd) {
   const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0, bd.trinket);
+  u.look = (bd.stats && bd.stats.look) || null;   // the doll wears your gear
   u.nav = buildNav(side, u.b.speed, COLS, u.acro);
   const mid = u.nav.idx[10 * COLS + (side ? 10 : 9)];
   u.navOk = mid >= 0 ? reach(u.nav, mid, true) : new Uint8Array(u.nav.nodes.length).fill(1);
@@ -6167,14 +6464,7 @@ function itemStatus(it) {
   const k = (it.onHit && it.onHit[0] && it.onHit[0].apply) || (it.trig && it.trig.map((t) => t.effect.apply).find((a) => ST_ICON[a]));
   return ST_ICON[k] ? k : null;
 }
-function itemIcon(inst) {
-  const it = ITEM[inst.item];
-  if (it.weapon) return gearSvg(it.weapon);
-  if (it.skill) return SKILL_ICON[it.skill];
-  if (it.relic) return gearSvg('relic');
-  if (it.slot === 'trinket') { const k = itemStatus(it); return k ? stSvg(k) : gearSvg('trinket'); }
-  return gearSvg(it.slot);
-}
+const itemIcon = (inst) => itemArt(inst.item);
 // An item's text, as in ZereshkStory: perks first, then the headline (damage and pace for a weapon), the
 // keystone's or relic's rule, statuses on hit, stats, and what a trigger does.
 function itemLines(inst) {
@@ -6456,7 +6746,7 @@ window.__homeTurf = {
   play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
-  run: { Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
+  run: { itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
