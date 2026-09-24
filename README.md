@@ -42,10 +42,22 @@ Then two stick figures fight it out on their own.
   - Duels are against another build for that day. Entering a duel saves yours,
     so later runs can meet your old builds. The run saves as you go, and the
     run bar continues it.
-  - 131 items: 37 weapons, 38 head, core and feet pieces, 25 trinkets, 9 skill
-    items, 10 keystones and 12 relics, in 12 families, one per creature.
-    There are 12 creatures at three tiers. `tools/runbot.mjs` plays whole
-    runs headless.
+  - Many items tie into how this game fights, with effects on rolls, wall
+    jumps and air flips, using your skill, parries, winning a blade exchange,
+    pad launches, air attacks, launching a foe, and kills in a hunt. Examples:
+    Silk Vest (after a roll, your next hit crits), Hide Plate (knockback taken
+    −50%) and Kite String (wall jumps carry you higher). Every item has a line
+    of flavour and its own ink drawing, and what you wear shows on your
+    fighter.
+  - **Random events,** four a run, as in ZereshkStory: the Gremlin Trader,
+    the Crimson Bargain, the Ghostly Tailor, the Dwarf Smith, a Suspicious
+    Chest, the Echo Shrine, the Fortune Well, and an Old Sensei who trains
+    your shoes' acrobatics. Each character is drawn beside your fighter.
+    Two of the same item at the same rarity merge into one a rarity up.
+  - 194 items: 55 weapons, 56 head, core and feet pieces, 43 trinkets, 12
+    skill items, 10 keystones and 18 relics, in 18 families, one per
+    creature. There are 18 creatures at three tiers. `tools/runbot.mjs`
+    plays whole runs headless.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
     reach, and it knocks arrows and stars out of the air.
@@ -118,10 +130,17 @@ Then two stick figures fight it out on their own.
   With random builds, Easy hunts are won about 95% of the time, Normal about
   55–90% and Elite about 15–45%. In a run, a bot that always takes Normal hunts
   wins about two thirds of them.
+  - **Hounds:** a lean, fast pack. Some of them leap clean over you to bite
+    from behind.
+  - **Crows:** hang back in the air and spit ink quills on an arc, then
+    swoop in. Shooters beware.
+  - **Crab:** its big claw guards its face, and hits from the front clank
+    off. Hit it from above, from behind, or while it snaps.
   - **Variants** appear from day 3 in a run: the same bodies with a status on
     their attacks and that status's colour on their eyes and markings. They
     are the Toxic Slime (poison), Frost Bats (chill), Storm Serpent (shock),
-    Blood Spiders (bleed), Ember Jellyfish (burn) and Molten Brute (burn).
+    Blood Spiders (bleed), Ember Jellyfish (burn), Molten Brute (burn),
+    Ember Hounds (burn), Plague Crows (poison) and Frost Crab (chill).
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll

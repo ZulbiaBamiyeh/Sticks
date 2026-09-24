@@ -5,9 +5,9 @@ different. ZereshkStory gets there with this much content:
 
 | | ZereshkStory | Home Turf today |
 | --- | --- | --- |
-| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 12 creatures (6 bodies, 6 variants) × 3 tiers |
+| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 18 creatures (9 bodies, 9 variants) × 3 tiers = 54 |
 | Biomes | 10 | 1 hunting ground |
-| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 131: 37 weapons, 38 armour, 25 trinkets, 9 skill items, 10 keystones, 12 relics |
+| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 194: 55 weapons, 56 armour, 43 trinkets, 12 skill items, 10 keystones, 18 relics |
 | Statuses | 14 | 5 |
 
 ## Creatures: bodies × variants × tiers
@@ -69,8 +69,12 @@ Items now work like ZereshkStory's:
 Creatures in a run grow 35% a day on top of gear's day scaling
 (`mobPower`), because gear multiplies.
 
+Since then:
+- Hounds, Crows and the Crab are built, each with a variant and a family.
+- ZereshkStory's random events and merging are built.
+- Every item has its own drawing, and worn gear shows on the fighter.
+
 Next, in order:
-1. **More bodies** from the list above, two or three at a time, each with a
-   variant and a family.
-2. **The shop, merging and events,** as in ZereshkStory.
-3. **Item art on the doll:** the fighter wearing what's equipped.
+1. **More bodies:** the Mantis, the Wraith and the Toad, each with a variant
+   and a family.
+2. **The shop,** as in ZereshkStory: set pieces, a twin to merge, a keystone.
