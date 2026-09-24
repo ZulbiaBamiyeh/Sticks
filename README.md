@@ -45,6 +45,11 @@ Then two stick figures fight it out on their own.
     fighter who just thawed can't be chilled again for a moment.
   - **Static Charm, Shock:** every hit taken lands harder per stack. Five stacks
     discharge for a burst of damage and a short stun.
+- **Damage breakdown:** after each fight, a donut shows where your damage came
+  from (hits, shots, crits, each status, walls and traps), with a toggle to see
+  what you took instead. Tap or hover a slice or legend row to read it out in the
+  middle. Each type keeps one colour, and statuses use the same colour on the
+  figure, on the HUD chip and in the chart.
 - **Hunts:** the rival page also offers hunts against line-drawn creatures on
   a hunting ground. They have simple brains instead of the route planner, and
   their attacks go through the same hit code, so fighters dodge and parry them

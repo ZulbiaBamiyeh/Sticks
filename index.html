@@ -147,9 +147,31 @@
   .res-t { font: 900 40px/0.95 var(--display); letter-spacing: 0.02em; text-wrap: balance; }
   .res-t.b { color: var(--blue); }
   .res-t.r { color: var(--red); }
-  #resStats { display: grid; grid-template-columns: auto 1fr; gap: 3px 14px; margin: 4px 0 0; font-size: 14px; }
-  #resStats dt { color: var(--ink-2); }
-  #resStats dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+  /* damage breakdown: a donut per side of the ledger, Dealt or Taken */
+  .why-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+  .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  .seg button { font: 700 12px/1 inherit; font-family: inherit; letter-spacing: 0.1em; text-transform: uppercase; padding: 7px 10px; min-height: 32px; background: none; border: 0; color: var(--ink); cursor: pointer; }
+  .seg button + button { border-left: 2px solid var(--ink); }
+  .seg button b { font-variant-numeric: tabular-nums; margin-left: 4px; }
+  .seg button.on { background: var(--ink); color: #fff; }
+  .why-body { display: grid; grid-template-columns: 86px 1fr; gap: 12px; align-items: center; }
+  .why-body[hidden] { display: none; }
+  .donut { position: relative; width: 86px; height: 86px; }
+  .donut svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .donut .sl { transition: opacity .12s, stroke-width .12s; cursor: pointer; }
+  .why-body.focus .sl:not(.hl) { opacity: .25; }
+  .why-body.focus .sl.hl { stroke-width: 16; }
+  .donut .mid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; text-align: center; line-height: 1.05; }
+  .donut .mid b { font: 900 22px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .donut .mid span { font-size: 10px; font-weight: 700; color: var(--ink-2); max-width: 60px; }
+  .dleg { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px 12px; font-size: 13px; }
+  .dleg.two { grid-template-columns: 1fr 1fr; }
+  .dleg li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 6px; min-height: 22px; cursor: pointer; border-radius: 3px; }
+  .dleg li i { width: 10px; height: 10px; border-radius: 2px; }
+  .dleg li b { font-variant-numeric: tabular-nums; }
+  .dleg li em { display: none; }
+  .why-body.focus .dleg li:not(.hl) { opacity: .4; }
+  .dnone { font-size: 14px; color: var(--ink-2); padding: 8px 0; }
   /* On short screens the panel scrolls and its buttons stay pinned to the bottom. */
   .panel { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 10px; padding-block: 12px 14px; }
   .panel > * { flex-shrink: 0; }
@@ -332,7 +354,7 @@
     <div id="result" hidden>
       <div class="res-k" id="resKicker">KO · 0:24</div>
       <div class="res-t" id="resTitle">You win</div>
-      <dl id="resStats"></dl>
+      <div id="resWhy"></div>
     </div>
   </div>
 
@@ -491,7 +513,7 @@ const PAL = {
   ink: '#16191d', far: '#4d555c', hatch: 'rgba(22,25,29,0.07)', grid: 'rgba(22,25,29,0.09)',
   blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
   tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
-  burn: '#e2711d', poison: '#4f9a3a', bleed: '#8c1d2c', chill: '#3d9cc4', shock: '#d9a50f', ice: 'rgba(61,156,196,0.16)',
+  burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#eda100', ice: 'rgba(61,156,196,0.16)',
 };
 const PAL_INV = {
   out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
@@ -1733,9 +1755,9 @@ function parrySuccess(u, att, x, y, what = 'shot') {
   sparks(px, py, 0, 26); ring(px, py, 1.7, 'spark'); ring(px, py, 1.1, TEAM[u.side]);
   streak(px, py, -1.35, 2.2, 'spark'); streak(px, py, 0.2, 1.6, 'spark');
   callout(u, 'PARRY');
-  world.hs = Math.max(world.hs, 12); world.impact = Math.max(world.impact, 2); world.punch = 1; sfxShake(7);
+  // a short, sharp freeze: long enough to read, too short to feel like the game hitched
+  world.hs = Math.max(world.hs, att ? 7 : 4); world.impact = Math.max(world.impact, 1); world.punch = 1; sfxShake(att ? 6 : 3);
   if (world.demo) return;
-  world.slowT = Math.max(world.slowT, 16);
   world.stats[u.side].parry++;
   const thing = att ? '' : what === 'hook' ? ' the hook' : ' the shot';
   if (att) log(u.side ? `${rivalName()} parried. You're wide open.` : 'Parried. The rival is wide open.', u.side);
@@ -2119,9 +2141,17 @@ function log(txt, side) {
 }
 
 // ---------------------------------------------------------------- combat resolution
-function hurt(u, d, src, by, c) {
+// Every point of damage is booked by type, for the breakdown after the fight. `split` divides one hit between types.
+function hurt(u, d, src, by, c, split) {
   if (u.state === 'dead' || world.over || world.demo) return;
+  const before = u.hp;
   u.hp = Math.max(0, u.hp - d);
+  const real = before - u.hp, kind = src === 'status' ? c : src === 'hit' ? 'hits' : 'arena';
+  for (const [k, f] of split || [[kind, 1]]) {
+    if (!(real * f > 0)) continue;
+    const t = world.dmg[u.side].taken; t[k] = (t[k] || 0) + real * f;
+    if (by >= 0 && by !== u.side && src !== 'zone') { const g = world.dmg[by].dealt; g[k] = (g[k] || 0) + real * f; }
+  }
   const st = world.stats;
   if (src === 'hit') st[by].dealt += d;
   else if (src === 'status') { if (by >= 0) st[by].status += d; }
@@ -2197,7 +2227,8 @@ function applyHit(att, def, d, dirX, crit) {
   const flying = def.state === 'stun' && def.tumble, j = flying ? def.juggle : 0;
   if (flying) def.juggle++;
   if (j >= 2) def.iT = Math.max(def.iT, 30);
-  const dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + s.shock * STATUS.shock.per + (shattered ? STATUS.chill.shatter : 0);
+  const zap = s.shock * STATUS.shock.per, dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + zap + (shattered ? STATUS.chill.shatter : 0);
+  const kind = crit ? 'crits' : d === SHOT.arrow.hit || d === SHOT.star.hit ? 'shots' : 'hits';
   if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
     log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
   }
@@ -2206,7 +2237,7 @@ function applyHit(att, def, d, dirX, crit) {
     world.stats[att.side].crit += dmg;
     if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
   }
-  hurt(def, dmg, 'hit', att.side);
+  hurt(def, dmg, 'hit', att.side, null, zap ? [[kind, 1 - zap / dmg], ['shock', zap / dmg]] : [[kind, 1]]);
   proc(att, def, d.dmg);
 }
 
@@ -2988,6 +3019,7 @@ function newWorld(seed) {
   return {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
+    dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
     stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0 })),
   };
 }
@@ -3582,7 +3614,7 @@ const ui = {
   phase: $('#phase'), hud: $('#hud'), clock: $('#clock'), wB: $('#wB'), wR: $('#wR'), nR: $('#nR'),
   fillB: $('#hpB .fill'), chipB: $('#hpB .chip'), fillR: $('#hpR .fill'), chipR: $('#hpR .chip'),
   sk: [$('#skB'), $('#skR')], st: [$('#stB'), $('#stR')],
-  toast: $('#toast'), result: $('#result'), resK: $('#resKicker'), resT: $('#resTitle'), resS: $('#resStats'),
+  toast: $('#toast'), result: $('#result'), resK: $('#resKicker'), resT: $('#resTitle'), resS: $('#resWhy'),
   buildPanel: $('#buildPanel'), fightPanel: $('#fightPanel'), rivalPanel: $('#rivalPanel'), ticker: $('#ticker'), budget: $('#budget'),
   live: $('#liveActions'), end: $('#endActions'), next: $('#nextBtn'), speed: $('#speedBtn'), seed: $('#seedLbl'), hint: $('#loadHint'), fight: $('#fightBtn'),
 };
@@ -3601,7 +3633,7 @@ const ST_ICON = {
   shock: '<path d="M13 2.5 L6 12 H11 L9 19.5 L16 10 H11 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   frozen: '<rect x="3.5" y="3.5" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7 L12 12 M10 7 L12.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
 };
-const ST_COL = { burn: '#e2711d', poison: '#4f9a3a', bleed: '#8c1d2c', chill: '#3d9cc4', shock: '#c7960a', frozen: '#3d9cc4' };
+const ST_COL = { burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#d49000', frozen: '#3d9cc4' };
 const stSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true" style="color:${ST_COL[k]}">${ST_ICON[k]}</svg>`;
 const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
 const ACRO_DESC = [
@@ -3708,28 +3740,66 @@ function saveRecord(name, won) {
   } catch { /* storage unavailable: the record just isn't kept */ }
 }
 
+// Damage types in a fixed order, each with a fixed colour, checked for colour-blind separation between
+// neighbours. The legend always names every slice with its number, so colour is never the only cue.
+const DMG_TYPES = [
+  ['hits', 'Hits', '#2a78d6'], ['burn', 'Burn', '#eb6834'], ['shots', 'Shots', '#1baf7a'], ['bleed', 'Bleed', '#c0304a'],
+  ['shock', 'Shock', '#eda100'], ['crits', 'Crits', '#e87ba4'], ['poison', 'Poison', '#008300'], ['arena', 'Walls & traps', '#4a3aa7'],
+];
+function donut(bag, label) {
+  const parts = DMG_TYPES.filter(([k]) => Math.round(bag[k] || 0) > 0).map(([k, name, color]) => ({ k, name, color, v: Math.round(bag[k]) }));
+  const total = parts.reduce((s, p) => s + p.v, 0);
+  if (!total) return '<div class="dnone">No damage.</div>';
+  const R = 38, SW = 13, C = 48, gap = parts.length > 1 ? 0.05 : 0;   // about 2px of surface between slices
+  let a = -Math.PI / 2;
+  const pt = (ang) => `${(C + Math.cos(ang) * R).toFixed(2)} ${(C + Math.sin(ang) * R).toFixed(2)}`;
+  const arcs = parts.map((p) => {
+    const sweep = p.v / total * Math.PI * 2, a0 = a + gap / 2, a1 = a + sweep - gap / 2;
+    a += sweep;
+    if (parts.length === 1) return `<circle class="sl" data-k="${p.k}" cx="${C}" cy="${C}" r="${R}" fill="none" stroke="${p.color}" stroke-width="${SW}"/>`;
+    return `<path class="sl" data-k="${p.k}" d="M ${pt(a0)} A ${R} ${R} 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${pt(a1)}" fill="none" stroke="${p.color}" stroke-width="${SW}"/>`;
+  }).join('');
+  const pct = (v) => `${Math.round(v / total * 100)}%`;
+  const legend = parts.map((p) => `<li data-k="${p.k}" data-v="${p.v}" data-p="${pct(p.v)}" data-n="${p.name}"><i style="background:${p.color}"></i><span>${p.name}</span><b>${p.v}</b></li>`).join('');
+  return `<div class="donut"><svg viewBox="0 0 96 96" role="img" aria-label="${label} by type">${arcs}</svg><div class="mid"><b>${total}</b><span>${label.toLowerCase()}</span></div></div>
+    <ul class="dleg ${parts.length > 4 ? 'two' : ''}">${legend}</ul>`;
+}
+function renderWhy(el, led) {
+  const sum = (bag) => DMG_TYPES.reduce((s, [k]) => s + Math.round(bag[k] || 0), 0);   // the same rounding as the slices
+  el.innerHTML = `<div class="why-top"><div class="seg" role="tablist" aria-label="Damage breakdown">
+      <button class="on" data-view="dealt" role="tab" aria-selected="true">Dealt<b>${sum(led.dealt)}</b></button>
+      <button data-view="taken" role="tab" aria-selected="false">Taken<b>${sum(led.taken)}</b></button></div></div>
+    <div class="why-body" data-view="dealt">${donut(led.dealt, 'Dealt')}</div>
+    <div class="why-body" data-view="taken" hidden>${donut(led.taken, 'Taken')}</div>`;
+  for (const btn of el.querySelectorAll('.seg button')) btn.onclick = () => {
+    for (const x of el.querySelectorAll('.seg button')) { x.classList.toggle('on', x === btn); x.setAttribute('aria-selected', String(x === btn)); }
+    for (const body of el.querySelectorAll('.why-body')) body.hidden = body.dataset.view !== btn.dataset.view;
+  };
+  // tap or hover a slice or a legend row to read it out in the middle
+  for (const body of el.querySelectorAll('.why-body')) {
+    const mid = body.querySelector('.mid');
+    if (!mid) continue;
+    const rest = mid.innerHTML;
+    const focus = (k) => {
+      body.classList.toggle('focus', !!k);
+      for (const n of body.querySelectorAll('[data-k]')) n.classList.toggle('hl', n.dataset.k === k);
+      const li = k && body.querySelector(`li[data-k="${k}"]`);
+      mid.innerHTML = li ? `<b>${li.dataset.v}</b><span>${li.dataset.n} · ${li.dataset.p}</span>` : rest;
+    };
+    for (const n of body.querySelectorAll('[data-k]')) {
+      n.addEventListener('mouseenter', () => focus(n.dataset.k));
+      n.addEventListener('mouseleave', () => focus(null));
+      n.addEventListener('click', () => focus(body.classList.contains('focus') && n.classList.contains('hl') ? null : n.dataset.k));
+    }
+  }
+}
 function showResult() {
-  const w = world.winner, st = world.stats, name = rivalName();
+  const w = world.winner, name = rivalName();
   ui.resT.textContent = world.hunt ? (w === 0 ? 'Hunt cleared' : `The ${name.toLowerCase()} won`) : w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
   ui.resK.textContent = world.hunt ? `${world.ko ? 'Cleared' : 'Out of time'} · ${clockStr(world.t - world.overT)}` : world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
   if (world.hunt && w === 0) ui.resK.textContent = `Cleared · ${clockStr(world.t - world.overT)} · ${Math.round(U[0].hp)} HP left`;
-  const mySpikes = A.spikes.filter((o) => o === 0).length, theirSpikes = A.spikes.filter((o) => o === 1).length;
-  const rows = [];
-  if (st[0].trap + st[1].trap) rows.push(['Traps dealt', `you ${Math.round(st[0].trap)} · ${name} ${Math.round(st[1].trap)}`]);
-  if (mySpikes + theirSpikes) rows.push(['Spikes found', `${name} found ${st[1].found} of ${mySpikes} · you found ${st[0].found} of ${theirSpikes}`]);
-  if (st[0].skill + st[1].skill) rows.push(['Skills used', `you ${st[0].skill} · ${name} ${st[1].skill}`]);
-  if (st[0].crit + st[1].crit) rows.push(['Critical damage', `you ${Math.round(st[0].crit)} · ${name} ${Math.round(st[1].crit)}`]);
-  if (st[0].status + st[1].status) rows.push(['Status damage', `you ${Math.round(st[0].status)} · ${name} ${Math.round(st[1].status)}`]);
-  if (st[0].frozen + st[1].frozen) rows.push(['Freezes', `you ${st[0].frozen} · ${name} ${st[1].frozen}`]);
-  if (st[0].parry + st[1].parry) rows.push(['Parries', `you ${st[0].parry} · ${name} ${st[1].parry}`]);
-  if (st[0].hooks + st[1].hooks) rows.push(['Hooks landed', `you ${st[0].hooks} · ${name} ${st[1].hooks}`]);
-  if (st[0].deflect + st[1].deflect) rows.push(['Shots knocked down', `you ${st[0].deflect} · ${name} ${st[1].deflect}`]);
-  if (st[0].pads + st[1].pads) rows.push(['Pad launches', `you ${st[0].pads} · ${name} ${st[1].pads}`]);
-  if (st[0].clash) rows.push(['Blade exchanges', String(st[0].clash)]);
-  if (st[0].rolls + st[1].rolls + st[0].acro + st[1].acro) rows.push(['Acrobatics', `you ${st[0].rolls + st[0].acro} moves · ${name} ${st[1].rolls + st[1].acro}`]);
-  ui.resS.innerHTML = '';
-  for (const [k, v] of rows) { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; ui.resS.append(dt, dd); }
+  renderWhy(ui.resS, world.dmg[0]);
   ui.result.hidden = false; ui.live.hidden = true; ui.end.hidden = false;
   ui.phase.textContent = 'Result';
   if (w >= 0 && !world.recorded) { world.recorded = true; saveRecord(name, w === 0); }
