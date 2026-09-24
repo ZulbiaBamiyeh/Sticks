@@ -221,6 +221,14 @@
   /* skill meter under each health bar: fills while the skill recharges, flashes when it fires */
   .skm { display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
   .hp.r .skm { flex-direction: row-reverse; }
+  .sts { display: flex; gap: 6px; min-height: 14px; margin-top: 4px; }
+  .hp.r .sts { flex-direction: row-reverse; }
+  .sts span { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; animation: stIn 0.25s ease-out; }
+  .sts svg { width: 13px; height: 13px; }
+  @keyframes stIn { from { transform: scale(1.6); } }
+  .tr-ic svg { width: 22px; height: 22px; display: block; }
+  .tr-ic.inl { display: inline-block; vertical-align: -4px; margin-right: 5px; }
+  .tr-ic.inl svg { width: 16px; height: 16px; }
   .skb { position: relative; flex: 0 0 38px; height: 4px; border-radius: 2px; background: rgba(22, 25, 29, 0.16); overflow: hidden; }
   .skb i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--ink-2); }
   .hp.r .skb i { inset: 0 0 0 auto; }
@@ -308,12 +316,14 @@
         <div class="who"><b>You</b><span id="wB">Sword</span></div>
         <div class="bar"><i class="chip"></i><i class="fill"></i></div>
         <div class="skm" id="skB"><span class="skn"></span><span class="skb"><i></i></span></div>
+        <div class="sts" id="stB"></div>
       </div>
       <div id="clock">0:00</div>
       <div class="hp r" id="hpR">
         <div class="who"><span id="wR">Bow</span><b id="nR">Rival</b></div>
         <div class="bar"><i class="chip"></i><i class="fill"></i></div>
         <div class="skm" id="skR"><span class="skn"></span><span class="skb"><i></i></span></div>
+        <div class="sts" id="stR"></div>
       </div>
     </div>
     <div id="toast" hidden></div>
@@ -354,6 +364,7 @@
       <p id="rvTip"></p>
     </div>
     <div class="bring"><span class="lbl">Acrobatics</span><span id="rvAcro"></span></div>
+    <div class="bring"><span class="lbl">Trinket</span><span id="rvTr"></span></div>
     <div class="bring"><span class="lbl">You bring</span><b id="rvYou">Sword · Blink</b></div>
     <div class="actions">
       <button class="ghost" id="rvEdit">Edit build</button>
@@ -366,6 +377,8 @@
     <div class="chips" id="weapons"></div>
     <div class="row-h"><span class="lbl">Skill</span><span class="lbl">Cooldown</span></div>
     <div class="tools" id="skills"></div>
+    <div class="row-h"><span class="lbl">Trinket</span><span class="lbl">Status on hit</span></div>
+    <div class="tools three" id="trinkets"></div>
     <div class="row-h"><span class="lbl">Acrobatics</span><span class="lbl" id="acroLbl">Level 2</span></div>
     <div class="acro" id="acro"></div>
     <p class="hint" id="loadHint"></p>
@@ -443,6 +456,24 @@ const SKILL = {
   hook: { name: 'Hook', cd: 300, stat: '5s', desc: 'Throws a chain across the arena and drags the rival in.' },
 };
 const SKILLS = Object.keys(SKILL);
+// Statuses change the fight, never how anyone runs or jumps, and each reads from one mark on the figure.
+// Times are in frames; damage ticks every half second.
+const STATUS = {
+  burn: { name: 'Burn', dur: 240, tick: 1.1 },
+  poison: { name: 'Poison', max: 6, decay: 150, tick: 0.35 },
+  bleed: { name: 'Bleed', dur: 240, cut: 0.15 },
+  chill: { name: 'Chill', dur: 240, slow: 0.22, freeze: 3, frozen: 50, thaw: 150, shatter: 4 },
+  shock: { name: 'Shock', dur: 300, max: 5, per: 1, burst: 8 },
+};
+// Passive trinkets: a landed hit can carry the trinket's status. Heavier hits carry it more often.
+const TRINKET = {
+  ember: { name: 'Ember Charm', status: 'burn', desc: 'Hits can set the rival alight. Burn ticks through any guard.' },
+  viper: { name: 'Viper Fang', status: 'poison', desc: 'Hits add Poison. It stacks up to six, and each stack keeps ticking.' },
+  barb: { name: 'Barbed Charm', status: 'bleed', desc: 'Hits open a Bleed: the rival hurts itself every time it attacks.' },
+  frost: { name: 'Frost Bell', status: 'chill', desc: 'Hits Chill the rival and slow its wind-ups. Three stacks freeze it solid.' },
+  static: { name: 'Static Charm', status: 'shock', desc: 'Hits add Shock, so every hit the rival takes lands harder. Five stacks discharge.' },
+};
+const TRINKETS = Object.keys(TRINKET);
 // Projectiles. v is launch speed and g is gravity, both in tiles per second.
 const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
@@ -457,12 +488,14 @@ const PAL = {
   ink: '#16191d', far: '#4d555c', hatch: 'rgba(22,25,29,0.07)', grid: 'rgba(22,25,29,0.09)',
   blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
   tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
+  burn: '#e2711d', poison: '#4f9a3a', bleed: '#8c1d2c', chill: '#3d9cc4', shock: '#d9a50f', ice: 'rgba(61,156,196,0.16)',
 };
 const PAL_INV = {
   out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
   ink: '#ffffff', far: '#d9ddd6', hatch: 'rgba(0,0,0,0)', grid: 'rgba(0,0,0,0)',
   blue: '#7fa3ff', red: '#ff7c66', spark: '#ffffff', steel: '#16191d', fog: 'rgba(22,25,29,0.9)',
   tintB: 'rgba(0,0,0,0)', tintR: 'rgba(0,0,0,0)', label: 'rgba(0,0,0,0)',
+  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)',
 };
 const TEAM = ['blue', 'red'];
 
@@ -861,12 +894,12 @@ const SK_POSE = {
 };
 
 // ---------------------------------------------------------------- fighters
-function makeUnit(side, weapon, skill, acro = 0) {
+function makeUnit(side, weapon, skill, acro = 0, trinket = null) {
   const sc = side === 0 ? SPAWN_C : COLS - 1 - SPAWN_C;
   const pose = { p: {}, v: {} };
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
-    side, w: weapon, skill: skill || null, acro, macros: MACROS_BY_ACRO[acro], hp: 100, hpShow: 100,
+    side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: 100, hpShow: 100,
     b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed, acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
@@ -876,6 +909,7 @@ function makeUnit(side, weapon, skill, acro = 0) {
     // skills: skCd counts down to ready; hidden counts down Dark Sight; fade is how see-through the figure is drawn.
     skCd: 75, skName: null, sf: 0, skTried: -1, hidden: 0, fade: 0, ambush: false, surprise: 0, hook: null, ghosts: [],
     seen: { x: sc + 0.5, y: SPAWN_R + 1 }, ghostE: null, blind: 0,
+    st: { by: -1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0,
     in: { dir: 0, press: false, hold: false },
     ai: { path: [], macro: null, mf: 0, air: false, replan: 0, fail: 0, blocked: new Set(), goal: -1, sx: 0, sy: 0, stuck: 0 },
     known: new Set(), nav: null, navOk: null, pose, gait: 0, trail: [], scarf: null, rag: null, demo: null,
@@ -899,6 +933,8 @@ const isRanged = (u) => !!WEAP[u.w].range;
 const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 function startAtk(u, name) {
+  bleedOnAttack(u, name);
+  if (u.state === 'dead') return;
   u.state = 'atk'; u.atkName = name; u.atkDef = ATK[name]; u.af = 0; u.phase = 'w';
   u.hitDone = false; u.hitLanded = false; u.atkId = ++world.atkSeq; u.ai.macro = null;
   u.poseVar = ATK_POSE_ALT[name] && vr() < 0.5 ? 1 : 0;
@@ -2051,6 +2087,9 @@ function stepParts() {
     else if (p.k === 't') { p.y += p.vy * DT; p.vy *= 0.9; }
     else if (p.k === 'q') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.86; p.vy *= 0.86; }
     else if (p.k === 'o') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.92; p.vy *= 0.92; p.r += 0.012; }
+    else if (p.k === 'e') { p.x += (p.vx + Math.sin(p.ph + p.life * 0.35) * 0.9) * DT; p.y += p.vy * DT; }
+    else if (p.k === 'b') { p.x += Math.sin(p.life * 0.4) * 0.008; p.y += p.vy * DT; }
+    else if (p.k === 'p') { p.x += p.vx * DT; p.vy += 30 * DT; p.y += p.vy * DT; if (solidAt(Math.floor(p.x), Math.floor(p.y))) { p.vx = 0; p.vy = 0; p.y = Math.floor(p.y) - 0.01; p.stuck = 1; } }
   }
   parts = parts.filter((p) => p.life < p.max);
 }
@@ -2061,14 +2100,15 @@ function log(txt, side) {
 }
 
 // ---------------------------------------------------------------- combat resolution
-function hurt(u, d, src, by) {
+function hurt(u, d, src, by, c) {
   if (u.state === 'dead' || world.over || world.demo) return;
   u.hp = Math.max(0, u.hp - d);
   const st = world.stats;
   if (src === 'hit') st[by].dealt += d;
+  else if (src === 'status') { if (by >= 0) st[by].status += d; }
   else if (src === 'trap') st[by].trap += d;
   else if (src === 'zone') st[u.side].zone += d;
-  if (d >= 1) popText(u.b.x, u.b.y - H - 0.35, String(Math.round(d)), TEAM[u.side], 0.5);
+  if (d >= 1) popText(u.b.x + (c ? (Math.random() - 0.5) * 0.5 : 0), u.b.y - H - 0.35, String(Math.round(d)), c || TEAM[u.side], c ? 0.38 : 0.5);
   if (u.hidden && d >= 1) reveal(u);
   if (u.hp <= 0) kill(u);
 }
@@ -2116,6 +2156,8 @@ function applyHit(att, def, d, dirX, crit) {
   att.hitLanded = true;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
   const armor = def.state === 'atk' && def.atkName === 'hammer' && def.phase === 'w' && def.af >= 5;
+  const s = def.st, shattered = s.frozen > 0;
+  if (shattered) shatter(def);
   if (!armor) {
     if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
     def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
@@ -2135,7 +2177,7 @@ function applyHit(att, def, d, dirX, crit) {
   const flying = def.state === 'stun' && def.tumble, j = flying ? def.juggle : 0;
   if (flying) def.juggle++;
   if (j >= 2) def.iT = Math.max(def.iT, 30);
-  const dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j);
+  const dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j) + s.shock * STATUS.shock.per + (shattered ? STATUS.chill.shatter : 0);
   if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
     log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
   }
@@ -2145,6 +2187,88 @@ function applyHit(att, def, d, dirX, crit) {
     if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
   }
   hurt(def, dmg, 'hit', att.side);
+  proc(att, def, d.dmg);
+}
+
+// ---------------------------------------------------------------- statuses
+function proc(att, def, base) {
+  const t = att.trinket && TRINKET[att.trinket];
+  if (!t || def.state === 'dead' || def.state === 'duel' || world.demo || !(base > 0) || rng() >= Math.min(1, base / 9)) return;
+  const s = def.st, k = t.status, K = STATUS[k], x = def.b.x, y = def.b.y - H * 0.6;
+  if (k === 'chill' && (s.frozen > 0 || s.thaw > 0)) return;
+  s.by = att.side;
+  const st = world.stats[att.side];
+  if (!st.procs++) {
+    const verb = { burn: 'set {} alight', poison: 'poisoned {}', bleed: 'cut {} open', chill: 'chilled {}', shock: 'shocked {}' }[k];
+    log(`${att.side ? rivalName() + '\'s' : 'Your'} ${t.name} ${verb.replace('{}', att.side ? 'your fighter' : rivalName())}.`, att.side);
+  }
+  if (k === 'burn') { s.burn = K.dur; ring(x, y, 0.6, 'burn'); }
+  else if (k === 'poison') { s.poison = Math.min(K.max, s.poison + 1); s.pT = K.decay; ring(x, y, 0.5, 'poison'); }
+  else if (k === 'bleed') { s.bleed = K.dur; drips(def, 3); }
+  else if (k === 'chill') {
+    s.chill++; s.chillT = K.dur; ring(x, y, 0.5, 'chill');
+    if (s.chill >= K.freeze) freeze(def);
+  } else if (k === 'shock') {
+    s.shock++; s.shockT = K.dur;
+    if (s.shock >= K.max) discharge(def);
+  }
+}
+function freeze(u) {
+  const s = u.st, K = STATUS.chill;
+  s.chill = 0; s.frozen = K.frozen; s.thaw = K.frozen + K.thaw;
+  u.state = 'stun'; u.stunT = Math.max(u.stunT, K.frozen); u.tumble = false; u.b.vx *= 0.3;
+  u.ai.macro = null; u.ai.path.length = 0; u.skName = null; u.hidden = 0;
+  if (!world.stats[1 - u.side].frozen++) log(u.side ? `${rivalName()} froze solid.` : 'Your fighter froze solid.', 1 - u.side);
+  callout(u, 'FROZEN', 1 - u.side); sfxShake(4);
+  for (let i = 0; i < 8; i++) streak(u.b.x + (Math.random() - 0.5) * 0.9, u.b.y - Math.random() * H, Math.random() * 6.283, 0.35, 'chill');
+}
+function shatter(u) {
+  const s = u.st;
+  s.frozen = 0;
+  const b = u.b;
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random() * 6.283, sp = 4 + Math.random() * 8;
+    parts.push({ k: 'q', x: b.x + (Math.random() - 0.5) * 0.7, y: b.y - Math.random() * H, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3, s: 0.08 + Math.random() * 0.1, c: 'chill', life: 0, max: 14 + Math.random() * 10 });
+  }
+  ring(b.x, b.y - H / 2, 1.1, 'chill'); world.hs = Math.max(world.hs, 6);
+}
+function discharge(u) {
+  const s = u.st, K = STATUS.shock;
+  s.shock = 0; s.shockT = 0;
+  hurt(u, K.burst, 'status', s.by, 'shock');
+  if (u.state === 'free' || u.state === 'atk') { u.state = 'stun'; u.stunT = 20; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0; }
+  u.zap = 14; ring(u.b.x, u.b.y - H / 2, 1.4, 'shock'); world.hs = Math.max(world.hs, 5); sfxShake(5);
+  callout(u, 'DISCHARGE', s.by >= 0 ? s.by : 1 - u.side);
+}
+// Bleed: every attack the bleeder starts costs it a cut of that attack's own damage.
+function bleedOnAttack(u, name) {
+  if (!(u.st.bleed > 0) || world.demo) return;
+  const d = ATK[name], base = d.dmg || (d.shot ? SHOT[d.shot].hit.dmg : 0);
+  if (!base) return;
+  hurt(u, Math.max(1, base * STATUS.bleed.cut), 'status', u.st.by, 'bleed');
+  drips(u, 2);
+}
+function drips(u, n) {
+  for (let i = 0; i < n; i++) parts.push({ k: 'p', x: u.b.x + (Math.random() - 0.5) * 0.4, y: u.b.y - 0.9 - Math.random() * 0.4, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 0, max: 40, c: 'bleed' });
+}
+function statusStep(u) {
+  const s = u.st, half = world.t % 30 === 0, b = u.b;
+  if (s.burn > 0) {
+    s.burn--;
+    if (half) hurt(u, STATUS.burn.tick, 'status', s.by, 'burn');
+    if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - H * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
+  }
+  if (s.poison > 0) {
+    if (half) hurt(u, STATUS.poison.tick * s.poison, 'status', s.by, 'poison');
+    if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
+    if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - H * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
+  }
+  if (s.bleed > 0) s.bleed--;
+  if (s.chill > 0 && --s.chillT <= 0) s.chill = 0;
+  if (s.frozen > 0 && --s.frozen === 0) { shatter(u); world.hs = 0; }
+  if (s.thaw > 0) s.thaw--;
+  if (s.shock > 0 && --s.shockT <= 0) s.shock = 0;
+  if (u.zap > 0) u.zap--;
 }
 function spikeHit(u, i) {
   const owner = A.spikes[i], c = i % COLS, b = u.b;
@@ -2176,6 +2300,10 @@ function spikeHit(u, i) {
 
 function atkStep(u) {
   const d = u.atkDef, b = u.b;
+  if (u.st.chill && u.phase === 'w') {   // Chill: the wind-up drags, a frame lost every few
+    u.slowAcc += STATUS.chill.slow * u.st.chill;
+    if (u.slowAcc >= 1) { u.slowAcc -= 1; return; }
+  }
   u.af++;
   if (u.af === d.w) {
     u.phase = 'a';
@@ -2214,6 +2342,8 @@ function act(u) {
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
   if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
+  statusStep(u);
+  if (u.state === 'dead') return;
   u.fade = approach(u.fade, u.hidden ? 1 : 0, u.hidden ? 0.12 : 0.2);
   let ctl = false, dir = 0, press = false, hold = false, fr = 1;
   switch (u.state) {
@@ -2226,8 +2356,8 @@ function act(u) {
       if (--u.rollT <= 0 || (!b.gr && u.rollT < u.rollMax - 2)) { u.state = 'free'; u.react = Math.min(u.react, 2); }
       break;
     case 'stun':
-      u.stunT--; fr = 0.5;
-      if (u.tumble) u.rot += u.spin;
+      u.stunT--; fr = u.st.frozen ? 1.6 : 0.5;
+      if (u.tumble && !u.st.frozen) u.rot += u.spin;
       if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; u.recover = true; }
       break;
     case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
@@ -2467,7 +2597,7 @@ const WALL_SLIDE = {
   bow: { ai: 0.2 },
 };
 function poseStep(u) {
-  if (u.state === 'dead') return;
+  if (u.state === 'dead' || u.st.frozen) return;
   const T = poseTarget(u), p = u.pose.p, v = u.pose.v;
   for (const k of PK) {
     const g = LEGK.has(k) ? T.kl : ARMK.has(k) ? T.ka : T.kb;
@@ -2618,7 +2748,7 @@ function newWorld(seed) {
   return {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -2676,23 +2806,23 @@ const TEMPLATES = [
 ].map((t) => (SPIKES_ON ? t : t.filter((p) => p.t !== 'spikes')));
 // The ladder. Each rival brings its own half, weapon and skill.
 const RIVALS = [
-  { name: 'Quill', weapon: 'bow', skill: 'blink', acro: 2, t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
-  { name: 'Lull', weapon: 'bow', skill: 'darksight', acro: 1, t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
-  { name: 'Pike', weapon: 'spear', skill: 'parry', acro: 2, t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
-  { name: 'Gaff', weapon: 'spear', skill: 'hook', acro: 2, t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
-  { name: 'Moth', weapon: 'daggers', skill: 'darksight', acro: 3, t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
-  { name: 'Anvil', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
-  { name: 'Pinwheel', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
-  { name: 'Tack', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
+  { name: 'Quill', trinket: 'frost', weapon: 'bow', skill: 'blink', acro: 2, t: 1, tag: 'Shoots from the shelf.', tip: 'Blinks away the moment a blade gets close. Something that closes distance, like Blink or Hook, keeps it pinned.' },
+  { name: 'Lull', trinket: 'viper', weapon: 'bow', skill: 'darksight', acro: 1, t: 4, tag: 'Hides behind the tower.', tip: 'Goes invisible when you close in, then lobs a critical arrow from somewhere new.' },
+  { name: 'Pike', trinket: 'static', weapon: 'spear', skill: 'parry', acro: 2, t: 2, tag: 'Keeps you at the tip.', tip: 'Out-reaches every blade and stabs up at jumpers. Get inside the tip, or don\'t come in at all.' },
+  { name: 'Gaff', trinket: 'barb', weapon: 'spear', skill: 'hook', acro: 2, t: 7, tag: 'Reels you in from the perch.', tip: 'Hooks you onto the end of the spear. Parry catches the chain.' },
+  { name: 'Moth', trinket: 'viper', weapon: 'daggers', skill: 'darksight', acro: 3, t: 5, tag: 'Lives in the tunnel.', tip: 'Vanishes on the way in and stabs from nowhere. Reach and armor, like the spear or hammer, keep it off you.' },
+  { name: 'Anvil', trinket: 'static', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
+  { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
+  { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
-const builds = [{ weapon: 'sword', skill: 'blink', acro: 2, pieces: TEMPLATES[0].slice() }, null];
+const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
 let rivalIx = 0;
 const rivalName = () => (builds[1] && builds[1].name) || 'The rival';
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
   const r = RIVALS[rivalIx];
-  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
+  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, trinket: r.trinket || null, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
 }
 
 // ---------------------------------------------------------------- canvas & camera
@@ -2929,6 +3059,11 @@ function drawParts(pal) {
       ctx.globalAlpha = 1;
     } else if (p.k === 'q') { ctx.fillStyle = col(pal, p.c); const q = p.s * (0.4 + 0.6 * k); ctx.fillRect(p.x - q / 2, p.y - q / 2, q, q); }
     else if (p.k === 'o') { ctx.globalAlpha = 0.3 * k; ctx.fillStyle = pal.far; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+    else if (p.k === 'e') {   // a burn: a small flame lick that curls as it rises
+      ctx.globalAlpha = Math.min(1, k * 1.6); ctx.strokeStyle = col(pal, p.c); ctx.lineWidth = 0.05 * k + 0.015; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, p.y + 0.2 * k); ctx.quadraticCurveTo(p.x + Math.sin(p.ph + p.life * 0.35) * 0.12, p.y + 0.1 * k, p.x, p.y); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (p.k === 'b') { ctx.globalAlpha = k; ctx.strokeStyle = col(pal, p.c); ctx.lineWidth = 0.025; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
+    else if (p.k === 'p') { ctx.globalAlpha = Math.min(1, k * 2); ctx.fillStyle = col(pal, p.c); ctx.beginPath(); if (p.stuck) ctx.ellipse(p.x, p.y, 0.07, 0.02, 0, 0, 6.283); else ctx.ellipse(p.x, p.y, 0.035, 0.05, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
     else if (p.k === 'm') {
       // marching ants
       const a = Math.min(1, k * 3);
@@ -3013,6 +3148,41 @@ function drawUnit(u, pal) {
   if (f > 0.01) { ctx.globalAlpha = f * 0.95; drawFig(S, u.side, pal, false, checkerPattern()); }
   ctx.globalAlpha = 1;
   if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
+  if (f < 0.5) drawMarks(u, S, pal);
+}
+// One mark per status: a green vein for Poison, frost ticks for Chill, an ice box when frozen, a crackle for Shock.
+function drawMarks(u, S, pal) {
+  const s = u.st, b = u.b;
+  if (s.poison > 0) {   // a green vein down the middle of each near limb, stronger with each stack
+    ctx.globalAlpha = 0.45 + 0.09 * s.poison; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const pts of [[S.hip, S.neck], [S.hip, S.kf, S.ff], [S.sh, S.ef, S.hf]]) stroke(pts, pal.poison, 0.034);
+    ctx.globalAlpha = 1;
+  }
+  if (s.chill > 0 && !s.frozen) {
+    ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.04; ctx.lineCap = 'round';
+    for (const [p, n] of [[S.hf, s.chill], [S.hb, s.chill - 1], [S.ff, s.chill], [S.bf, s.chill - 1]]) {
+      for (let i = 0; i < n; i++) { const a = i * 1.9 + 0.4; ctx.beginPath(); ctx.moveTo(p.x + Math.cos(a) * 0.05, p.y + Math.sin(a) * 0.05); ctx.lineTo(p.x + Math.cos(a) * 0.15, p.y + Math.sin(a) * 0.15); ctx.stroke(); }
+    }
+  }
+  if (s.frozen > 0) {
+    const x0 = b.x - W / 2 - 0.12, y0 = b.y - H - 0.22, w = W + 0.24, h = H + 0.22, k = Math.min(1, s.frozen / 8);
+    ctx.globalAlpha = k; ctx.fillStyle = pal.ice; ctx.fillRect(x0, y0, w, h);
+    ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.045; ctx.strokeRect(x0, y0, w, h);
+    ctx.lineWidth = 0.03; ctx.beginPath(); ctx.moveTo(x0 + w * 0.2, y0 + 0.12); ctx.lineTo(x0 + w * 0.55, y0 + 0.12 + w * 0.35); ctx.moveTo(x0 + w * 0.45, y0 + 0.12); ctx.lineTo(x0 + w * 0.62, y0 + 0.12 + w * 0.17); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  if (s.shock > 0 || u.zap > 0) {
+    const n = u.zap > 0 ? 5 : s.shock;
+    ctx.strokeStyle = pal.shock; ctx.lineWidth = u.zap > 0 ? 0.05 : 0.03; ctx.lineJoin = 'round';
+    for (let i = 0; i < n; i++) {
+      if (!u.zap && Math.random() < 0.55) continue;
+      const a = Math.random() * 6.283, cx = b.x + Math.cos(a) * 0.4, cy = b.y - H * 0.55 + Math.sin(a) * 0.65;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      for (let j = 1; j <= 3; j++) ctx.lineTo(cx + Math.cos(a) * 0.09 * j + (j % 2 ? 0.07 : -0.07), cy + Math.sin(a) * 0.09 * j);
+      ctx.stroke();
+    }
+    ctx.lineJoin = 'miter';
+  }
 }
 function render() {
   const pal = world && world.impact > 0 ? PAL_INV : PAL;
@@ -3167,7 +3337,7 @@ document.addEventListener('visibilitychange', () => {
 const ui = {
   phase: $('#phase'), hud: $('#hud'), clock: $('#clock'), wB: $('#wB'), wR: $('#wR'), nR: $('#nR'),
   fillB: $('#hpB .fill'), chipB: $('#hpB .chip'), fillR: $('#hpR .fill'), chipR: $('#hpR .chip'),
-  sk: [$('#skB'), $('#skR')],
+  sk: [$('#skB'), $('#skR')], st: [$('#stB'), $('#stR')],
   toast: $('#toast'), result: $('#result'), resK: $('#resKicker'), resT: $('#resTitle'), resS: $('#resStats'),
   buildPanel: $('#buildPanel'), fightPanel: $('#fightPanel'), rivalPanel: $('#rivalPanel'), ticker: $('#ticker'), budget: $('#budget'),
   live: $('#liveActions'), end: $('#endActions'), speed: $('#speedBtn'), seed: $('#seedLbl'), hint: $('#loadHint'), fight: $('#fightBtn'),
@@ -3178,6 +3348,17 @@ const SKILL_ICON = {
   parry: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M12 2.5 A 9 9 0 0 1 12 19.5" fill="none" stroke="#2358d6" stroke-width="2.6"/><path d="M7.5 19 V3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M4 15.5 H11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
   hook: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2.5 19.5 L10 12" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.4 1.6"/><path d="M10 12 L15 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M15 7 C 18.5 4 21 8.5 17.5 11.5 M15 7 C 12 3.5 7.5 6 10 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/></svg>',
 };
+// Status glyphs: one line drawing each, in the status's own colour.
+const ST_ICON = {
+  burn: '<path d="M11 20 C6.5 20 5 16.5 6.5 13.5 C7.5 11.5 9.5 10.5 9 6.5 C12 8 15.5 11.5 15.5 15.5 C15.5 18.5 13.5 20 11 20 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  poison: '<path d="M11 3 C14 8 16.5 10.5 16.5 14 A5.5 5.5 0 0 1 5.5 14 C5.5 10.5 8 8 11 3 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="9.3" cy="14.5" r="1.4" fill="currentColor"/>',
+  bleed: '<path d="M11 3 C14 8 16.5 10.5 16.5 14 A5.5 5.5 0 0 1 5.5 14 C5.5 10.5 8 8 11 3 Z" fill="currentColor"/>',
+  chill: '<path d="M11 2.5 V19.5 M3.6 6.8 L18.4 15.2 M3.6 15.2 L18.4 6.8 M8.6 3.8 L11 6 L13.4 3.8 M8.6 18.2 L11 16 L13.4 18.2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>',
+  shock: '<path d="M13 2.5 L6 12 H11 L9 19.5 L16 10 H11 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  frozen: '<rect x="3.5" y="3.5" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7 L12 12 M10 7 L12.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+};
+const ST_COL = { burn: '#e2711d', poison: '#4f9a3a', bleed: '#8c1d2c', chill: '#3d9cc4', shock: '#c7960a', frozen: '#3d9cc4' };
+const stSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true" style="color:${ST_COL[k]}">${ST_ICON[k]}</svg>`;
 const ACRO_MOVES = ['None', 'Roll', 'Wall jump', 'Wall run', 'Air flip'];
 const ACRO_DESC = [
   'Runs and jumps, nothing fancy.',
@@ -3187,11 +3368,12 @@ const ACRO_DESC = [
   'Air flip: a second jump in mid-air, with a flip.',
 ];
 const acroMoves = (lv) => (lv ? ACRO_MOVES.slice(1, lv + 1).join(', ') : 'none');
-const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill].name : 'No skill'} · Acro ${bd.acro || 0}`;
+const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill].name : 'No skill'}${bd.trinket ? ' · ' + TRINKET[bd.trinket].name : ''} · Acro ${bd.acro || 0}`;
 
 // Weapon and skill chips are generated from the tables so the numbers on them never drift.
 $('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
 $('#acro').innerHTML = ACRO_MOVES.map((m, i) => `<button data-a="${i}" aria-pressed="false" aria-label="Acrobatics ${i}: ${m}">${m}</button>`).join('');
+$('#trinkets').innerHTML = [null, ...TRINKETS].map((k) => `<button class="opt tool" data-tr="${k || ''}" aria-pressed="false"><span class="ic"><span class="tr-ic">${k ? stSvg(TRINKET[k].status) : '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>'}</span><small>${k ? STATUS[TRINKET[k].status].name : ''}</small></span><b>${k ? TRINKET[k].name.split(' ')[0] : 'None'}</b></button>`).join('');
 $('#skills').innerHTML = SKILLS.map((k) => `<button class="opt tool skill" data-s="${k}" aria-pressed="false"><span class="ic"><span class="sk-ic">${SKILL_ICON[k]}</span><small>${SKILL[k].stat}</small></span><b>${SKILL[k].name}</b></button>`).join('');
 
 let tool = 'block', toastT = 0;
@@ -3206,6 +3388,7 @@ if (!SPIKES_ON) { document.querySelector('#tools [data-t="spikes"]').remove(); d
 function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
+  for (const b of document.querySelectorAll('#trinkets .opt')) b.setAttribute('aria-pressed', String((b.dataset.tr || null) === (builds[0].trinket || null)));
   for (const b of document.querySelectorAll('#tools .opt')) b.setAttribute('aria-pressed', String(b.dataset.t === tool));
   const lv = builds[0].acro || 0;
   for (const b of document.querySelectorAll('#acro button')) { const i = +b.dataset.a; b.classList.toggle('on', i >= 1 && i <= lv); b.setAttribute('aria-pressed', String(i === lv)); }
@@ -3227,7 +3410,17 @@ function renderTicker() {
     li.append(t, sw, sp); ui.ticker.append(li);
   }
 }
-const skShown = [{}, {}];
+const skShown = [{}, {}], stShown = ['', ''];
+function statusChips(u) {
+  const s = u.st, out = [];
+  if (s.frozen > 0) out.push(['frozen', '']);
+  if (s.burn > 0) out.push(['burn', '']);
+  if (s.poison > 0) out.push(['poison', s.poison]);
+  if (s.bleed > 0) out.push(['bleed', '']);
+  if (s.chill > 0) out.push(['chill', s.chill]);
+  if (s.shock > 0) out.push(['shock', s.shock]);
+  return out;
+}
 function updateHud() {
   if (mode !== 'fight') return;
   const [b, r] = U;
@@ -3235,6 +3428,13 @@ function updateHud() {
   ui.fillR.style.width = `${r.hp}%`; ui.chipR.style.width = `${r.hpShow}%`;
   ui.clock.textContent = clockStr(world.over ? world.t - world.overT : world.t);
   ui.clock.classList.toggle('sq', world.zone > 1.001 && !world.over);
+  for (const u of U) {
+    const chips = statusChips(u), sig = chips.map((c) => c.join('')).join(' ');
+    if (sig !== stShown[u.side]) {
+      stShown[u.side] = sig;
+      ui.st[u.side].innerHTML = chips.map(([k, n]) => `<span title="${k === 'frozen' ? 'Frozen' : STATUS[k].name}" style="color:${ST_COL[k]}">${stSvg(k)}${n}</span>`).join('');
+    }
+  }
   for (const u of U) {
     const el = ui.sk[u.side], was = skShown[u.side];
     if (!u.skill) { el.hidden = true; continue; }
@@ -3269,6 +3469,8 @@ function showResult() {
   if (mySpikes + theirSpikes) rows.push(['Spikes found', `${name} found ${st[1].found} of ${mySpikes} · you found ${st[0].found} of ${theirSpikes}`]);
   if (st[0].skill + st[1].skill) rows.push(['Skills used', `you ${st[0].skill} · ${name} ${st[1].skill}`]);
   if (st[0].crit + st[1].crit) rows.push(['Critical damage', `you ${Math.round(st[0].crit)} · ${name} ${Math.round(st[1].crit)}`]);
+  if (st[0].status + st[1].status) rows.push(['Status damage', `you ${Math.round(st[0].status)} · ${name} ${Math.round(st[1].status)}`]);
+  if (st[0].frozen + st[1].frozen) rows.push(['Freezes', `you ${st[0].frozen} · ${name} ${st[1].frozen}`]);
   if (st[0].parry + st[1].parry) rows.push(['Parries', `you ${st[0].parry} · ${name} ${st[1].parry}`]);
   if (st[0].hooks + st[1].hooks) rows.push(['Hooks landed', `you ${st[0].hooks} · ${name} ${st[1].hooks}`]);
   if (st[0].deflect + st[1].deflect) rows.push(['Shots knocked down', `you ${st[0].deflect} · ${name} ${st[1].deflect}`]);
@@ -3410,6 +3612,7 @@ function enterRival() {
   $('#rvTip').textContent = r.tip;
   const pips = [1, 2, 3, 4].map((i) => `<i class="${i <= (bd.acro || 0) ? 'on' : ''}"></i>`).join('');
   $('#rvAcro').innerHTML = `<span class="acro-pips" aria-hidden="true">${pips}</span>Level ${bd.acro || 0}: ${acroMoves(bd.acro || 0)}`;
+  $('#rvTr').innerHTML = bd.trinket ? `<span class="tr-ic inl">${stSvg(TRINKET[bd.trinket].status)}</span>${TRINKET[bd.trinket].name}: ${TRINKET[bd.trinket].desc}` : 'None';
   $('#rvYou').textContent = loadout(builds[0]);
   $('#rvFight').textContent = `Fight ${bd.name}`;
 }
@@ -3432,7 +3635,7 @@ function startFight(seed, replay = false) {
   A = makeArena(builds);
   world = newWorld(seed);
   world.recorded = replay;   // a replay is the same fight again, so it doesn't count toward the record
-  U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0));
+  U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket));
   for (const u of U) {
     u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
     const mid = u.nav.idx[10 * COLS + (u.side ? 10 : 9)];
@@ -3441,7 +3644,7 @@ function startFight(seed, replay = false) {
   }
   shots = []; parts = [];
   ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
-  skShown[0] = {}; skShown[1] = {};
+  skShown[0] = {}; skShown[1] = {}; stShown[0] = stShown[1] = '-';
   for (const u of U) { const el = ui.sk[u.side]; el.classList.remove('fired', 'ready'); if (u.skill) el.querySelector('.skn').textContent = SKILL[u.skill].name; }
   ui.hud.hidden = false; ui.result.hidden = true;
   showPanel('fight');
@@ -3524,6 +3727,13 @@ $('#skills').addEventListener('click', (ev) => {
   ui.hint.textContent = `${SKILL[k].name}: ${SKILL[k].desc}`;
   refreshBuildUI();
 });
+$('#trinkets').addEventListener('click', (ev) => {
+  const b = ev.target.closest('.opt'); if (!b) return;
+  const k = b.dataset.tr || null;
+  builds[0].trinket = k;
+  ui.hint.textContent = k ? `${TRINKET[k].name}: ${TRINKET[k].desc}` : 'No trinket: nothing extra rides on your hits.';
+  refreshBuildUI();
+});
 $('#acro').addEventListener('click', (ev) => {
   const b = ev.target.closest('button'); if (!b) return;
   const lv = +b.dataset.a;
@@ -3595,7 +3805,7 @@ window.__homeTurf = {
   // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).
   play(seed, blue, red) { if (blue) builds[0] = blue; if (red) builds[1] = red; startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
-  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, validate, get world() { return world; }, get units() { return U; },
+  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
