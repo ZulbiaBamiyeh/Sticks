@@ -62,7 +62,11 @@ figures fight it out on their own.
 - **Your half:** 10 points to spend on blocks (1) and pads (2). Columns 9 and
   10 are no-man's-land and stay open.
 - **Home advantage:** pads launch only the fighter who built them, so they're
-  shortcuts only you can use.
+  moves only you can make. Fighters plan around their own pads by tracing the
+  whole arc of every possible launch. Blades walk to a pad on purpose when a
+  launch carries them over the rival, then plunge onto it. Shooters take a pad
+  up to high ground or a shot from the top of the arc, and run onto one to
+  escape a blade.
 - **Spikes are switched off for now.** The code is still there: set
   `SPIKES_ON = true` in `index.html` to bring back the spikes tool and the
   spikes in the rival layouts. When they're on, your fighter knows where your

@@ -941,7 +941,7 @@ function think(u) {
     return;
   }
   if (u.state !== 'free') { ai.macro = null; ai.path.length = 0; return; }
-  if (u.padLaunched) { u.padLaunched = false; choosePadMacro(u); }
+  if (u.padLaunched) { u.padLaunched = false; choosePadMacro(u, e); }
   if (ai.macro) {
     const m = ai.macro, f = ai.mf++;
     macroInput(ai.ms, m, b, inp);
@@ -1177,9 +1177,19 @@ function rangedEngage(u, e) {
   ai.escT = world.t + 8;
   const ex = e.b.x + e.b.vx * 0.35, cur = Math.hypot(b.x - ex, dy);
   let best = null, bs = -1e9;
-  for (const m of u.macros) {
-    if (!m.hold) continue;
-    const r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
+  const cands = u.macros.filter((m) => m.hold);
+  // an own pad within a couple of steps is an escape too: run onto it and get thrown clear
+  for (const dir of [-1, 1]) {
+    const r0 = Math.floor(b.y - 1e-3);
+    for (let k = 1; k <= 2; k++) if (A.pads[r0 * COLS + Math.floor(b.x + dir * k)] === u.side) { cands.push({ dir, hold: 0, delay: 0, pad: 1 }); break; }
+  }
+  for (const m of cands) {
+    let r;
+    if (m.pad) {
+      const fl = simFlight(stateOf(b), m, u.side, b.speed, u.acro);
+      if (!fl || !fl.launched || fl.land.pad) continue;
+      r = { x: fl.land.x, r: fl.land.r, frames: fl.land.f, spikes: null };
+    } else r = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
     if (!r || knownHit(u, r) || inZone(r.x)) continue;
     const ly = r.r + 1, d = Math.hypot(r.x - ex, (ly - e.b.y) * 1.2);
     let sc = d * 10 - r.frames * 0.12 + (lineClear(r.x, ly - 1.2, e.b.x, e.b.y - 0.9) ? 6 : 0) + Math.max(0, e.b.y - ly) * 5 + rng() * 4;
@@ -1237,11 +1247,77 @@ function plan(u, e) {
     const sc = score(u, e, nav.nodes[i], dist[i], i === s);
     if (sc < bs) { bs = sc; best = i; }
   }
+  // A pad can beat any walking route: a blade springs over the rival and comes down on it,
+  // a shooter springs up to high ground or to a shot from the top of the arc.
+  ai.padIntent = null;
+  const pp = padPlan(u, e, dist, bs);
+  if (pp) { best = pp.node; ai.padIntent = pp; }
   ai.goal = best;
   const path = [];
   for (let k = best; k !== s && prev[k]; k = prev[k].from) path.push(prev[k]);
   path.reverse();
   ai.path = path;
+}
+// Trace a macro's whole flight, not just where it lands. A pad under the start launches it.
+function simFlight(s, m, side, speed, acro) {
+  const b = { ...s, speed, acro }, ms = macroState(m), inp = {}, pts = [];
+  let air = !b.gr, launched = !b.gr;
+  for (let f = 0; f < 150; f++) {
+    macroInput(ms, m, b, inp);
+    const ev = physStep(b, inp.dir, inp.press, inp.hold, side, true, 1);
+    if (ev & EV_PAD) {
+      if (launched) return { pts, launched, land: { x: b.x, c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), f, pad: true } };
+      launched = true;
+    }
+    if ((ev & EV_WALL) && b.gr && !launched) return null;
+    pts.push({ x: b.x, y: b.y, vy: b.vy });
+    if (!b.gr) air = true;
+    else if (air) return { pts, launched, land: { x: b.x, c: Math.floor(b.x), r: Math.floor(b.y - 1e-6), f } };
+  }
+  return null;
+}
+// Does this flight come down on the rival from above, close enough for a plunge?
+function flightStrikes(u, e, fl) {
+  const ex = e.b.x + e.b.vx * 0.3, ey = e.b.y, reach = u.w === 'hammer' ? 1.9 : 1.2;
+  for (const p of fl.pts) {
+    const dy = ey - p.y;
+    if (p.vy > -6 && dy > 0.7 && dy < 5 && Math.abs(p.x - ex) < reach + dy * 0.12) return true;
+  }
+  return false;
+}
+// Does the top of this flight give a shooter a clear shot?
+function flightShot(e, fl) {
+  for (const p of fl.pts) {
+    if (p.vy < -7 || p.vy > 4) continue;
+    const d = Math.hypot(e.b.x - p.x, e.b.y - p.y);
+    if (d > 2.2 && d < 9 && lineClear(p.x, p.y - 1.1, e.b.x, e.b.y - 0.9)) return true;
+  }
+  return false;
+}
+function padPlan(u, e, dist, bs) {
+  const nav = u.nav, ai = u.ai;
+  if (e.ghost || lying(e) || ai.padCd > world.t) return null;
+  let pick = null, ps = bs;
+  for (let i = 0; i < nav.nodes.length; i++) {
+    const n = nav.nodes[i];
+    if (!n.pad || dist[i] > 150) continue;
+    const s0 = { x: n.c + 0.5, y: n.r + 1, vx: 0, vy: 0, gr: true, jumping: false };
+    for (const m of PADM) {
+      const fl = simFlight(s0, m, u.side, u.b.speed, u.acro);
+      if (!fl || fl.land.pad || !fl.launched) continue;
+      let sc;
+      if (!isRanged(u)) {
+        if (!flightStrikes(u, e, fl)) continue;
+        sc = dist[i] + fl.land.f * 0.5 - 35;
+      } else {
+        const j = nodeAt(u, fl.land.x, fl.land.r + 1);
+        if (j < 0) continue;
+        sc = score(u, e, nav.nodes[j], dist[i] + fl.land.f * 0.45, false) - (flightShot(e, fl) ? 14 : 0) - 6;
+      }
+      if (sc < ps) { ps = sc; pick = { node: i, i: n.i, m, strike: !isRanged(u) }; }
+    }
+  }
+  return pick;
 }
 function findMacro(u, e) {
   const to = u.nav.nodes[e.to], s = stateOf(u.b);
@@ -1276,13 +1352,17 @@ function follow(u, en) {
   u.in.dir = Math.abs(off) > 0.06 ? -Math.sign(off) : 0;
   if (u.in.dir) u.face = u.in.dir;
 }
-function choosePadMacro(u) {
+function choosePadMacro(u, e) {
   const ai = u.ai, nav = u.nav, p = ai.path;
+  // launched with a plan: fly the plan
+  const pi = ai.padIntent;
+  ai.padIntent = null; ai.padCd = world.t + 150;
+  if (pi && pi.i === u.b.pad) { startMacro(u, pi.m); ai.air = true; ai.path.length = 0; u.padStrike = pi.strike; return; }
   while (p.length && p[0].type === 'walk') p.shift();
   let target = null;
   if (p.length && p[0].type === 'pad') { target = nav.nodes[p[0].to]; p.shift(); }
   const g = target || (ai.goal >= 0 ? nav.nodes[ai.goal] : null), s = stateOf(u.b);
-  let best = null, bs = 1e9;
+  let best = null, bs = 1e9, strike = false;
   for (const m of PADM) {
     const r = simMacro(s, m, u.side, u.b.speed, u.acro);
     if (!r) continue;
@@ -1290,9 +1370,22 @@ function choosePadMacro(u) {
     if (knownHit(u, r)) sc += 50;
     if (A.pads[r.r * COLS + r.c] === u.side && !(target && r.c === target.c && r.r === target.r)) sc += 200;
     if (target && r.c === target.c && r.r === target.r) sc -= 100;
-    if (sc < bs) { bs = sc; best = m; }
+    // steer the flight to use it: over the rival for a blade, to a shot or high ground for a shooter
+    let hits = false;
+    if (e && !e.ghost && !lying(e)) {
+      const fl = simFlight(s, m, u.side, u.b.speed, u.acro);
+      if (fl) {
+        if (!isRanged(u) && flightStrikes(u, e, fl)) { sc -= 80; hits = true; }
+        if (isRanged(u)) {
+          if (flightShot(e, fl)) sc -= 6;
+          const j = nodeAt(u, fl.land.x, fl.land.r + 1);
+          if (j >= 0) sc += score(u, e, nav.nodes[j], 0, false) * 0.08;
+        }
+      }
+    }
+    if (sc < bs) { bs = sc; best = m; strike = hits; }
   }
-  if (best) { startMacro(u, best); ai.air = true; }
+  if (best) { startMacro(u, best); ai.air = true; u.padStrike = strike; }
 }
 function stuckCheck(u) {
   const ai = u.ai, b = u.b;
@@ -1868,6 +1961,9 @@ function applyHit(att, def, d, dirX, crit) {
   if (flying) def.juggle++;
   if (j >= 2) def.iT = Math.max(def.iT, 30);
   const dmg = d.dmg * (crit ? CRIT : 1) * Math.max(0.4, 1 - 0.3 * j);
+  if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
+    log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
+  }
   if (crit) {
     callout(att, 'CRIT'); ring(hx, hy, 1.8, 'spark');
     world.stats[att.side].crit += dmg;
@@ -1989,6 +2085,7 @@ function act(u) {
     if (u.state === 'free') u.padLaunched = true;
   } else if (ev & EV_LAND) {
     dust(b.x, b.y, vyBefore > 14 ? 5 : 2, 0.5);
+    u.padStrike = false;
     if (vyBefore > 9) u.landT = 9;
     u.flipT = 0;
     // a parkour roll out of a big drop keeps the momentum going
@@ -2334,7 +2431,7 @@ function newWorld(seed) {
   return {
     t: 0, rng: mulberry(seed), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
