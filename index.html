@@ -2566,7 +2566,7 @@ const MOB = {
       }
       ctx.closePath(); ctx.fill();
       // a shine and two eyes, looking where it's going
-      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.035;
+      ctx.strokeStyle = accentC(u, pal, pal.steel); ctx.lineWidth = 0.035;
       ctx.beginPath(); ctx.arc(cx - w * 0.14, cy - h * 0.02, Math.min(w, h) * 0.3, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
       const ex = cx + u.face * w * 0.14, ey = cy - h * 0.06, blink = (world.t + u.size * 37) % 140 < 5;
       ctx.strokeStyle = eyeC(u, pal); ctx.lineWidth = u.size > 2 ? 0.07 : 0.05;
@@ -2615,7 +2615,7 @@ const MOB = {
         const sh = { x: b.x + s * 0.07, y: cy - 0.02 }, el = { x: b.x + s * 0.24, y: cy - 0.12 - f * 0.14 }, tip = { x: b.x + s * (diving ? 0.3 : 0.44), y: cy + f * 0.2 - 0.04 }, tr = { x: b.x + s * 0.2, y: cy + 0.1 };
         ctx.fillStyle = flash ? pal.red : pal.steel; ctx.strokeStyle = ink; ctx.lineWidth = 0.04;
         ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(el.x, el.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(tr.x, tr.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = pal.far; ctx.lineWidth = 0.02; ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(tip.x, tip.y); ctx.stroke();   // the fold
+        ctx.strokeStyle = accentC(u, pal, pal.far); ctx.lineWidth = u.accent ? 0.03 : 0.02; ctx.beginPath(); ctx.moveTo(sh.x, sh.y); ctx.lineTo(tip.x, tip.y); ctx.stroke();   // the fold
       }
       ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(b.x, cy, 0.1, 0.13, 0, 0, 6.283); ctx.fill();
       ctx.beginPath(); ctx.moveTo(b.x - 0.08, cy - 0.08); ctx.lineTo(b.x - 0.05, cy - 0.21); ctx.lineTo(b.x - 0.01, cy - 0.1); ctx.moveTo(b.x + 0.08, cy - 0.08); ctx.lineTo(b.x + 0.05, cy - 0.21); ctx.lineTo(b.x + 0.01, cy - 0.1); ctx.fill();
@@ -2667,7 +2667,7 @@ const MOB = {
         ctx.strokeStyle = ink; ctx.lineWidth = 0.27 * (1 - (i - 1) / P0.length * 0.8);
         ctx.beginPath(); ctx.moveTo(P0[i].x, P0[i].y); ctx.lineTo(P0[i - 1].x, P0[i - 1].y); ctx.stroke();
       }
-      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.025;
+      ctx.strokeStyle = accentC(u, pal, pal.steel); ctx.lineWidth = 0.025;
       for (let i = 2; i < P0.length - 2; i += 2) {   // paper chevrons down its back
         const a = P0[i - 1], c = P0[i + 1], m = P0[i], ang = Math.atan2(c.y - a.y, c.x - a.x), s = 0.07 * (1 - i / P0.length);
         ctx.beginPath(); ctx.moveTo(m.x + Math.cos(ang + 2.4) * s, m.y + Math.sin(ang + 2.4) * s); ctx.lineTo(m.x, m.y); ctx.lineTo(m.x + Math.cos(ang - 2.4) * s, m.y + Math.sin(ang - 2.4) * s); ctx.stroke();
@@ -2810,7 +2810,7 @@ const MOB = {
       for (const ex of [0.13, 0.03]) { const a = angry ? 0.45 : 0.2; ctx.beginPath(); ctx.moveTo(ex - Math.cos(a) * 0.035, -0.035 - Math.sin(a) * 0.035); ctx.lineTo(ex + Math.cos(a) * 0.035, -0.035 + Math.sin(a) * 0.035); ctx.stroke(); }
       ctx.restore();
       // shine along the hump
-      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.038; ctx.globalAlpha = 0.9;
+      ctx.strokeStyle = accentC(u, pal, pal.steel); ctx.lineWidth = 0.038; ctx.globalAlpha = 0.9;
       const s0 = P(-0.46, -1.42), s1 = P(-0.34, -1.86), s2 = P(0.08, -1.94);
       ctx.beginPath(); ctx.moveTo(s0.x, s0.y); ctx.quadraticCurveTo(s1.x, s1.y, s2.x, s2.y); ctx.stroke();
       ctx.globalAlpha = 1;
@@ -2921,7 +2921,7 @@ const MOB = {
       ctx.fillStyle = ink;
       ctx.beginPath(); ctx.ellipse(b.x - f * 0.22, cy - 0.06, 0.3, 0.24, f * 0.25, 0, 6.283); ctx.fill();
       ctx.beginPath(); ctx.ellipse(b.x + f * 0.13, cy + 0.02, 0.19, 0.15, 0, 0, 6.283); ctx.fill();
-      ctx.fillStyle = pal.steel;
+      ctx.fillStyle = accentC(u, pal, pal.steel);
       const ax = b.x - f * 0.26, ay = cy - 0.08;
       ctx.beginPath(); ctx.moveTo(ax - 0.06, ay - 0.08); ctx.lineTo(ax + 0.06, ay - 0.08); ctx.lineTo(ax, ay); ctx.lineTo(ax + 0.06, ay + 0.08); ctx.lineTo(ax - 0.06, ay + 0.08); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill();
       // a cluster of eyes: two big, two small
@@ -2991,7 +2991,7 @@ const MOB = {
             ctx.strokeStyle = pal.far; ctx.lineWidth = 0.08 * (1 - t * 0.6); ctx.beginPath(); ctx.moveTo(T[j - 1].x, T[j - 1].y); ctx.lineTo(T[j].x, T[j].y); ctx.stroke();
             ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.03 * (1 - t * 0.6); ctx.beginPath(); ctx.moveTo(T[j - 1].x, T[j - 1].y); ctx.lineTo(T[j].x, T[j].y); ctx.stroke();
           } else {
-            ctx.strokeStyle = u.charge > 0.2 ? pal.poison : ink; ctx.lineWidth = 0.035 * (1 - t * 0.7);
+            ctx.strokeStyle = u.charge > 0.2 ? pal[(u.sting && u.sting.status) || 'poison'] : ink; ctx.lineWidth = 0.035 * (1 - t * 0.7);
             ctx.beginPath(); ctx.moveTo(T[j - 1].x, T[j - 1].y); ctx.lineTo(T[j].x, T[j].y); ctx.stroke();
           }
         }
@@ -3010,7 +3010,7 @@ const MOB = {
       ctx.strokeStyle = pal.far; ctx.lineWidth = 0.02;
       ctx.beginPath(); ctx.ellipse(cx, by - 0.02, rx * 0.8, ry * 0.3, 0, Math.PI * 1.1, Math.PI * 1.9); ctx.stroke();
       // four rings set in a ring around the crown, like a moon jelly's; they glow green before a sting
-      ctx.strokeStyle = u.charge > 0.2 ? pal.poison : pal.far; ctx.lineWidth = 0.022;
+      ctx.strokeStyle = u.charge > 0.2 ? pal[(u.sting && u.sting.status) || 'poison'] : accentC(u, pal, pal.far); ctx.lineWidth = 0.022;
       for (let i = 0; i < 4; i++) { const a = i / 4 * 6.283 + 0.785; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * rx * 0.3, by - ry * 0.52 + Math.sin(a) * ry * 0.16, 0.055, 0.04, a, 0, 6.283); ctx.stroke(); }
       ctx.fillStyle = u.elite ? pal.red : ink;
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(cx + u.face * 0.06 + s * 0.085, by - 0.1, 0.026, 0, 6.283); ctx.fill(); }
@@ -3020,7 +3020,8 @@ const MOB = {
   },
 
 };
-const eyeC = (u, pal) => (u.elite ? pal.red : pal.steel);   // elites are marked by red eyes
+const eyeC = (u, pal) => (u.elite ? pal.red : u.accent ? pal[u.accent] : pal.steel);   // elites are marked by red eyes, variants by their status colour
+const accentC = (u, pal, dflt) => (u.accent ? pal[u.accent] : dflt);
 // a scrap of paper: a little folded triangle that tumbles and flutters down
 function scrap(x, y, vx, vy) {
   parts.push({ k: 'sc', x, y, vx, vy, a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, s: 0.08 + Math.random() * 0.08, life: 0, max: 60 + Math.random() * 30 });
@@ -3057,6 +3058,19 @@ function mobWorth(u) {
   for (let s = u.size - 1; s >= 1; s--, n *= 2) w += n * Math.round(MOB.slime.hp[s] * TIER[broodTier(u)].hp * huntPower);
   return w;
 }
+// Variants: the same body with a status on its attacks, and that status's colour on its eyes and markings.
+const VARIANT = {
+  toxic: { status: 'poison', label: 'Toxic' }, frost: { status: 'chill', label: 'Frost' }, storm: { status: 'shock', label: 'Storm' },
+  blood: { status: 'bleed', label: 'Blood' }, ember: { status: 'burn', label: 'Ember' }, molten: { status: 'burn', label: 'Molten' },
+};
+Object.assign(HUNTS, {
+  toxic: { name: 'Toxic Slime', eliteName: 'Toxic King', base: 'slime', variant: 'toxic', tip: 'A slime that poisons with every hit, and splits when it pops.', spawn: HUNTS.slime.spawn },
+  frostbats: { name: 'Frost Bats', base: 'bats', variant: 'frost', tip: 'Every dive chills. Three stacks and you freeze in the air.', spawn: HUNTS.bats.spawn },
+  storm: { name: 'Storm Serpent', base: 'serpent', variant: 'storm', tip: 'Its lunges shock, and a full shock bar discharges.', spawn: HUNTS.serpent.spawn },
+  blood: { name: 'Blood Spiders', base: 'spiders', variant: 'blood', tip: 'Their bites open bleeds that hurt you every time you swing.', spawn: HUNTS.spiders.spawn },
+  emberjellies: { name: 'Ember Jellyfish', base: 'jellies', variant: 'ember', tip: 'Their stings set you alight.', spawn: HUNTS.jellies.spawn },
+  molten: { name: 'Molten Brute', base: 'brute', variant: 'molten', tip: 'Its slams and globs burn. Past Easy it slams twice.', spawn: HUNTS.brute.spawn },
+});
 const HUNT_KEYS = Object.keys(HUNTS);
 function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
   const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v), T = TIER[tier];
@@ -3070,6 +3084,8 @@ function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
     hidden: 0, fade: 0, hook: null, ghosts: [], trail: [], skName: null, in: { dir: 0, press: false, hold: false },
     ai: { path: [], macro: null, blocked: new Set() }, known: new Set(), t: Math.floor(rng() * 200), squash: 0, sqV: 0, hopT: 20, heavy: !!K.heavy,
   };
+  const V = huntVariant && VARIANT[huntVariant];
+  if (V) { u.variant = huntVariant; u.accent = V.status; u.sting = { name: `${V.label.toLowerCase()} ${K.name.toLowerCase()}`, status: V.status }; }
   if (K.init) K.init(u);
   return u;
 }
@@ -3730,7 +3746,7 @@ const RIVALS = [
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
-let rivalIx = 0, huntKind = null, huntTier = 'easy', huntPower = 1;   // huntPower: the run's day makes creatures stronger
+let rivalIx = 0, huntKind = null, huntTier = 'easy', huntPower = 1, huntVariant = null;   // huntPower: the run's day makes creatures stronger
 const rivalName = () => (world && world.hunt ? world.hunt.name : (builds[1] && builds[1].name) || 'The rival');
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
@@ -3782,6 +3798,14 @@ const FAMILY = {
   tide: { name: 'Tide', hunt: 'jellies', status: 'shock', set2: { proc: 0.3, hp: 15 } },
   iron: { name: 'Iron', hunt: 'brute', status: 'burn', set2: { hp: 25, atk: 0.06 } },
 };
+Object.assign(FAMILY, {
+  toxic: { name: 'Toxic', hunt: 'toxic', status: 'poison', set2: { proc: 0.25, regen: 0.6 } },
+  frost: { name: 'Frost', hunt: 'frostbats', status: 'chill', set2: { crit: 0.05, speed: 0.06 } },
+  storm: { name: 'Storm', hunt: 'storm', status: 'shock', set2: { proc: 0.3, atk: 0.04 } },
+  blood: { name: 'Blood', hunt: 'blood', status: 'bleed', set2: { ls: 0.06, crit: 0.04 } },
+  ember: { name: 'Ember', hunt: 'emberjellies', status: 'burn', set2: { proc: 0.25, hp: 15 } },
+  molten: { name: 'Molten', hunt: 'molten', status: 'burn', set2: { hp: 30, armor: 0.06 } },
+});
 const HUNT_FAMILY = Object.fromEntries(Object.entries(FAMILY).map(([k, f]) => [f.hunt, k]));
 // Items: base numbers are day 1's. `weapon` sets the weapon type, `skill` the skill, `trinket` a status
 // trinket, `acro` the acrobatics level, `onHit` a status the item's hits can carry.
@@ -3834,6 +3858,52 @@ const ITEM = {
   hide_plate: { name: 'Hide Plate', slot: 'core', family: 'iron', stats: { hp: 32, armor: 0.12, speed: -0.05 } },
   heavy_boots: { name: 'Heavy Boots', slot: 'feet', family: 'iron', acro: 1, stats: { hp: 8, armor: 0.05 } },
   ember_charm: { name: 'Ember Charm', slot: 'trinket', family: 'iron', trinket: 'ember', stats: {} },
+  // toxic: the toxic slime's
+  toxic_cleaver: { name: 'Toxic Cleaver', slot: 'weapon', family: 'toxic', weapon: 'sword', onHit: 'poison', stats: { hp: 8 } },
+  ooze_stars: { name: 'Ooze Stars', slot: 'weapon', family: 'toxic', weapon: 'stars', onHit: 'poison', stats: { proc: 0.1 } },
+  ooze_helm: { name: 'Ooze Helm', slot: 'head', family: 'toxic', stats: { hp: 16, proc: 0.1 } },
+  toxic_mantle: { name: 'Toxic Mantle', slot: 'core', family: 'toxic', stats: { hp: 22, regen: 0.3 } },
+  slick_boots: { name: 'Slick Boots', slot: 'feet', family: 'toxic', acro: 2, stats: { speed: 0.04 } },
+  venom_vial: { name: 'Venom Vial', slot: 'trinket', family: 'toxic', trinket: 'viper', stats: { proc: 0.1 } },
+  // frost: the frost bats'
+  frost_fangs: { name: 'Frost Fangs', slot: 'weapon', family: 'frost', weapon: 'daggers', onHit: 'chill', stats: { crit: 0.03 } },
+  icicle_bow: { name: 'Icicle Bow', slot: 'weapon', family: 'frost', weapon: 'bow', onHit: 'chill', stats: {} },
+  frost_cowl: { name: 'Frost Cowl', slot: 'head', family: 'frost', stats: { hp: 8, crit: 0.05 } },
+  rime_wings: { name: 'Rime Wings', slot: 'core', family: 'frost', stats: { speed: 0.06, armor: 0.04 } },
+  glide_boots: { name: 'Glide Boots', slot: 'feet', family: 'frost', acro: 4, stats: { speed: 0.04 } },
+  frost_bell: { name: 'Frost Bell', slot: 'trinket', family: 'frost', trinket: 'frost', stats: { crit: 0.02 } },
+  frost_wing: { name: 'Frost Wing', slot: 'skill', family: 'frost', skill: 'blink', stats: { haste: 0.05 } },
+  // storm: the storm serpent's
+  storm_pike: { name: 'Storm Pike', slot: 'weapon', family: 'storm', weapon: 'spear', onHit: 'shock', stats: {} },
+  thunder_maul: { name: 'Thunder Maul', slot: 'weapon', family: 'storm', weapon: 'hammer', onHit: 'shock', stats: { atk: 0.04 } },
+  storm_crest: { name: 'Storm Crest', slot: 'head', family: 'storm', stats: { proc: 0.2 } },
+  coil_plate: { name: 'Coil Plate', slot: 'core', family: 'storm', stats: { hp: 20, armor: 0.08 } },
+  surge_boots: { name: 'Surge Boots', slot: 'feet', family: 'storm', acro: 3, stats: { speed: 0.06 } },
+  static_coil: { name: 'Static Coil', slot: 'trinket', family: 'storm', trinket: 'static', stats: { proc: 0.1 } },
+  storm_shed: { name: 'Storm Shed', slot: 'skill', family: 'storm', skill: 'darksight', stats: { haste: 0.05 } },
+  // blood: the blood spiders'
+  blood_knives: { name: 'Blood Knives', slot: 'weapon', family: 'blood', weapon: 'daggers', onHit: 'bleed', stats: { atk: 0.03 } },
+  hooked_spear: { name: 'Hooked Spear', slot: 'weapon', family: 'blood', weapon: 'spear', onHit: 'bleed', stats: {} },
+  blood_circlet: { name: 'Blood Circlet', slot: 'head', family: 'blood', stats: { crit: 0.07, ls: 0.03 } },
+  red_silk: { name: 'Red Silk', slot: 'core', family: 'blood', stats: { hp: 14, ls: 0.05 } },
+  stalker_boots: { name: 'Stalker Boots', slot: 'feet', family: 'blood', acro: 4, stats: { crit: 0.03 } },
+  barb_spool: { name: 'Barb Spool', slot: 'trinket', family: 'blood', trinket: 'barb', stats: { ls: 0.03 } },
+  blood_line: { name: 'Blood Line', slot: 'skill', family: 'blood', skill: 'hook', stats: { haste: 0.05 } },
+  // ember: the ember jellyfish's
+  ember_stars: { name: 'Ember Stars', slot: 'weapon', family: 'ember', weapon: 'stars', onHit: 'burn', stats: {} },
+  flare_bow: { name: 'Flare Bow', slot: 'weapon', family: 'ember', weapon: 'bow', onHit: 'burn', stats: {} },
+  lantern_hat: { name: 'Lantern Hat', slot: 'head', family: 'ember', stats: { hp: 12, proc: 0.15 } },
+  glow_robe: { name: 'Glow Robe', slot: 'core', family: 'ember', stats: { hp: 18, regen: 0.5 } },
+  drift_boots: { name: 'Drift Boots', slot: 'feet', family: 'ember', acro: 3, stats: { hp: 8 } },
+  ember_bell: { name: 'Ember Bell', slot: 'trinket', family: 'ember', trinket: 'ember', stats: { proc: 0.1 } },
+  ember_mirror: { name: 'Ember Mirror', slot: 'skill', family: 'ember', skill: 'parry', stats: { haste: 0.05 } },
+  // molten: the molten brute's
+  molten_maul: { name: 'Molten Maul', slot: 'weapon', family: 'molten', weapon: 'hammer', onHit: 'burn', stats: { atk: 0.08 } },
+  slag_sword: { name: 'Slag Sword', slot: 'weapon', family: 'molten', weapon: 'sword', onHit: 'burn', stats: { atk: 0.05 } },
+  slag_helm: { name: 'Slag Helm', slot: 'head', family: 'molten', stats: { hp: 20, armor: 0.06 } },
+  molten_plate: { name: 'Molten Plate', slot: 'core', family: 'molten', stats: { hp: 36, armor: 0.12, speed: -0.04 } },
+  cinder_treads: { name: 'Cinder Treads', slot: 'feet', family: 'molten', acro: 2, stats: { hp: 10, armor: 0.04 } },
+  cinder_heart: { name: 'Cinder Heart', slot: 'trinket', family: 'molten', trinket: 'ember', stats: { hp: 15 } },
 };
 const FAMILY_ITEMS = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, Object.keys(ITEM).filter((id) => ITEM[id].family === f)]));
 
@@ -3873,11 +3943,11 @@ function runBuild(equip, pieces = []) {
 const DAY_POOLS = [
   { easy: ['slime:easy', 'bats:easy'], normal: ['serpent:easy', 'spiders:easy'], elite: ['brute:easy', 'jellies:normal'] },
   { easy: ['slime:easy', 'bats:easy', 'spiders:easy'], normal: ['serpent:normal', 'jellies:easy', 'slime:normal'], elite: ['brute:normal', 'spiders:normal'] },
-  { easy: ['spiders:easy', 'jellies:easy', 'serpent:easy'], normal: ['bats:normal', 'spiders:normal', 'brute:easy'], elite: ['slime:elite', 'serpent:elite'] },
-  { easy: ['bats:easy', 'slime:normal', 'jellies:easy'], normal: ['jellies:normal', 'brute:normal', 'serpent:normal'], elite: ['bats:elite', 'spiders:elite'] },
-  { easy: ['serpent:normal', 'spiders:normal'], normal: ['slime:normal', 'bats:normal', 'jellies:normal'], elite: ['brute:elite', 'jellies:elite'] },
-  { easy: ['jellies:normal', 'bats:normal'], normal: ['serpent:elite', 'spiders:normal', 'brute:normal'], elite: ['slime:elite', 'bats:elite'] },
-  { easy: ['slime:normal', 'spiders:normal'], normal: ['brute:normal', 'jellies:normal', 'bats:elite'], elite: ['brute:elite', 'serpent:elite', 'spiders:elite'] },
+  { easy: ['spiders:easy', 'jellies:easy', 'toxic:easy'], normal: ['bats:normal', 'frostbats:easy', 'brute:easy'], elite: ['slime:elite', 'serpent:elite', 'storm:normal'] },
+  { easy: ['toxic:easy', 'frostbats:easy', 'jellies:easy'], normal: ['blood:easy', 'storm:normal', 'emberjellies:easy'], elite: ['bats:elite', 'spiders:elite', 'molten:normal'] },
+  { easy: ['blood:easy', 'storm:easy', 'emberjellies:easy'], normal: ['toxic:normal', 'frostbats:normal', 'molten:easy'], elite: ['brute:elite', 'jellies:elite', 'blood:elite'] },
+  { easy: ['toxic:normal', 'frostbats:normal'], normal: ['storm:normal', 'blood:normal', 'emberjellies:normal'], elite: ['toxic:elite', 'frostbats:elite', 'molten:elite'] },
+  { easy: ['blood:normal', 'emberjellies:normal', 'storm:normal'], normal: ['molten:normal', 'frostbats:elite', 'toxic:normal'], elite: ['molten:elite', 'storm:elite', 'emberjellies:elite', 'blood:elite'] },
 ];
 const CARD_GOLD = { easy: 2, normal: 3, elite: 5, duel: 6, duelLoss: 3 };
 const SELL = { common: 1, rare: 2, epic: 4 };
@@ -4962,6 +5032,7 @@ function startFight(seed, replay = false) {
   fightSeed = seed;
   if (!builds[1]) setRival(rivalIx);
   const hunt = huntKind && HUNTS[huntKind];
+  huntVariant = hunt ? hunt.variant || null : null;
   A = makeArena(hunt ? [builds[0], null] : builds);
   world = newWorld(seed);
   world.recorded = replay || !!hunt;   // replays and hunts don't count toward the record

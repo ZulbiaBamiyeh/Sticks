@@ -5,9 +5,9 @@ different. ZereshkStory gets there with this much content:
 
 | | ZereshkStory | Home Turf today |
 | --- | --- | --- |
-| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 6 creatures × 3 tiers |
+| Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 12 creatures (6 bodies, 6 variants) × 3 tiers |
 | Biomes | 10 | 1 hunting ground |
-| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 6 weapons, 4 skills, 5 trinkets |
+| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 82 in 12 families, across six slots |
 | Statuses | 14 | 5 |
 
 ## Creatures: bodies × variants × tiers
@@ -51,14 +51,15 @@ several pieces of a family unlocks a set bonus that bends a rule (see
 | Keystones | ~10 | one per biome, each changing a rule |
 | Relics | ~13 | from Elite hunts |
 
-## What has to be built first
+## Where it stands
 
-Items only mean something inside a run: drop tables, a bag, rarity and
-affixes, and the hunt, hunt, duel loop with ghosts. The suggested order:
+The run loop is built (see the README): days, three hunt offers, loot, gear and
+bag, set bonuses, duels against generated and saved builds, and saving. There
+are six bodies, each with a status variant, and a family of gear for each.
 
-1. **The run and loot loop** with the six current creatures, so drops and
-   builds exist at all.
-2. **Bodies in batches of two or three,** each batch with its variants and
-   families.
-3. **Items per family** as each batch lands, run through the balance sim
-   before shipping.
+Next, in order:
+1. **More bodies** from the list above, two or three at a time, each with a
+   variant and a family.
+2. **Keystones and relics:** rule-changing items from Elite hunts.
+3. **The shop, merging and events,** as in ZereshkStory.
+4. **4-piece set bonuses** that bend a rule, not just add stats.

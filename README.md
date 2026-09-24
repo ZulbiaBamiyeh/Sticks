@@ -8,6 +8,23 @@ An autobattler prototype built for phones. Each player builds their half of a
 small arena and picks a weapon, a skill, a trinket and an acrobatics level.
 Then two stick figures fight it out on their own.
 
+- **Roguelike run** (the run bar at the top of the rival page), built on
+  ZereshkStory's structure with this game's fights:
+  - Seven days, each three hunts and then a duel. Win five duels for the Crown;
+    lose three and the run is over. Losing a hunt only costs its drop.
+  - Each hunt offers three creatures, Easy, Normal and Elite, and every card
+    shows its full drop list and its family's set bonus. Win, then pick one of
+    three drops, with one reroll a day. Harder creatures and variants turn up on
+    later days, and creatures and gear both grow stronger each day.
+  - Gear goes on the paper doll: head, core, feet (acrobatics), weapon, skill and
+    trinket. Items come in Common, Rare and Epic, with extra stats at higher
+    rarities, and two pieces from the same family give a set bonus. A six-slot
+    bag holds spares, and they sell for gold.
+  - Duels are against another build for that day. Entering a duel saves yours,
+    so later runs can meet your old builds. The run saves as you go, and the
+    run bar continues it.
+  - 82 items in 12 families, one per creature, and 12 creatures at three tiers.
+    `tools/runbot.mjs` plays whole runs headless.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
     reach, and it knocks arrows and stars out of the air.
@@ -79,6 +96,10 @@ Then two stick figures fight it out on their own.
 
   With random builds, Easy hunts are won about 95% of the time, Normal about
   55–90% and Elite about 15–45%.
+  - **Variants** appear from day 3 in a run: the same bodies with a status on
+    their attacks and that status's colour on their eyes and markings. They
+    are the Toxic Slime (poison), Frost Bats (chill), Storm Serpent (shock),
+    Blood Spiders (bleed), Ember Jellyfish (burn) and Molten Brute (burn).
 - **Acrobatics** (a stat from 0 to 4, meant to grow over a roguelike run). Each
   level unlocks a move, N+ style:
   1. **Roll:** a tumble that can't be hit for most of its length. Blades roll
