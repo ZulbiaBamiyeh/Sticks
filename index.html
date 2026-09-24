@@ -2980,15 +2980,15 @@ const broodTier = (u) => (u.size > 2 ? 'easy' : u.tier);
 function mobWorth(u) {
   if (u.mob !== 'slime') return u.hp;
   let w = u.hp, n = 2;
-  for (let s = u.size - 1; s >= 1; s--, n *= 2) w += n * Math.round(MOB.slime.hp[s] * TIER[broodTier(u)].hp);
+  for (let s = u.size - 1; s >= 1; s--, n *= 2) w += n * Math.round(MOB.slime.hp[s] * TIER[broodTier(u)].hp * huntPower);
   return w;
 }
 const HUNT_KEYS = Object.keys(HUNTS);
 function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
   const K = MOB[kind], at = (v) => (Array.isArray(v) ? v[size] : v), T = TIER[tier];
-  const hp = Math.round(at(K.hp) * T.hp), bw = at(K.bw), bh = at(K.bh), y = K.spawnY ? K.spawnY(slot) : SPAWN_R + 1;
+  const hp = Math.round(at(K.hp) * T.hp * huntPower), bw = at(K.bw), bh = at(K.bh), y = K.spawnY ? K.spawnY(slot) : SPAWN_R + 1;
   const u = {
-    mob: kind, name: K.name, size, slot, tier, elite: tier === 'elite', dmgMul: T.dmg, cdMul: T.cd, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpMax: hp, hpShow: hp, bw, bh,
+    mob: kind, name: K.name, size, slot, tier, elite: tier === 'elite', dmgMul: T.dmg * (1 + (huntPower - 1) * 0.8), cdMul: T.cd, side: 1, w: 'mob', skill: null, trinket: null, sting: K.sting || null, acro: 0, hp, hpMax: hp, hpShow: hp, bw, bh,
     b: { x, y, vx: 0, vy: 0, gr: !K.spawnY, speed: 0 },
     face: -1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0, hitDone: false, hitLanded: false,
     stunT: 0, juggle: 0, guardT: 0, react: 30 + Math.floor(rng() * 30), cd: 40 + Math.floor(rng() * 50), iT: 0, flash: 0, tumble: false, spin: 0, rot: 0,
@@ -3656,12 +3656,271 @@ const RIVALS = [
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
-let rivalIx = 0, huntKind = null, huntTier = 'easy';
+let rivalIx = 0, huntKind = null, huntTier = 'easy', huntPower = 1;   // huntPower: the run's day makes creatures stronger
 const rivalName = () => (world && world.hunt ? world.hunt.name : (builds[1] && builds[1].name) || 'The rival');
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
   const r = RIVALS[rivalIx];
   builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, trinket: r.trinket || null, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
+}
+
+// ---------------------------------------------------------------- the run (roguelike)
+// ZereshkStory's structure with this game's fights: seven days, each three hunts and then a duel
+// against another build. Pick one of three creatures to hunt (Easy, Normal, Elite), each showing what
+// it drops; win and pick one of three drops. Win five duels for the Crown; lose three and the run ends.
+// Hunts only cost you the drop. Creatures and gear both grow stronger day by day.
+// Everything in this section is rules and data, no DOM, so it can be run headless.
+const RUNCFG = { days: 7, perDay: 4, winTarget: 5, lives: 3, bag: 6, rerolls: 1 };
+const RUN_KEY = 'homeTurf.run.v1', GHOST_KEY = 'homeTurf.ghosts.v1';
+const dayOf = (round) => Math.ceil(round / RUNCFG.perDay);
+const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
+const isDuelRound = (round) => slotOf(round) === RUNCFG.perDay;
+const dayPower = (day) => 1 + 0.28 * (day - 1);   // creatures and gear both grow this much a day
+// a seeded random stream for any (seed, …tags)
+function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function runRng(...tags) {
+  const r = mulberry(hashStr(tags.join(':')));
+  r.pick = (a) => a[Math.floor(r() * a.length)];
+  r.chance = (p) => r() < p;
+  r.shuffle = (a) => { const b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; };
+  return r;
+}
+
+const SLOTS_RUN = ['head', 'core', 'feet', 'weapon', 'skill', 'trinket'];
+const RARITY = {
+  common: { name: 'Common', affixes: 0, mult: 1, next: 'rare' },
+  rare: { name: 'Rare', affixes: 1, mult: 1.15, next: 'epic' },
+  epic: { name: 'Epic', affixes: 2, mult: 1.3, next: 'epic' },
+};
+// odds of [common, rare, epic] by the card's tier; later days lean rarer
+const RARITY_ODDS = { easy: [80, 18, 2], normal: [30, 55, 15], elite: [0, 55, 45] };
+const AFFIX = { hp: 12, atk: 0.05, crit: 0.04, armor: 0.04, speed: 0.04, haste: 0.08, proc: 0.2, regen: 0.5 };
+const STAT_LABEL = { hp: 'HP', atk: 'Attack', crit: 'Crit', armor: 'Armour', speed: 'Speed', haste: 'Skill haste', proc: 'Status chance', ls: 'Lifesteal', regen: 'Regen' };
+const PCT_STATS = new Set(['atk', 'crit', 'armor', 'speed', 'haste', 'proc', 'ls']);
+const fmtStat = (k, v) => (PCT_STATS.has(k) ? `${v > 0 ? '+' : ''}${Math.round(v * 100)}%` : k === 'regen' ? `+${v.toFixed(1)}/s` : `${v > 0 ? '+' : ''}${Math.round(v)}`);
+
+// Families: each creature drops its family's gear. Two pieces of a family give its set bonus.
+const FAMILY = {
+  gel: { name: 'Gel', hunt: 'slime', set2: { regen: 1, hp: 10 } },
+  wing: { name: 'Wing', hunt: 'bats', status: 'bleed', set2: { speed: 0.08, crit: 0.04 } },
+  scale: { name: 'Scale', hunt: 'serpent', status: 'poison', set2: { armor: 0.06, proc: 0.2 } },
+  silk: { name: 'Silk', hunt: 'spiders', status: 'chill', set2: { crit: 0.06, haste: 0.1 } },
+  tide: { name: 'Tide', hunt: 'jellies', status: 'shock', set2: { proc: 0.3, hp: 15 } },
+  iron: { name: 'Iron', hunt: 'brute', status: 'burn', set2: { hp: 25, atk: 0.06 } },
+};
+const HUNT_FAMILY = Object.fromEntries(Object.entries(FAMILY).map(([k, f]) => [f.hunt, k]));
+// Items: base numbers are day 1's. `weapon` sets the weapon type, `skill` the skill, `trinket` a status
+// trinket, `acro` the acrobatics level, `onHit` a status the item's hits can carry.
+const ITEM = {
+  rusty_sword: { name: 'Rusty Sword', slot: 'weapon', weapon: 'sword', stats: {} },
+  worn_shoes: { name: 'Worn Shoes', slot: 'feet', acro: 1, stats: {} },
+  // gel: the slime's
+  gel_blade: { name: 'Gel Blade', slot: 'weapon', family: 'gel', weapon: 'sword', stats: { hp: 12 } },
+  glob_maul: { name: 'Glob Maul', slot: 'weapon', family: 'gel', weapon: 'hammer', stats: { hp: 10, atk: 0.04 } },
+  gel_cap: { name: 'Gel Cap', slot: 'head', family: 'gel', stats: { hp: 14, regen: 0.4 } },
+  gel_coat: { name: 'Gel Coat', slot: 'core', family: 'gel', stats: { hp: 24, regen: 0.4 } },
+  gel_boots: { name: 'Gel Boots', slot: 'feet', family: 'gel', acro: 1, stats: { hp: 10 } },
+  gel_heart: { name: 'Gel Heart', slot: 'trinket', family: 'gel', stats: { regen: 1.2 } },
+  // wing: the bats'
+  fang_knives: { name: 'Fang Knives', slot: 'weapon', family: 'wing', weapon: 'daggers', onHit: 'bleed', stats: { crit: 0.03 } },
+  wing_bow: { name: 'Wing Bow', slot: 'weapon', family: 'wing', weapon: 'bow', stats: { speed: 0.06 } },
+  bat_hood: { name: 'Bat Hood', slot: 'head', family: 'wing', stats: { crit: 0.06 } },
+  wing_cloak: { name: 'Wing Cloak', slot: 'core', family: 'wing', stats: { hp: 12, speed: 0.06 } },
+  wing_boots: { name: 'Wing Boots', slot: 'feet', family: 'wing', acro: 3, stats: { speed: 0.05 } },
+  barbed_charm: { name: 'Barbed Charm', slot: 'trinket', family: 'wing', trinket: 'barb', stats: {} },
+  night_wing: { name: 'Night Wing', slot: 'skill', family: 'wing', skill: 'blink', stats: {} },
+  // scale: the serpent's
+  fang_spear: { name: 'Fang Spear', slot: 'weapon', family: 'scale', weapon: 'spear', onHit: 'poison', stats: { atk: 0.03 } },
+  scale_stars: { name: 'Scale Stars', slot: 'weapon', family: 'scale', weapon: 'stars', stats: { proc: 0.2 } },
+  scale_helm: { name: 'Scale Helm', slot: 'head', family: 'scale', stats: { hp: 10, armor: 0.05 } },
+  scale_mail: { name: 'Scale Mail', slot: 'core', family: 'scale', stats: { hp: 16, armor: 0.1 } },
+  coil_boots: { name: 'Coil Boots', slot: 'feet', family: 'scale', acro: 2, stats: { speed: 0.04 } },
+  viper_fang: { name: 'Viper Fang', slot: 'trinket', family: 'scale', trinket: 'viper', stats: {} },
+  shed_skin: { name: 'Shed Skin', slot: 'skill', family: 'scale', skill: 'darksight', stats: {} },
+  // silk: the spiders'
+  silk_daggers: { name: 'Silk Daggers', slot: 'weapon', family: 'silk', weapon: 'daggers', stats: { atk: 0.06 } },
+  silk_spear: { name: 'Silk Spear', slot: 'weapon', family: 'silk', weapon: 'spear', onHit: 'chill', stats: { crit: 0.03 } },
+  eye_circlet: { name: 'Eye Circlet', slot: 'head', family: 'silk', stats: { crit: 0.08 } },
+  silk_vest: { name: 'Silk Vest', slot: 'core', family: 'silk', stats: { hp: 14, haste: 0.1 } },
+  web_boots: { name: 'Web Boots', slot: 'feet', family: 'silk', acro: 4, stats: {} },
+  frost_spool: { name: 'Frost Spool', slot: 'trinket', family: 'silk', trinket: 'frost', stats: {} },
+  silk_line: { name: 'Silk Line', slot: 'skill', family: 'silk', skill: 'hook', stats: {} },
+  // tide: the jellyfish's
+  tide_stars: { name: 'Tide Stars', slot: 'weapon', family: 'tide', weapon: 'stars', onHit: 'shock', stats: {} },
+  tide_bow: { name: 'Tide Bow', slot: 'weapon', family: 'tide', weapon: 'bow', stats: { proc: 0.2 } },
+  bell_hat: { name: 'Bell Hat', slot: 'head', family: 'tide', stats: { hp: 12, proc: 0.15 } },
+  tide_robe: { name: 'Tide Robe', slot: 'core', family: 'tide', stats: { hp: 20, regen: 0.3 } },
+  float_boots: { name: 'Float Boots', slot: 'feet', family: 'tide', acro: 2, stats: { hp: 8 } },
+  static_charm: { name: 'Static Charm', slot: 'trinket', family: 'tide', trinket: 'static', stats: {} },
+  tide_mirror: { name: 'Tide Mirror', slot: 'skill', family: 'tide', skill: 'parry', stats: {} },
+  // iron: the brute's
+  brute_maul: { name: 'Brute Maul', slot: 'weapon', family: 'iron', weapon: 'hammer', stats: { atk: 0.1 } },
+  iron_sword: { name: 'Iron Sword', slot: 'weapon', family: 'iron', weapon: 'sword', stats: { atk: 0.06, armor: 0.04 } },
+  brute_brow: { name: 'Brute Brow', slot: 'head', family: 'iron', stats: { hp: 18, armor: 0.05 } },
+  hide_plate: { name: 'Hide Plate', slot: 'core', family: 'iron', stats: { hp: 32, armor: 0.12, speed: -0.05 } },
+  heavy_boots: { name: 'Heavy Boots', slot: 'feet', family: 'iron', acro: 1, stats: { hp: 8, armor: 0.05 } },
+  ember_charm: { name: 'Ember Charm', slot: 'trinket', family: 'iron', trinket: 'ember', stats: {} },
+};
+const FAMILY_ITEMS = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, Object.keys(ITEM).filter((id) => ITEM[id].family === f)]));
+
+let runUid = 1;
+function rollInstance(id, rarity, day, r) {
+  const n = RARITY[rarity].affixes, pool = r.shuffle(Object.keys(AFFIX));
+  return { uid: `i${Date.now().toString(36)}${(runUid++).toString(36)}`, item: id, rarity, day, affixes: pool.slice(0, n) };
+}
+function rollRarity(card, day, r) {
+  const [c, ra, e] = RARITY_ODDS[card], shift = Math.min(c, (day - 1) * 5), x = r() * 100;
+  return x < c - shift ? 'common' : x < c - shift + ra + shift * 0.6 ? 'rare' : 'epic';
+}
+// An instance's numbers: base stats times rarity and the day it dropped on; percentages grow half as fast.
+function instStats(inst) {
+  const it = ITEM[inst.item], m = RARITY[inst.rarity].mult, p = dayPower(inst.day), pp = 1 + (p - 1) * 0.5, out = {};
+  const add = (k, v) => { out[k] = (out[k] || 0) + v; };
+  for (const [k, v] of Object.entries(it.stats)) add(k, v * m * (PCT_STATS.has(k) ? pp : p));
+  for (const k of inst.affixes) add(k, AFFIX[k] * (PCT_STATS.has(k) ? pp : p));
+  return out;
+}
+// Equipment -> the build a fighter is made from
+function runBuild(equip, pieces = []) {
+  const stats = { ...NO_STATS, onHit: [] }, fams = {};
+  for (const inst of Object.values(equip)) {
+    if (!inst) continue;
+    const it = ITEM[inst.item];
+    for (const [k, v] of Object.entries(instStats(inst))) stats[k] += v;
+    if (it.onHit && !stats.onHit.includes(it.onHit)) stats.onHit.push(it.onHit);
+    if (it.family) fams[it.family] = (fams[it.family] || 0) + 1;
+  }
+  for (const [f, n] of Object.entries(fams)) if (n >= 2) for (const [k, v] of Object.entries(FAMILY[f].set2)) stats[k] += v;
+  const get = (s, k) => (equip[s] ? ITEM[equip[s].item][k] : null);
+  return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: get('trinket', 'trinket'), acro: get('feet', 'acro') || 0, stats, pieces, sets: fams };
+}
+
+// Which creatures turn up each day, one list per card tier. Entries are hunt:tier.
+const DAY_POOLS = [
+  { easy: ['slime:easy', 'bats:easy'], normal: ['serpent:easy', 'spiders:easy'], elite: ['brute:easy', 'jellies:normal'] },
+  { easy: ['slime:easy', 'bats:easy', 'spiders:easy'], normal: ['serpent:normal', 'jellies:easy', 'slime:normal'], elite: ['brute:normal', 'spiders:normal'] },
+  { easy: ['spiders:easy', 'jellies:easy', 'serpent:easy'], normal: ['bats:normal', 'spiders:normal', 'brute:easy'], elite: ['slime:elite', 'serpent:elite'] },
+  { easy: ['bats:easy', 'slime:normal', 'jellies:easy'], normal: ['jellies:normal', 'brute:normal', 'serpent:normal'], elite: ['bats:elite', 'spiders:elite'] },
+  { easy: ['serpent:normal', 'spiders:normal'], normal: ['slime:normal', 'bats:normal', 'jellies:normal'], elite: ['brute:elite', 'jellies:elite'] },
+  { easy: ['jellies:normal', 'bats:normal'], normal: ['serpent:elite', 'spiders:normal', 'brute:normal'], elite: ['slime:elite', 'bats:elite'] },
+  { easy: ['slime:normal', 'spiders:normal'], normal: ['brute:normal', 'jellies:normal', 'bats:elite'], elite: ['brute:elite', 'serpent:elite', 'spiders:elite'] },
+];
+const CARD_GOLD = { easy: 2, normal: 3, elite: 5, duel: 6, duelLoss: 3 };
+const SELL = { common: 1, rare: 2, epic: 4 };
+
+// Duel rivals: generated builds geared for their day, with a name, a record and a half; plus your
+// own builds saved from earlier runs, which turn up half the time when one exists for that round.
+const GHOST_NAMES = ['Quill', 'Lull', 'Pike', 'Gaff', 'Moth', 'Anvil', 'Pinwheel', 'Tack', 'Wick', 'Hatch', 'Smudge', 'Nib', 'Vellum', 'Ferrule', 'Stipple', 'Loop'];
+function makeGhost(seed, round) {
+  const r = runRng(seed, round, 'ghost'), day = dayOf(round), fams = r.shuffle(Object.keys(FAMILY)).slice(0, 2), equip = {};
+  const card = day >= 5 ? 'elite' : day >= 3 ? 'normal' : 'easy';
+  for (const s of SLOTS_RUN) {
+    if (s === 'skill' && day < 2) continue;
+    if (s === 'trinket' && day < 2 && r.chance(0.5)) continue;
+    const pool = fams.flatMap((f) => FAMILY_ITEMS[f]).filter((id) => ITEM[id].slot === s);
+    if (!pool.length) continue;
+    equip[s] = rollInstance(r.pick(pool), rollRarity(card, day, r), day, r);
+  }
+  if (!equip.weapon) equip.weapon = rollInstance('rusty_sword', 'common', day, r);
+  const l = Math.floor(r() * Math.min(3, day));
+  return { name: r.pick(GHOST_NAMES), record: `${Math.max(0, day - 1 - l)}-${l}`, round, equip, t: Math.floor(r() * TEMPLATES.length) };
+}
+function loadGhosts() { try { return JSON.parse(localStorage.getItem(GHOST_KEY)) || []; } catch { return []; } }
+function saveGhost(g) { try { const all = loadGhosts().filter((x) => x.id !== g.id); all.push(g); localStorage.setItem(GHOST_KEY, JSON.stringify(all.slice(-60))); } catch { /* storage may be unavailable */ } }
+
+class Run {
+  constructor(seed = 1 + Math.floor(Math.random() * 1e9)) {
+    this.seed = seed; this.round = 1; this.lives = RUNCFG.lives; this.wins = 0; this.duelLosses = 0; this.gold = 0;
+    this.over = false; this.crown = false; this.history = []; this.bag = []; this.rerolls = RUNCFG.rerolls;
+    this.loot = null; this.offer = null;
+    const r = runRng(seed, 'start');
+    this.equip = { weapon: rollInstance('rusty_sword', 'common', 1, r), feet: rollInstance('worn_shoes', 'common', 1, r) };
+    this.rollRound();
+  }
+  get day() { return dayOf(this.round); }
+  get isDuel() { return isDuelRound(this.round); }
+  build(pieces) { return runBuild(this.equip, pieces); }
+  // three hunts to choose from, one per tier, or tonight's duel rival
+  rollRound() {
+    const r = runRng(this.seed, this.round, 'offers');
+    this.offers = null; this.ghost = null;
+    if (this.isDuel) {
+      const mine = loadGhosts().filter((g) => g.round === this.round && g.seed !== this.seed);
+      this.ghost = mine.length && r.chance(0.5) ? { ...r.pick(mine), mine: true } : makeGhost(this.seed, this.round);
+    } else {
+      const pool = DAY_POOLS[Math.min(DAY_POOLS.length, this.day) - 1];
+      this.offers = ['easy', 'normal', 'elite'].map((card) => {
+        const [hunt, tier] = r.pick(pool[card]).split(':');
+        return { card, hunt, tier, family: HUNT_FAMILY[hunt] };
+      });
+    }
+  }
+  // the drops a card can give: its family's gear; skills only from Normal and Elite cards
+  drops(offer) { return FAMILY_ITEMS[offer.family].filter((id) => ITEM[id].slot !== 'skill' || offer.card !== 'easy'); }
+  resolve(won, offer) {
+    const out = { won, duel: this.isDuel, lifeLost: false, gold: 0 };
+    if (this.isDuel) {
+      if (won) { this.wins++; out.gold = CARD_GOLD.duel; if (this.wins >= RUNCFG.winTarget) this.crown = true; }
+      else { this.lives--; this.duelLosses++; out.lifeLost = true; out.gold = CARD_GOLD.duelLoss; }
+      this.loot = null;
+    } else if (won) {
+      out.gold = CARD_GOLD[offer.card];
+      this.lootFor(offer, 0);
+    } else this.loot = null;
+    this.gold += out.gold;
+    this.history.push({ round: this.round, duel: this.isDuel, label: this.isDuel ? this.ghost.name : HUNTS[offer.hunt].name, result: won ? 'W' : 'L' });
+    if (this.crown || this.lives <= 0 || (this.round >= RUNCFG.days * RUNCFG.perDay && !this.loot)) this.over = true;
+    return out;
+  }
+  lootFor(offer, n) {
+    const r = runRng(this.seed, this.round, 'loot', n), ids = r.shuffle(this.drops(offer)).slice(0, 3);
+    this.loot = { offer, items: ids.map((id) => rollInstance(id, rollRarity(offer.card, this.day, r), this.day, r)) };
+  }
+  rerollLoot() {
+    if (!this.loot || this.rerolls <= 0) return false;
+    this.rerolls--; this.lootFor(this.loot.offer, 1 + RUNCFG.rerolls - this.rerolls); return true;
+  }
+  bagFull() { return this.bag.length >= RUNCFG.bag; }
+  // put a piece on: whatever it replaces goes to the bag, or is sold if the bag is full
+  wear(inst) {
+    const s = ITEM[inst.item].slot, old = this.equip[s];
+    this.equip[s] = inst;
+    this.bag = this.bag.filter((x) => x.uid !== inst.uid);
+    if (old) { if (!this.bagFull()) this.bag.push(old); else this.gold += SELL[old.rarity]; }
+  }
+  takeLoot(i, action) {
+    const inst = this.loot && this.loot.items[i];
+    if (!inst) return false;
+    if (action === 'wear') this.wear(inst);
+    else if (action === 'bag') { if (this.bagFull()) return false; this.bag.push(inst); }
+    this.loot = null;
+    if (this.round >= RUNCFG.days * RUNCFG.perDay) this.over = true;
+    return true;
+  }
+  sell(uid) {
+    const inst = this.bag.find((x) => x.uid === uid);
+    if (!inst) return 0;
+    this.bag = this.bag.filter((x) => x.uid !== uid); this.gold += SELL[inst.rarity];
+    return SELL[inst.rarity];
+  }
+  unwear(slot) {
+    if (!this.equip[slot] || this.bagFull() || slot === 'weapon') return false;
+    this.bag.push(this.equip[slot]); delete this.equip[slot]; return true;
+  }
+  snapshot() {
+    return { id: `me-${this.seed}-${this.round}`, seed: this.seed, name: 'Your ghost', record: `${this.wins}-${this.duelLosses}`, round: this.round, equip: this.equip, t: 0, mine: true };
+  }
+  next() {
+    if (this.over) return;
+    this.round++;
+    if (slotOf(this.round) === 1) this.rerolls = RUNCFG.rerolls;
+    this.loot = null; this.rollRound();
+  }
+  save() { try { localStorage.setItem(RUN_KEY, JSON.stringify(this)); } catch { /* storage may be unavailable */ } }
+  static load() {
+    try { const d = JSON.parse(localStorage.getItem(RUN_KEY)); if (!d || !d.seed) return null; return Object.assign(Object.create(Run.prototype), d); } catch { return null; }
+  }
+  static clear() { try { localStorage.removeItem(RUN_KEY); } catch { /* ignore */ } }
 }
 
 // ---------------------------------------------------------------- canvas & camera
@@ -4795,7 +5054,8 @@ window.__homeTurf = {
     const saved = [builds[0], builds[1]], savedHunt = huntKind;
     builds[0] = blue;
     const savedTier = huntTier;
-    if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { builds[1] = red; huntKind = null; }
+    const savedPower = huntPower;
+    if (typeof red === 'string') { let p; [huntKind, huntTier = 'easy', p = '1'] = red.split(':'); huntPower = +p; } else { builds[1] = red; huntKind = null; }
     headless = true; startFight(seed);
     let f = 0;
     while (f++ < maxFrames && !(world.over && world.overT > 5)) {
@@ -4804,13 +5064,14 @@ window.__homeTurf = {
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
     const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
-    builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; headless = false;
+    builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; huntPower = savedPower; headless = false;
     return res;
   },
   // Start a rendered fight, and advance it by hand (for screenshots and frame-by-frame review).
   play(seed, blue, red) { if (blue) builds[0] = blue; if (typeof red === 'string') { [huntKind, huntTier = 'easy'] = red.split(':'); } else { huntKind = null; if (red) builds[1] = red; } startFight(seed); },
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
-  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS, validate, get world() { return world; }, get units() { return U; },
+  templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
+  run: { Run, runBuild, instStats, ITEM, FAMILY, dayPower, makeGhost, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
