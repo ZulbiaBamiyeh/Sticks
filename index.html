@@ -894,7 +894,7 @@ function physStep(b, dir, press, hold, side, ctl, fr) {
     if (b.vy >= 0) b.jumping = false;
     else if (!hold && !b.wr) { b.vy *= P.cut; b.jumping = false; }
   }
-  b.vy = Math.min(b.vy + P.g * DT, P.maxFall);
+  b.vy = Math.min(b.vy + P.g * (b.gMul || 1) * DT, P.maxFall);
   // wall run: holding jump into a wall carries the fighter straight up it
   if (acro >= 3 && ctl && hold && dir && !b.wrUsed && !b.wr && (b.gr || b.vy < 4) && touchingWall(b, dir)) {
     b.wr = ACRO.wrFrames; b.wrUsed = true; b.wrSide = dir; b.gr = false; b.jumping = false; ev |= EV_WR;
@@ -2526,6 +2526,7 @@ function triggerEffect(u, t, target) {
   if (e.apply === 'frenzy') { u.frenzyT = Math.round(e.duration * 60); callout(u, 'FRENZY'); }
   else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
   if (e.shield) { u.shield += e.shield; ring(u.b.x, u.b.y - H / 2, 1, 'steel'); }
+  if (e.shift) startShift(u, e.shift, e.duration);
   if (e.critNext) { u.critNext = true; }
   if (e.halveHp) { u.hpMax = Math.max(20, Math.round(u.hpMax / 2)); u.hp = Math.min(u.hp, u.hpMax); callout(u, 'LAST PAGE'); }
   if (e.boom && target) { ring(target.b.x, target.b.y - H / 2, 1.6, 'ink'); sparks(target.b.x, target.b.y - H / 2, 0, 18, 'ink'); sfxShake(5); }
@@ -2544,6 +2545,31 @@ function triggerEffect(u, t, target) {
     callout(u, 'GILDED');
   }
 }
+// ---- shapeshifting: for a few seconds you stop being a stick figure. The creature's body is drawn over
+// yours, you move the way it moves, and you keep your own weapon and skills underneath.
+const SHIFT = {
+  bat: { name: 'BAT', secs: 4, bw: 0.62, bh: 0.52, gMul: 0.22, speed: 1.35, evasion: 0.25, apply: 'bleed', why: 'A bat: you fall like paper, and your bites open cuts.' },
+  slime: { name: 'SLIME', secs: 4, bw: 0.96, bh: 0.8, gMul: 1, speed: 0.8, def: 14, steady: 1, heal: 3, why: 'A slime: heavy, hard to shift, and every hit feeds you.' },
+  wraith: { name: 'WRAITH', secs: 3.5, bw: 0.7, bh: 1.2, gMul: 0.12, speed: 1.2, evasion: 0.4, drain: 6, why: 'A wraith: half there, and every hit drains.' },
+};
+function startShift(u, kind, secs) {
+  const S = SHIFT[kind];
+  if (!S || u.state === 'dead') return;
+  u.shift = { kind, t: Math.round((secs || S.secs) * 60), speed: u.b.speed };
+  u.b.gMul = S.gMul; u.b.speed *= S.speed;
+  u.bw = S.bw; u.bh = S.bh; u.slot = 0; u.size = 2; u.hopT = u.hopT || 20;
+  u.vis = 1; u.t = u.t || 0; u.squash = u.squash || 0; u.phase = u.phase || 'w';   // the fields the creature's own drawing reads
+  smoke(u.b.x, u.b.y, 10); ring(u.b.x, u.b.y - H / 2, 1.4, TEAM[u.side]);
+  callout(u, S.name);
+}
+function endShift(u) {
+  if (!u.shift) return;
+  const b = u.b;
+  b.gMul = 1; b.speed = u.shift.speed;
+  u.bw = undefined; u.bh = undefined; u.shift = null;
+  smoke(b.x, b.y, 8);
+}
+const shiftOf = (u) => (u && u.shift ? SHIFT[u.shift.kind] : null);
 function kill(u) {
   if (u.mob) { mobDie(u); return; }
   if (u.gs && u.gs.flags.revive && !u.revived) {   // Phoenix Feather: rise once, cleansed, and burn the foe
@@ -2602,7 +2628,8 @@ function applyHit(att, def, d, dirX, crit) {
     }
   }
   // Evasion: the hit whiffs past a fighter who reads it
-  if (def.gs && def.gs.evasion > 0 && d.dmg && rng() < def.gs.evasion) {
+  const dSh = shiftOf(def), dEv = (def.gs ? def.gs.evasion : 0) + ((dSh && dSh.evasion) || 0);
+  if (dEv > 0 && d.dmg && rng() < dEv) {
     att.hitDone = true; def.iT = Math.max(def.iT, 8);
     popText(def.b.x, def.b.y - H - 0.35, 'dodge', 'steel', 0.4); streak(def.b.x, def.b.y - 0.9, dirX > 0 ? 0 : Math.PI, 0.8, 'steel');
     if (def.gs.flags.dodgeRage) def.rage += def.gs.flags.dodgeRage;   // Dervish Slippers
@@ -2625,7 +2652,8 @@ function applyHit(att, def, d, dirX, crit) {
     if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
     def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
     // knockback: more from gear that hits hard, less on gear that stands firm
-    const kbm = (ag ? 1 + (ag.flags.kb || 0) : 1) * (dg && dg.flags.steady ? 1 - Math.min(0.8, dg.flags.steady) : 1);
+    const steady = Math.min(0.85, (dg ? dg.flags.steady || 0 : 0) + ((dSh && dSh.steady) || 0));
+    const kbm = (ag ? 1 + (ag.flags.kb || 0) : 1) * (1 - steady);
     def.b.vx = dirX * d.kb[0] * kbm; def.b.vy = d.kb[1] * kbm; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
     def.face = -dirX;
     if (d.tumble) { def.tumble = true; def.bounced = false; def.spin = -0.26; } else def.tumble = false;
@@ -2667,7 +2695,7 @@ function applyHit(att, def, d, dirX, crit) {
     if (f.dmgPerShock && def.st.shock) mods *= 1 + f.dmgPerShock * def.st.shock;
     if (f.dmgPerPoison && def.st.poison) mods *= 1 + f.dmgPerPoison * def.st.poison;
   }
-  const defNow = dg ? dg.def + (dg.flags.shieldToDef ? def.shield : 0) : 0;   // Tidal Ledger: a shield is armour too
+  const defNow = (dg ? dg.def + (dg.flags.shieldToDef ? def.shield : 0) : 0) + ((dSh && dSh.def) || 0);   // Tidal Ledger: a shield is armour too
   const armour = dg ? 26 / (26 + Math.max(0, defNow - (ag ? ag.pen : 0))) : 1;
   const zap = s.shock * STATUS.shock.per * dotPwr(def);
   let dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter * (1 + ((ag && ag.flags.shatter) || 0)) * powerOf(att) : 0)) * armour;
@@ -2686,6 +2714,12 @@ function applyHit(att, def, d, dirX, crit) {
   const taken = dmg;
   hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap * armour / dmg], ['shock', zap * armour / dmg]] : [[kind, 1]]);
   if (ag && ag.ls > 0 && att.state !== 'dead') heal(att, taken * ag.ls);
+  const aSh = shiftOf(att);
+  if (aSh && att.state !== 'dead') {   // the form's own bite
+    if (aSh.heal) heal(att, aSh.heal * powerOf(att));
+    if (aSh.drain) { heal(att, aSh.drain * powerOf(att)); }
+    if (aSh.apply) applyStatus(att, def, aSh.apply);
+  }
   proc(att, def, d.dmg);
   if (ag) {
     att.hits++;
@@ -4113,12 +4147,16 @@ function act(u) {
   if (u.flash > 0) u.flash--;
   if (u.spikeCd > 0) u.spikeCd--;
   if (u.rollCd > 0) u.rollCd--;
-  if (u.twirlT > 0) u.twirlT--;
+  // An idle twirl turns the wrist a whole circle, so it ends where it began. If something interrupts it,
+  // run the rest of the turn out fast rather than letting the weapon snap back through the circle.
+  if (u.twirlT > 0) u.twirlT = Math.max(0, u.twirlT - (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 ? 1 : 4));
   else if (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 && !world.over && vr() < 0.006) { const e = foe(u); if (!e || Math.abs(e.b.x - b.x) > 4) u.twirlT = 40; }
   if (u.landT > 0) u.landT--;
   if (u.flipT > 0) u.flipT--;
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
+  // A shift runs on its own clock, gear or no gear, so the form always ends.
+  if (u.shift && --u.shift.t <= 0) endShift(u);
   if (u.gs) {
     const g = u.gs;
     if (g.regen > 0 && world.t % 60 === 0 && !world.over) {
@@ -4340,10 +4378,10 @@ function poseTarget(u) {
     } else { Object.assign(T, sp); T.ka = 0.5; T.kb = 0.35; }
   }
   // Waiting with nothing in reach: now and then twirl the weapon.
-  if (st === 'free' && b.gr && spd < 0.5 && u.twirlT > 0) {
-    const k = 1 - u.twirlT / 40;
-    if (w === 'bow') T.ai = 0.9 - Math.sin(k * Math.PI) * 1.6;
-    else { T.wa = STANCE[w].wa - k * 2 * Math.PI; T.wb = STANCE[w].wb + k * 2 * Math.PI; T.fx += 0.08; T.fy -= 0.1; }
+  if (u.twirlT > 0) {
+    const lift = Math.sin((1 - u.twirlT / 40) * Math.PI);   // the hand rises and settles over the turn
+    if (w === 'bow') T.ai = 0.9 - lift * 1.6;
+    else { T.fx += 0.08 * lift; T.fy -= 0.1 * lift; }
     T.ka = 0.5;
   }
   // On guard: blade up across the body, weight back.
@@ -4436,8 +4474,15 @@ function weaponGeom(w, hf, hb, wd, draw, wdb = wd) {
   const drawn = draw > 0.04;
   return { t1: at(hf, -0.14, 0.45), t2: at(hf, -0.14, -0.45), ctl: at(hf, 0.22), nock: drawn ? hb : at(hf, -0.12), a1: drawn ? hb : null, a2: drawn ? at(hb, 0.74) : null };
 }
+// How far round an idle twirl has carried the wrist: a full circle, eased at both ends, so it starts and
+// finishes on the stance with nothing to spring back to.
+function twirlTurn(u) {
+  if (!(u.twirlT > 0) || u.w === 'bow') return 0;
+  const r = 1 - u.twirlT / 40;
+  return r * r * (3 - 2 * r) * 2 * Math.PI;
+}
 function skel(u) {
-  const p = u.pose.p, f = u.face, b = u.b, rot = u.rot, drop = p.drop;
+  const p = u.pose.p, f = u.face, b = u.b, rot = u.rot, drop = p.drop, tw = twirlTurn(u);
   const hip = { x: 0, y: -p.hipH };
   const sl = Math.sin(p.lean), cl = Math.cos(p.lean);
   const neck = { x: hip.x + sl * 0.5, y: hip.y - cl * 0.5 };
@@ -4452,7 +4497,7 @@ function skel(u) {
     hfT = { x: sh.x + wd.x * 0.53, y: sh.y + wd.y * 0.53 };
     hbT = draw > 0.04 ? { x: hfT.x - wd.x * (0.1 + 0.42 * draw), y: hfT.y - wd.y * (0.1 + 0.42 * draw) } : { x: sh.x + p.bx, y: sh.y + p.by };
   } else {
-    wd = { x: Math.cos(p.wa), y: Math.sin(p.wa) };
+    wd = { x: Math.cos(p.wa - tw), y: Math.sin(p.wa - tw) };
     hfT = { x: sh.x + p.fx, y: sh.y + p.fy };
     // Two-handed weapons put the back hand on the haft, unless that hand is busy throwing a hook.
     const grip = u.w === 'hammer' ? 0.26 : u.w === 'spear' ? 0.42 : 0;
@@ -4460,7 +4505,7 @@ function skel(u) {
   }
   const a1 = ik(sh, hfT, 0.31, 0.31, 1), a2 = ik(sh, hbT, 0.31, 0.31, 1);
   const l1 = ik(hip, { x: hip.x + p.ffx, y: hip.y + p.ffy }, 0.41, 0.41, -1), l2 = ik(hip, { x: hip.x + p.bfx, y: hip.y + p.bfy }, 0.41, 0.41, -1);
-  const wg = weaponGeom(u.w, a1.e, a2.e, wd, draw, { x: Math.cos(p.wb), y: Math.sin(p.wb) });
+  const wg = weaponGeom(u.w, a1.e, a2.e, wd, draw, { x: Math.cos(p.wb + tw), y: Math.sin(p.wb + tw) });
   const c = Math.cos(rot), s = Math.sin(rot);
   const tf = (q) => { if (!q) return null; const x0 = q.x, y0 = q.y + 0.8; return { x: b.x + (x0 * c - y0 * s) * f, y: b.y + (x0 * s + y0 * c) - 0.8 + drop }; };
   const wp = {};
@@ -5244,6 +5289,19 @@ Object.assign(ITEM, {
   understudy_hood: iL('Understudy\'s Hood', 'head', { stats: { hp: 14, crit: 0.05, haste: 0.08 }, flags: { firstCrit: true }, desc: 'The first hit you land in a fight always crits, and heals you 15.', flavor: 'One good entrance is worth a whole rehearsal.' }),
   patience_stone: iL('Patience Stone', 'trinket', { flags: { rampUp: 0.04 }, desc: '+4% damage for every second the fight has lasted, up to +80%.', flavor: 'It gets there. Everything does.' }),
   broken_compass: iL('Broken Compass', 'trinket', { flags: { backstab: 0.7 }, stats: { speed: 0.08 }, desc: '+70% damage from behind the foe.', flavor: 'Points at whatever is about to regret it.' }),
+  // Shapeshifters: for a few seconds you stop being a stick figure at all.
+  bat_cowl: iL('Batskin Cowl', 'head', { stats: { evasion: 0.05, speed: 0.05 },
+    trig: [{ type: 'every', s: 9, effect: { shift: 'bat', duration: 4 } }],
+    desc: 'Every 9s: become a bat for 4s. You barely fall, you run faster, you are far harder to hit, and your hits open cuts.',
+    flavor: 'Put it on. Something folds.' }),
+  slime_skin: iL('Slimeskin', 'core', { stats: { hp: 24, regen: 0.6 },
+    trig: [{ type: 'hpBelow', pct: 0.5, effect: { shift: 'slime', duration: 5 } }],
+    desc: 'Below half HP, once: become a slime for 5s. Heavy armour, nothing can shift you, and every hit you land feeds you.',
+    flavor: 'It has been waiting to wear you.' }),
+  wraith_veil: iL('Wraith Veil', 'trinket', { stats: { skillHaste: 0.15 },
+    trig: [{ type: 'onSkill', effect: { shift: 'wraith', duration: 3.5 } }],
+    desc: 'Using your skill turns you into a wraith for 3.5s: you drift, most things miss you, and every hit drains life.',
+    flavor: 'Worn once by someone who is still not finished.' }),
 });
 const LEGENDS = Object.keys(ITEM).filter((id) => ITEM[id].legend);
 for (const id of LEGENDS) { ITEM[id].stats = ITEM[id].stats || {}; ITEM[id].id = id; }
@@ -6346,6 +6404,7 @@ const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue
 function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
   if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
+  if (u.shift) { drawShifted(u, pal); return; }
   const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face;
   for (const g of u.ghosts) {
     if (g.age < 0) continue;
@@ -6360,6 +6419,18 @@ function drawUnit(u, pal) {
   ctx.globalAlpha = 1;
   if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
   if (f < 0.5) drawMarks(u, S, pal);
+}
+// A shifted fighter: the creature's own drawing, in your team's ink, with your weapon still in hand.
+function drawShifted(u, pal) {
+  const S = SHIFT[u.shift.kind], flash = u.flash > 0 && u.flash % 2 === 0, fade = Math.min(1, u.shift.t / 18);
+  // the creature is drawn in your own ink, so at a glance it is still your fighter out there
+  const ink = flash ? pal.red : pal[TEAM[u.side]];
+  ctx.globalAlpha = 0.3 + 0.7 * fade;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  MOB[u.shift.kind].draw(u, pal, ink, flash);
+  ctx.globalAlpha = 1;
+  void S;
+  drawMarks(u, null, pal);
 }
 // One mark per status: a green vein for Poison, frost ticks for Chill, an ice box when frozen, a crackle for Shock.
 function drawMarks(u, S, pal) {
@@ -7963,6 +8034,7 @@ window.__inkfall = window.__homeTurf = {
   step(n = 1) { for (let i = 0; i < n; i++) { if (world.hs > 0) { world.hs--; continue; } simStep(); } updateHud(); render(); return { t: world.t, over: world.over }; },
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
   cam(o) { camOverride = o; cam.init = false; },
+  shiftNow(u, kind, secs) { startShift(u, kind, secs); },
   get runState() { return run; }, showRun,
   run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };

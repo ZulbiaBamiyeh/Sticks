@@ -37,10 +37,17 @@ fights run themselves. **Start a run** is the front door, and everything else
     HP).
   - **A creature drops one thing.** No picking from three: what it drops is
     what you get, with two rerolls a day to change your mind. Elite hunts can
-    turn up a **legendary** instead, the only place they come from: sixteen
+    turn up a **legendary** instead, the only place they come from: nineteen
     rule-breaking items like the Gambler's Die (every hit is half or double),
     Pacifist's Vow (your hits do nothing, your statuses deal triple) and
     Thousand Cuts (every hit deals exactly 6, and you swing 60% faster).
+  - **Three of them turn you into something else.** For a few seconds you stop
+    being a stick figure: the Batskin Cowl makes you a bat every 9s (you barely
+    fall, you are far harder to hit, your hits open cuts), Slimeskin makes you a
+    slime the first time you drop below half HP (heavy armour, nothing can shift
+    you, every hit feeds you), and the Wraith Veil turns using your skill into a
+    wraith (you drift, most things miss, every hit drains). The creature is drawn
+    in your own ink, and you keep your weapon and skills underneath.
   - **Builds compound.** Engine pieces turn one stat into another — HP into
     Atk, Def into Crit, Crit into status damage, every completed set into
     both — and payoff pieces multiply per status stack on the foe. The gear
@@ -75,8 +82,8 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 290 items: 79 weapons, 87 head, core and feet pieces, 78 trinkets, 13
-    skill items, 12 keystones, 21 relics and 16 legendaries, in 29 families,
+  - 293 items: 79 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+    skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless, shop
     included. A careful bot that always takes Normal hunts wins the Crown
