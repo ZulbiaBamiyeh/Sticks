@@ -26,8 +26,8 @@ fights run themselves. **Start a run** is the front door, and everything else
     patches you up by half, not to full. Leaving a drop where it lies is a
     rest worth +35%. Losing a hunt costs its drop, not a life.
   - Each hunt offers three creatures, Easy, Normal and Elite. A card shows the
-    creature, its difficulty, the rarity odds of its drops and an icon for each
-    drop (keystones rimmed in bronze, relics in gold). Win, then pick one of
+    creature, its difficulty, the rarity odds of its drops, and a line saying
+    what its gear is about ("Bleed gear · Evasion, HP · Blink · relic"). Win, then pick one of
     three drops. Harder creatures and variants turn up on later days, and
     creatures grow a little faster than gear does.
   - Gear works like ZereshkStory's. Weapons roll a damage range and carry
@@ -94,7 +94,7 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 293 items: 79 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+  - 305 items: 91 weapons, 87 head, core and feet pieces, 78 trinkets, 13
     skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
@@ -110,6 +110,17 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
+  - **Spellbook:** casts rooted — you cannot move, roll or jump through a cast.
+    The book picks its page from the moment: a bolt at range, a nova when
+    something is inside three tiles, a ward when it is hurting you. Its gear
+    makes your statuses deal +25%, so it is the caster wing of the status
+    builds. Anything that closes fast beats it.
+  - **Puppet:** you carry no blade at all. A jointed marionette fights on a
+    five-tile string, built out of your own gear — it takes three quarters of
+    your HP, your weapon's damage range and your Atk — and a tug on the strings
+    throws it forward with its heavy swing ready. Break it and the puppeteer
+    has five seconds with nothing but a boot before another is strung. Strong
+    against blades, weak against shooters.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):
@@ -122,6 +133,10 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Parry:** a short guard that catches a swing, a shot or a hook. Shots
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
+  - **Sidestep:** step into the wall at one edge of the page and out of the one
+    opposite, at the same height, and the first hit you land after it is an
+    ambush. The squeeze eats those edges from 20 s, so it is a flank early and
+    a grave late — the clock does the balancing, not the cooldown.
 - **Trinkets and statuses:** a trinket puts a status on the rival when a hit
   lands, more often on heavier hits. **Statuses scale with the fighter that
   applied them**, so a burn from a day-seven maul is not the same burn as a
