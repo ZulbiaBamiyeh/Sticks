@@ -764,8 +764,8 @@ const WEAP = {
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
-  spellbook: { name: 'Spellbook', speed: 5.8, atk: 'cast_bolt', range: 5.6, stat: '22f · three spells', desc: 'Casts rooted: a bolt at range, a nova when something gets close, a ward when it hurts. Long casts, and you cannot move through one.' },
-  puppet: { name: 'Puppet', speed: 6.2, atk: 'command', range: 7, stat: 'strings', desc: 'Your puppet does the fighting on a five-tile string. You carry no blade of your own, so if it falls you have nothing.' },
+  spellbook: { name: 'Spellbook', speed: 5.8, atk: 'cast_bolt', range: 5.6, float: 0.34, stat: '4 spells', desc: 'Casts rooted, and the book picks its page: a bolt at range, a sigil under a foe that stands still, a nova when something gets close, a ward when it hurts. You cannot move through a cast, but you sink through the air instead of falling.' },
+  puppet: { name: 'Puppet', speed: 6.0, atk: 'pswing', stop: 3.1, stat: '17f · reach 4', desc: 'You never touch anybody. The marionette hangs on your strings four tiles out and your swings land where it is, so you fight from where a bow would stand — but only as far as the strings go.' },
 };
 const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
@@ -774,7 +774,7 @@ const SKILL = {
   darksight: { name: 'Dark Sight', cd: 480, dur: 210, stat: '8s', desc: 'Invisible for three and a half seconds. The rival loses track, and the first hit out of it crits.' },
   parry: { name: 'Parry', cd: 390, stat: '6.5s', desc: 'Catches a hit, a shot or a hook. The attacker is left wide open.' },
   hook: { name: 'Hook', cd: 300, stat: '5s', desc: 'Throws a chain across the arena and drags the rival in.' },
-  sidestep: { name: 'Sidestep', cd: 400, stat: '6.7s', desc: 'Steps into the wall at the edge of the page and out of the one opposite, at the same height. The squeeze closes those edges first, so it is a gift early and a grave late.' },
+  ghostwalk: { name: 'Ghost Walk', cd: 400, dur: 44, stat: '7s', desc: 'For a second nothing on the page is solid: you drift through blocks, floors and the walls at the edge, and nothing can touch you. You cannot attack while you are through, and you come out wherever you stopped.' },
 };
 const SKILLS = Object.keys(SKILL);
 // Statuses change the fight, never how anyone runs or jumps, and each reads from one mark on the figure.
@@ -896,6 +896,15 @@ const touchingWall = (b, s) => (s > 0 ? boxSolid(b.x + W / 2, b.y - H + 0.25, b.
 function physStep(b, dir, press, hold, side, ctl, fr) {
   let ev = 0;
   const acro = b.acro || 0;
+  // Ghost walking: nothing is solid, and nothing pulls. You swim through the page under your own steam.
+  if (b.noClip) {
+    b.vx = approach(b.vx, (ctl ? dir : 0) * b.speed * 1.2, P.accA * DT);
+    b.vy = approach(b.vy, b.gy || 0, 70 * DT);
+    b.x = Math.max(0.4, Math.min(COLS - 0.4, b.x + b.vx * DT));
+    b.y = Math.max(1.2, Math.min(ROWS - 0.15, b.y + b.vy * DT));
+    b.gr = false; b.onWall = 0; b.wr = 0; b.jumping = false;
+    return ev;
+  }
   // after a wall jump, pushing back toward the wall is ignored for a moment so the fighter actually leaves it
   if (b.wjT > 0) { b.wjT--; if (dir === b.wjSide) dir = 0; }
   if (b.gr) {
@@ -913,7 +922,8 @@ function physStep(b, dir, press, hold, side, ctl, fr) {
     if (b.vy >= 0) b.jumping = false;
     else if (!hold && !b.wr) { b.vy *= P.cut; b.jumping = false; }
   }
-  b.vy = Math.min(b.vy + P.g * (b.gMul || 1) * DT, P.maxFall);
+  const drift = b.float && b.vy > 0 ? b.float : 1;   // a caster's robes catch the air on the way down
+  b.vy = Math.min(b.vy + P.g * (b.gMul || 1) * drift * DT, P.maxFall * (drift < 1 ? 0.45 : 1));
   // wall run: holding jump into a wall carries the fighter straight up it
   if (acro >= 3 && ctl && hold && dir && !b.wrUsed && !b.wr && (b.gr || b.vy < 4) && touchingWall(b, dir)) {
     b.wr = ACRO.wrFrames; b.wrUsed = true; b.wrSide = dir; b.gr = false; b.jumping = false; ev |= EV_WR;
@@ -1135,8 +1145,7 @@ const ATK = {
   acast_bolt: { w: 15, a: 1, r: 10, shot: 'bolt', air: 1, cd: 10, cast: 1 },
   cast_nova: { w: 17, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 2.7, dmg: 11, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
   cast_ward: { w: 20, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 16, r: 3, apply: 'chill', stacks: 1 } },
-  // a puppeteer's hands: no blade of your own, just a tug on the strings
-  command: { w: 12, a: 1, r: 14, cd: 8, command: 1 },
+  cast_sigil: { w: 21, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 52, r: 2.3, dmg: 14, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -1212,6 +1221,7 @@ const ATK_POSE = {
   cast_bolt: { w: { fx: 0.16, fy: 0.3, bx: -0.18, by: -0.1, lean: -0.12, hipH: 0.62, head: 0.06 }, a: { fx: 0.34, fy: 0.08, bx: 0.5, by: -0.14, lean: 0.3, hipH: 0.6 }, r: { fx: 0.3, fy: 0.18, bx: 0.28, by: 0.0, lean: 0.14 } },
   cast_nova: { w: { fx: 0.1, fy: 0.36, bx: -0.24, by: 0.1, lean: -0.22, hipH: 0.52, head: 0.14 }, a: { fx: 0.4, fy: -0.26, bx: -0.4, by: -0.26, lean: 0, hipH: 0.76 }, r: { fx: 0.3, fy: -0.02, bx: -0.24, by: 0.04, lean: 0.06, hipH: 0.66 } },
   cast_ward: { w: { fx: 0.14, fy: 0.24, bx: -0.14, by: 0.12, lean: -0.1, hipH: 0.6 }, a: { fx: 0.24, fy: -0.2, bx: 0.24, by: -0.2, lean: 0, hipH: 0.72, head: -0.12 }, r: { fx: 0.24, fy: 0.0, bx: 0.2, by: 0.0, lean: 0.04 } },
+  cast_sigil: { w: { fx: 0.12, fy: 0.3, bx: -0.2, by: 0.16, lean: 0.16, hipH: 0.58, head: 0.12 }, a: { fx: 0.3, fy: 0.3, bx: 0.34, by: 0.28, lean: 0.34, hipH: 0.54 }, r: { fx: 0.26, fy: 0.2, bx: 0.22, by: 0.12, lean: 0.18 } },
   // a tug on the strings: both hands snap up and forward
   acast_bolt: { w: { fx: 0.2, fy: 0.16, bx: -0.16, by: -0.14, lean: 0.06 }, a: { fx: 0.36, fy: 0.02, bx: 0.46, by: -0.18, lean: 0.24 }, r: { fx: 0.3, fy: 0.1, bx: 0.24, by: -0.04, lean: 0.12 } },
   command: { w: { fx: 0.18, fy: -0.16, bx: 0.1, by: -0.2, lean: -0.1, hipH: 0.68 }, a: { fx: 0.48, fy: -0.3, bx: 0.36, by: -0.34, lean: 0.24, hipH: 0.64 }, r: { fx: 0.3, fy: -0.1, bx: 0.24, by: -0.14, lean: 0.1 } },
@@ -1253,7 +1263,7 @@ const ATK_POSE_ALT = {
 const SK_POSE = {
   parry: { fx: 0.3, fy: 0.02, wa: -1.5, wb: -1.25, bx: 0.24, by: 0.06, ai: -0.5, lean: -0.1, hipH: 0.6, head: -0.1 },
   cast: { hipH: 0.46, lean: 0.6, head: 0.3, fx: 0.1, fy: -0.14, bx: 0.14, by: -0.1, ai: 1.3 },
-  sidestep: { hipH: 0.52, lean: 0.52, head: 0.2, fx: 0.34, fy: -0.06, bx: -0.24, by: 0.3, wa: -0.2, wb: 0, ffx: 0.44, ffy: 0.52, bfx: -0.4, bfy: 0.66, ai: 0.6 },
+  ghostwalk: { hipH: 0.5, lean: 0.34, head: 0.16, fx: 0.3, fy: -0.1, bx: -0.2, by: -0.05, wa: -0.6, wb: 0, ffx: 0.3, ffy: 0.48, bfx: -0.3, bfy: 0.56, ai: 0.7 },
   hook: {
     w: { bx: -0.32, by: -0.26, lean: -0.14, hipH: 0.66 },
     a: { bx: 0.58, by: 0.0, lean: 0.3, hipH: 0.6 },
@@ -1280,7 +1290,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
     look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
     onHit: trinket ? [TRINKET[trinket]] : [],
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false },
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: WEAP[weapon].float || 1 },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
@@ -1314,13 +1324,15 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 // A spellbook casts what the moment needs: a nova when something is on top of you, a ward when it is
 // hurting, a bolt the rest of the time. Each page has its own cooldown, so you cannot lean on one.
-const SPELL_CD = { cast_nova: 170, cast_ward: 280 };
+const SPELL_CD = { cast_nova: 170, cast_ward: 280, cast_sigil: 230 };
 function pickSpell(u, fallback) {
-  if (u.state === 'dead' || !u.b.gr) return fallback;
+  if (u.state === 'dead' || !u.b.gr || world.demo) return fallback;
   const e = foe(u), cd = (u.sCd ||= {});
   const near = e && e.state !== 'dead' && Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) < 3.1;
   if (near && !(cd.cast_nova > 0)) return 'cast_nova';
   if (!(cd.cast_ward > 0) && (u.hp < u.hpMax * 0.65 || shotThreat(u, 26) >= 0) && u.shield < 6) return 'cast_ward';
+  // a sigil is for somebody standing off at mid range, where it has time to cook under their feet
+  if (e && !(cd.cast_sigil > 0) && e.b.gr && !near && Math.abs(e.b.x - u.b.x) < 8) return 'cast_sigil';
   return fallback;
 }
 function startAtk(u, name) {
@@ -1568,14 +1580,6 @@ function pathClears(u, m, frames) {
 function tryAttack(u, e) {
   if (u.react > 0 || u.cd > 0 || e.state === 'dead') return false;
   const b = u.b, eb = e.b, dx = eb.x - b.x, dy = eb.y - b.y, f = Math.sign(dx) || u.face, wp = WEAP[u.w];
-  if (u.w === 'puppet') {
-    if (!e.ghost && Math.abs(dx) < 1.25 && Math.abs(dy) < 1 && !lying(e)) { u.face = f; startAtk(u, 'kick'); return true; }
-    const pp = puppetOf(u);
-    if (!pp || pp.state === 'dead') return false;
-    const pe = foe(pp);
-    if (!pe || pe.state === 'dead' || Math.hypot(pe.b.x - pp.b.x, pe.b.y - pp.b.y) > 4.5) return false;
-    u.face = f; startAtk(u, 'command'); return true;
-  }
   if (wp.range) {
     const dist = Math.hypot(dx, dy);
     if (u.hidden && dist < 3.5) return false;   // slip away first; the shot out of hiding is worth more from range
@@ -1594,6 +1598,10 @@ function tryAttack(u, e) {
     return false;
   }
   if (u.w === 'spear' && dy < -0.9 && dy > -3.2 && Math.abs(dx) < 1.1) { u.face = f; startAtk(u, 'rise'); return true; }
+  // a puppeteer's heavy spin is for an opening: something stunned, down or committed to a slow swing
+  if (u.w === 'puppet' && !(u.pupCd > world.t) && (e.state === 'stun' || lying(e) || e.st.frozen > 0) && inBox(b.x, b.y, f, ATK.pspin.box, eb.x, eb.y, 0.2)) {
+    u.pupCd = world.t + 160; u.face = f; startAtk(u, 'pspin'); return true;
+  }
   const name = wp.atk, def = ATK[name], lead = def.w / 60 * 0.6;
   if (inBox(b.x, b.y, f, def.box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
   // sword: a long dash slash from just out of reach
@@ -1997,7 +2005,7 @@ function trySkill(u, e, air) {
   if (!u.skill || u.skCd > 0 || u.state !== 'free' || u.surprise > 0 || !e || e.state === 'dead') return false;
   if (u.skill === 'blink') return aiBlink(u, e, air);
   if (air) return false;
-  if (u.skill === 'sidestep') return aiSidestep(u, e);
+  if (u.skill === 'ghostwalk') return aiGhostwalk(u, e);
   if (u.skill === 'parry') return aiParry(u, e);
   if (u.skill === 'darksight') return aiDarkSight(u, e);
   if (u.skill === 'hook') return aiHook(u, e);
@@ -2021,42 +2029,53 @@ function skillStep(u) {
   else if (u.skName === 'hook') {
     if (f === 8) throwHook(u);
     if ((f > 8 && !u.hook) || f > 150) endSkill(u, 3);
-  } else if (u.skName === 'sidestep') {
-    if (f === 5) { u.iT = Math.max(u.iT, 8); wrapEdge(u); }
-    if (f >= 10) endSkill(u, 4);   // a beat of nothing on the far side: it is not a clean escape
+  } else if (u.skName === 'ghostwalk') {
+    if (f === 1) startGhost(u, !!u.ghostIn);
+    if (f >= SKILL.ghostwalk.dur) endSkill(u, 4);
   }
 }
-// ---- Sidestep: through the wall at one edge of the page and out of the other, at the same height.
-const wrapX = (x) => COLS - x;
-// Where it would put you, or null when the far side is solid, off the floor plan, or already in the squeeze.
-function wrapSpot(u) {
-  const b = u.b, x = wrapX(b.x), y = b.y;
-  if (inZone(x) || inZone(b.x)) return null;                       // the squeeze eats both edges first
-  if (x < 1 + W / 2 || x > COLS - 1 - W / 2) return null;
-  if (boxSolid(x - W / 2, y - H, x + W / 2, y)) return null;
-  return settle(u, x, y) ? { x, y } : null;
+// ---- Ghost Walk: the page stops being solid for a moment.
+function startGhost(u, toward) {
+  const b = u.b, e = foe(u);
+  u.ghostT = SKILL.ghostwalk.dur;
+  // where you are swimming to: straight at them, or straight through whatever is behind you
+  const f = e ? Math.sign(e.b.x - b.x) || u.face : u.face;
+  u.ghostGoal = e && toward ? { x: e.b.x - f * 1.1, y: e.b.y }
+    : { x: Math.max(1.5, Math.min(COLS - 1.5, b.x - f * 5.5)), y: b.y - (e && e.b.y < b.y - 1 ? 0 : 1.2) };
+  b.noClip = true; b.gy = 0; b.vy *= 0.3;
+  u.iT = Math.max(u.iT, SKILL.ghostwalk.dur + 4);
+  u.ghosts.push({ S: skel(u), age: 0, max: 24 });
+  smoke(b.x, b.y, 8); ring(b.x, b.y - H / 2, 1.2, TEAM[u.side]);
 }
-function wrapEdge(u) {
-  const spot = wrapSpot(u);
-  if (!spot) { endSkill(u, 6); return; }
-  const e = foe(u);
-  streak(u.b.x, u.b.y - H / 2, u.b.x < COLS / 2 ? Math.PI : 0, 1.6, TEAM[u.side]);
-  doBlink(u, spot.x, spot.y, e ? e.b.x : spot.x);
-  streak(spot.x, spot.y - H / 2, spot.x < COLS / 2 ? 0 : Math.PI, 1.6, TEAM[u.side]);
-  u.ambush = true;   // nobody is watching the wall they have their back to
+// Coming back: if the fighter stopped inside something, it is nudged out to the nearest clear spot.
+function endGhost(u) {
+  const b = u.b;
+  b.noClip = false; u.ghostT = 0;
+  if (boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
+    let best = null, bd = 1e9;
+    for (let dy = 0; dy <= 5; dy += 0.25) for (const sy of [-1, 1]) for (let dx = 0; dx <= 5; dx += 0.25) for (const sx of [-1, 1]) {
+      const x = Math.max(1 + W / 2, Math.min(COLS - 1 - W / 2, b.x + dx * sx)), y = Math.max(1 + H, Math.min(ROWS - 1, b.y + dy * sy));
+      if (boxSolid(x - W / 2, y - H, x + W / 2, y)) continue;
+      const d = Math.hypot(x - b.x, y - b.y);
+      if (d < bd) { bd = d; best = { x, y }; }
+    }
+    if (best) { b.x = best.x; b.y = best.y; }
+  }
+  smoke(b.x, b.y, 6);
 }
-// Worth doing when the far side is closer to what you want than this side is.
-function aiSidestep(u, e) {
-  const b = u.b, spot = wrapSpot(u);
-  if (!spot) return false;
-  const here = Math.abs(e.b.x - b.x), there = Math.abs(e.b.x - spot.x), ranged = isRanged(u);
-  const t = meleeThreat(u, e);
-  // a blade is coming and the far wall is not where it is: go
-  if (t >= 1 && t <= 9 && u.skTried !== e.atkId && there > 4) { u.skTried = e.atkId; return startSkill(u, 'sidestep'); }
-  if (shotThreat(u, 18) >= 2 && u.skTried !== u.threat && there > here) { u.skTried = u.threat; return startSkill(u, 'sidestep'); }
+// Worth doing to get away from something, or to walk through the block between you and them.
+function aiGhostwalk(u, e) {
+  const t = meleeThreat(u, e), b = u.b;
+  const ranged = isRanged(u);
+  if (t >= 1 && t <= 10 && u.skTried !== e.atkId) { u.skTried = e.atkId; u.ghostIn = ranged ? 0 : 1; return startSkill(u, 'ghostwalk'); }
+  if (shotThreat(u, 18) >= 2 && u.skTried !== u.threat) { u.skTried = u.threat; u.ghostIn = ranged ? 0 : 1; return startSkill(u, 'ghostwalk'); }
   if (e.ghost || lying(e)) return false;
-  if (ranged) return here < 3.6 && there > here + 3 && startSkill(u, 'sidestep');     // kite the long way round
-  return there < here - 3 && there > 1.4 && startSkill(u, 'sidestep');                // the short way in, and behind
+  const dx = e.b.x - b.x, dy = e.b.y - b.y;
+  // a wall or a floor in the way, and them on the other side of it
+  const blocked = Math.abs(dx) > 1.6 && Math.abs(dx) < 8 && !walkLine(b.x, e.b.x, Math.floor(b.y - 1e-3), u);
+  if (!ranged && (blocked || (Math.abs(dy) > 1.5 && Math.abs(dx) < 4))) { u.ghostIn = 1; return startSkill(u, 'ghostwalk'); }
+  if (ranged && Math.hypot(dx, dy) < 2.8) { u.ghostIn = 0; return startSkill(u, 'ghostwalk'); }
+  return false;
 }
 const parrying = (u) => u.state === 'skill' && u.skName === 'parry' && u.sf <= 16;
 const facingPoint = (u, x) => Math.abs(x - u.b.x) < 0.25 || Math.sign(x - u.b.x) === u.face;
@@ -3816,110 +3835,67 @@ Object.assign(HUNTS, {
   plaguecrows: { name: 'Plague Crows', eliteName: 'Plague Murder', base: 'crows', variant: 'toxic', tip: 'Poisoned quills from out of reach.', spawn: HUNTS.crows.spawn },
   frostcrab: { name: 'Frost Crab', eliteName: 'Frost King Crab', base: 'crab', variant: 'frost', tip: 'An armoured shell whose snap chills. Hit it from above or behind.', spawn: HUNTS.crab.spawn },
 });
-// ---- The puppet: a jointed marionette on your strings. It carries the fight while you stand back, it
-// can only go so far from your hands, and its body is made out of yours.
+// ---- The puppet: a marionette on your strings. It is not a second fighter — it is the weapon. It
+// hangs out on the strings between you and whatever you are looking at, and your swings land where it
+// is, not where you are. You stand still and hit things four tiles away.
 Object.assign(ATK, {
-  pslash: { w: 9, a: 5, r: 15, dmg: 9, kb: [5, -4], stun: 18, hs: 4, box: [0.05, -1.25, 1.3, -0.1], melee: 1, mob: 1, trail: 1 },
-  pspin: { w: 13, a: 9, r: 20, dmg: 13, kb: [7, -8], stun: 26, hs: 6, box: [-0.6, -1.35, 1.35, -0.05], melee: 1, mob: 1, trail: 1, tumble: 1, big: 1 },
+  pswing: { w: 14, a: 6, r: 16, dmg: 10, kb: [5, -4], stun: 18, hs: 4, box: [1.1, -1.9, 4.3, -0.05], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
+  pswing2: { w: 10, a: 6, r: 18, dmg: 10, kb: [5.5, -5], stun: 18, hs: 4, box: [1.0, -2.0, 4.3, 0.0], melee: 1, trail: 1, pup: 1 },
+  pspin: { w: 22, a: 11, r: 24, dmg: 15, kb: [8, -10], stun: 28, hs: 7, box: [0.5, -2.2, 4.5, 0.1], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
 });
-const PUPPET_LEASH = 5;
-Object.assign(MOB, {
-  puppet: {
-    name: 'Puppet', hp: 40, bw: 0.62, bh: 1.18, speed: 6.4, cd: 26, walker: 1, scraps: 0, heavy: true,
-    armor: (u) => u.state === 'atk' && u.phase !== 'r',   // wood does not flinch out of a swing
-    init(u) { u.gait = 0; u.arm = 0; u.swing = 0; u.leapCd = 0; },
-    think(u, e, dx, dy) {
-      const b = u.b, o = u.owner;
-      if (!o || o.state === 'dead') { u.hp = 0; mobDie(u); return; }
-      // the strings only reach so far: past that, nothing else matters
-      const slack = o.b.x - b.x;
-      if (Math.abs(slack) > PUPPET_LEASH) { walkAt(u, slack, MOB.puppet.speed, -14); u.face = Math.sign(slack) || u.face; return; }
-      u.face = Math.sign(dx) || u.face;
-      const adx = Math.abs(dx);
-      if (u.leapCd > 0) u.leapCd--;
-      if (u.cd <= 0 && u.react <= 0 && e.state !== 'dead' && !e.hidden && adx < 1.7 && dy > -1.5 && dy < 1.1) { startMobAtk(u, u.charged ? 'pspin' : 'pslash'); u.charged = false; b.vx = 0; return; }
-      // a shooter is no use to anyone at range, so the strings throw the puppet at it
-      if (b.gr && u.leapCd <= 0 && adx > 3 && adx < 7.5 && dy > -2.5 && !e.hidden && e.state !== 'dead') {
-        b.vy = -14; b.vx = Math.sign(dx) * 12; b.gr = false; u.leapCd = 100; dust(b.x, b.y, 4, 0.6); return;
-      }
-      // stay between your puppeteer and whatever it is fighting, without ever letting the string go tight
-      const want = Math.max(o.b.x - PUPPET_LEASH + 0.6, Math.min(o.b.x + PUPPET_LEASH - 0.6, e.b.x - Math.sign(dx || 1) * 1.1));
-      walkAt(u, want - b.x, MOB.puppet.speed, -14);
-    },
-    atk(u, d, e) {
-      const b = u.b;
-      if (u.phase === 'w') { b.vx = approach(b.vx, 0, 40 * DT); u.face = Math.sign(e.b.x - b.x) || u.face; }
-      if (u.af === d.w) { u.phase = 'a'; b.vx = u.face * (u.atkName === 'pspin' ? 7 : 4.5); }
-      if (u.af === d.w + d.a) u.phase = 'r';
-      u.swing = u.phase === 'w' ? -Math.min(1, u.af / d.w) : u.phase === 'a' ? 1 : approach(u.swing, 0, 0.12);
-    },
-    step(u) { const b = u.b; if (b.gr) u.gait += Math.abs(b.vx) * DT * 3.4; u.arm = approach(u.arm, u.charged ? 1 : 0, 0.08); },
-    draw(u, pal, ink, flash) {
-      const b = u.b, o = u.owner, team = pal[TEAM[u.side]], cy = b.y - u.bh;
-      const body = flash ? pal.red : ink, joint = flash ? pal.red : team;
-      const sw = u.swing || 0, bob = Math.sin(u.gait) * 0.04;
-      ctx.save(); ctx.translate(b.x, cy + bob); ctx.scale(u.face, 1);
-      // strings, up out of the top of the page and down from the puppeteer's hand
-      if (o && o.state !== 'dead') {
-        ctx.globalAlpha = 0.5; ctx.strokeStyle = team; ctx.lineWidth = 0.022;
-        const hx = (o.b.x - b.x) * u.face, hy = (o.b.y - 0.95) - (cy + bob);
-        for (const sx of [-0.16, 0.18]) { ctx.beginPath(); ctx.moveTo(sx, 0.06); ctx.quadraticCurveTo((sx + hx) / 2, (hy - 0.3) / 2, hx, hy); ctx.stroke(); }
-        ctx.globalAlpha = 1;
-      }
-      // a head with a painted seam, a segmented trunk, blade arms and two dangling legs
-      ctx.fillStyle = body;
-      ctx.beginPath(); ctx.ellipse(0, 0.2, 0.15, 0.17, 0, 0, 6.283); ctx.fill();
-      ctx.strokeStyle = pal.far; ctx.lineWidth = 0.025;
-      ctx.beginPath(); ctx.moveTo(-0.1, 0.2); ctx.lineTo(0.1, 0.2); ctx.stroke();
-      ctx.fillStyle = eyeC(u, pal);
-      for (const ex of [0.02, 0.1]) { ctx.beginPath(); ctx.ellipse(ex, 0.18, 0.022, 0.03, 0, 0, 6.283); ctx.fill(); }
-      ctx.fillStyle = body;
-      for (const [y, w, h] of [[0.5, 0.13, 0.11], [0.74, 0.15, 0.12], [0.97, 0.12, 0.09]]) { ctx.beginPath(); ctx.ellipse(0, y, w, h, 0, 0, 6.283); ctx.fill(); }
-      ctx.strokeStyle = joint; ctx.lineWidth = 0.035;
-      ctx.beginPath(); ctx.moveTo(0, 0.36); ctx.lineTo(0, 1.05); ctx.stroke();
-      // the blade arm reaches on a swing and folds back between them
-      ctx.strokeStyle = body; ctx.lineWidth = 0.055; ctx.lineCap = 'round';
-      const ex2 = 0.28 + sw * 0.34, ey2 = 0.52 - sw * 0.24;
-      ctx.beginPath(); ctx.moveTo(0.1, 0.5); ctx.lineTo(ex2, ey2); ctx.stroke();
-      ctx.strokeStyle = flash ? pal.red : pal.steel; ctx.lineWidth = 0.05;
-      ctx.beginPath(); ctx.moveTo(ex2, ey2); ctx.lineTo(ex2 + 0.42 + sw * 0.1, ey2 - 0.1); ctx.stroke();
-      ctx.strokeStyle = body; ctx.lineWidth = 0.05;
-      ctx.beginPath(); ctx.moveTo(-0.08, 0.52); ctx.lineTo(-0.3 - sw * 0.1, 0.72); ctx.stroke();
-      const step = Math.sin(u.gait) * 0.16;
-      for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.05, 1.03); ctx.lineTo(s2 * 0.1 + step * s2, u.bh - 0.02); ctx.stroke(); }
-      ctx.restore();
-      if (u.st.burn > 0 || u.st.poison > 0) { ctx.globalAlpha = 0.5; ctx.strokeStyle = u.st.burn > 0 ? pal.burn : pal.poison; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.ellipse(b.x, cy + 0.6, 0.3, 0.5, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1; }
-    },
-  },
-});
-// A puppet is made out of its puppeteer: it takes a share of the gear, so every piece you wear is a
-// piece it wears too, and nothing about it lives outside the build.
-const PUPPET_SHARE = 0.75, PUPPET_REBUILD = 5 * 60;
-const puppetOf = (u) => (u.puppet && u.puppet.state !== 'dead' ? u.puppet : null);
-function spawnPuppet(u) {
-  const g = u.gs, share = PUPPET_SHARE + ((g && g.flags.puppetShare) || 0);
-  const p = makeMob('puppet', u.b.x + u.face * 1.2, 1, 0, 'easy', u.side);
-  p.owner = u; u.puppet = p;
-  p.hp = p.hpMax = p.hpShow = Math.max(30, Math.round((100 + (g ? g.hp : 0)) * (g ? g.hpMul || 1 : 1) * share * (u.restrung ? 0.6 : 1)));
-  // its swings carry your weapon's range and your flat Atk, at the same share
-  const w = g && g.wpn;
-  p.dmgMul = 2.4 * share * (w ? ((w.min + w.max) / 2 + g.atk) / 9 : 1);
-  p.critCh = g ? g.crit : 0;
-  p.gsOwner = g;
-  p.b.y = u.b.y; p.face = u.face; p.react = 20;
-  U.push(p);
-  smoke(p.b.x, p.b.y, 8); callout(u, 'STRINGS');
-  return p;
+function pupStep(u) {
+  const b = u.b, p = (u.pup ||= { x: b.x + u.face * 1.2, y: b.y - 1.4, sw: 0, bob: Math.random() * 6 });
+  p.bob += 0.055;
+  const d = u.atkDef, striking = u.state === 'atk' && d && d.pup;
+  // out along the swing when it strikes, drifting at your shoulder the rest of the time
+  const reach = striking ? (u.phase === 'w' ? -0.5 - 0.9 * Math.min(1, u.af / d.w) : u.phase === 'a' ? (d.box[0] + d.box[2]) / 2 : 1.2) : 1.15;
+  const lift = striking ? (u.phase === 'a' ? 1.0 : 1.25) : 1.35 + Math.sin(p.bob) * 0.12;
+  const k = striking && u.phase === 'a' ? 0.55 : 0.2;
+  p.x += (b.x + u.face * reach - p.x) * k;
+  p.y += (b.y - lift - p.y) * k;
+  p.sw = striking ? (u.phase === 'w' ? -Math.min(1, u.af / d.w) : u.phase === 'a' ? 1 : approach(p.sw, 0, 0.14)) : approach(p.sw, 0, 0.06);
+  p.face = u.face;
 }
-// A tug on the strings: the puppet winds up its big swing and lunges at whatever it is facing.
-function commandPuppet(u) {
-  const p = puppetOf(u);
-  if (!p) return;
-  p.charged = true; p.cd = 0; p.react = 0;
-  const pe = foe(p);
-  if (pe && p.state === 'free') { p.b.vx = (Math.sign(pe.b.x - p.b.x) || p.face) * 11; p.face = Math.sign(pe.b.x - p.b.x) || p.face; }
-  selection(p.b.x, p.b.y, u.side);
-  streak(p.b.x, p.b.y - p.bh, u.face > 0 ? 0 : Math.PI, 0.9, TEAM[u.side]);
+// The marionette itself: a head, three body links on a spine, a blade arm, and strings home to the hands.
+function drawPuppet(u, pal) {
+  const p = u.pup;
+  if (!p || u.state === 'dead') return;
+  const team = pal[TEAM[u.side]], ink = u.flash > 0 && u.flash % 2 === 0 ? pal.red : pal.ink;
+  const S = skel(u), hand = S.wp && S.wp.hand ? S.wp.hand : { x: u.b.x, y: u.b.y - 0.95 };
+  // the strings, slack when it hangs and taut when it strikes
+  ctx.strokeStyle = team; ctx.lineWidth = 0.02; ctx.globalAlpha = 0.55;
+  for (const off of [-0.14, 0.16]) {
+    const sag = 0.3 * (1 - Math.abs(p.sw));
+    ctx.beginPath(); ctx.moveTo(hand.x, hand.y);
+    ctx.quadraticCurveTo((hand.x + p.x + off) / 2, (hand.y + p.y) / 2 + sag, p.x + off, p.y - 0.42);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.face || 1, 1);
+  const sw = p.sw, lean = sw * 0.5;
+  ctx.rotate(lean * 0.35);
+  ctx.fillStyle = ink;
+  // spine of three links
+  for (const [y, rx, ry] of [[-0.3, 0.115, 0.135], [-0.05, 0.12, 0.1], [0.18, 0.1, 0.085]]) { ctx.beginPath(); ctx.ellipse(0, y, rx, ry, 0, 0, 6.283); ctx.fill(); }
+  ctx.strokeStyle = team; ctx.lineWidth = 0.03;
+  ctx.beginPath(); ctx.moveTo(0, -0.18); ctx.lineTo(0, 0.24); ctx.stroke();
+  // head with a painted seam and two eyes
+  ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(0, -0.55, 0.15, 0.17, 0, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = pal.far; ctx.lineWidth = 0.022; ctx.beginPath(); ctx.moveTo(-0.1, -0.55); ctx.lineTo(0.1, -0.55); ctx.stroke();
+  ctx.fillStyle = eyeC(u, pal);
+  for (const ex of [0.02, 0.1]) { ctx.beginPath(); ctx.ellipse(ex, -0.58, 0.021, 0.029, 0, 0, 6.283); ctx.fill(); }
+  // the blade arm: folded back on the wind-up, thrown out on the swing
+  ctx.lineCap = 'round'; ctx.strokeStyle = ink; ctx.lineWidth = 0.055;
+  const ex2 = 0.16 + sw * 0.42, ey2 = -0.28 - sw * 0.12;
+  ctx.beginPath(); ctx.moveTo(0.08, -0.3); ctx.lineTo(ex2, ey2); ctx.stroke();
+  ctx.strokeStyle = u.flash > 0 && u.flash % 2 === 0 ? pal.red : pal.steel; ctx.lineWidth = 0.055;
+  ctx.beginPath(); ctx.moveTo(ex2, ey2); ctx.lineTo(ex2 + 0.5 + sw * 0.25, ey2 - 0.16 + sw * 0.1); ctx.stroke();
+  // the off arm and two legs hanging
+  ctx.strokeStyle = ink; ctx.lineWidth = 0.05;
+  ctx.beginPath(); ctx.moveTo(-0.08, -0.28); ctx.lineTo(-0.3 - sw * 0.14, -0.06 + sw * 0.1); ctx.stroke();
+  const dangle = Math.sin(p.bob * 0.8) * 0.06 + sw * 0.1;
+  for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.05, 0.22); ctx.lineTo(s2 * 0.09 + dangle, 0.58); ctx.stroke(); }
+  ctx.restore();
 }
 // ---- three more: a mantis that parries and ripostes, a wraith that fades out and reappears behind you,
 // and a toad whose tongue yanks you across the floor.
@@ -4334,7 +4310,7 @@ function atkStep(u) {
     if (d.shot) fireShot(u);
     if (d.nova) castNova(u, d.nova);
     if (d.ward) castWard(u, d.ward);
-    if (d.command) commandPuppet(u);
+    if (d.sigil) castSigil(u, d.sigil);
     if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
     if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
   }
@@ -4363,6 +4339,7 @@ function act(u) {
   if (u.rollCd > 0) u.rollCd--;
   // An idle twirl turns the wrist a whole circle, so it ends where it began. If something interrupts it,
   // run the rest of the turn out fast rather than letting the weapon snap back through the circle.
+  if (u.ghostT > 0 && --u.ghostT <= 0) endGhost(u);
   if (u.twirlT > 0) u.twirlT = Math.max(0, u.twirlT - (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 ? 1 : 4));
   else if (u.state === 'free' && b.gr && Math.abs(b.vx) < 0.5 && !world.over && vr() < 0.006) { const e = foe(u); if (!e || Math.abs(e.b.x - b.x) > 4) u.twirlT = 40; }
   if (u.landT > 0) u.landT--;
@@ -4370,10 +4347,7 @@ function act(u) {
   if (u.state === 'free' || u.state === 'atk') u.juggle = 0;
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
   if (u.sCd) for (const k in u.sCd) if (u.sCd[k] > 0) u.sCd[k]--;
-  // A puppeteer whose puppet is down spends eight seconds with nothing in their hands, then strings another
-  if (u.w === 'puppet' && !puppetOf(u) && !world.over && world.intro <= 0 && u.state !== 'dead') {
-    if ((u.pupCd = (u.pupCd || PUPPET_REBUILD) - 1) <= 0) { u.restrung = true; u.pupCd = PUPPET_REBUILD; spawnPuppet(u); }
-  }
+  if (u.w === 'puppet') pupStep(u);
   // A shift runs on its own clock, gear or no gear, so the form always ends.
   if (u.shift && --u.shift.t <= 0) endShift(u);
   if (u.gs) {
@@ -4395,7 +4369,16 @@ function act(u) {
   switch (u.state) {
     case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
     case 'atk': atkStep(u); hasteStep(u); if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; } break;
-    case 'skill': skillStep(u); break;
+    case 'skill':
+      skillStep(u);
+      // Ghost walking still moves: the fighter swims toward wherever it set off for.
+      if (u.ghostT > 0 && u.ghostGoal) {
+        ctl = true;
+        dir = Math.abs(u.ghostGoal.x - b.x) > 0.3 ? Math.sign(u.ghostGoal.x - b.x) : 0;
+        b.gy = Math.max(-6, Math.min(6, (u.ghostGoal.y - b.y) * 3));
+        u.face = dir || u.face;
+      }
+      break;
     case 'roll':
       // a roll keeps its speed, then scrubs it off at the end; rolling off a ledge just becomes a fall
       fr = u.rollT > 5 ? 0.12 : 1.2;
@@ -4480,6 +4463,7 @@ function landPlunge(u) {
 }
 // A shockwave runs along the floor. It hits anyone standing on it, and a roll doesn't get under it.
 // A nova: everything of theirs standing in the circle, wherever it is in the air.
+const bookStatus = (u, fb) => (u.gs && u.gs.flags.spellSt) || fb;
 function castNova(u, sh) {
   const b = u.b, cy = b.y - H / 2;
   ring(b.x, cy, sh.r, TEAM[u.side]); ring(b.x, cy, sh.r * 0.55, 'spark');
@@ -4489,9 +4473,39 @@ function castNova(u, sh) {
     if (e.side === u.side || e.state === 'dead') continue;
     if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh ? e.bh / 2 : H / 2)) - cy) > sh.r + (e.bw || W) * 0.5) continue;
     applyHit(u, e, sh, Math.sign(e.b.x - b.x) || u.face);
-    if (sh.apply && e.state !== 'dead') applyStatus(u, e, sh.apply);
+    const st = bookStatus(u, sh.apply);
+    if (st && e.state !== 'dead') applyStatus(u, e, st);
   }
   u.hitDone = true;
+}
+// A sigil: written on the floor under whoever you are looking at, and it takes a beat to catch.
+function castSigil(u, sp) {
+  const e = foe(u);
+  if (!e) return;
+  const x = Math.max(1.4, Math.min(COLS - 1.4, e.b.x + e.b.vx * 0.25));
+  world.sigils.push({ x, y: e.b.y, t: sp.delay, max: sp.delay, side: u.side, by: u, sp });
+  ring(x, e.b.y - 0.1, 0.8, TEAM[u.side]);
+  u.hitDone = true;
+}
+function stepSigils() {
+  const out = [];
+  for (const g of world.sigils) {
+    if (--g.t > 0) { out.push(g); continue; }
+    const sp = g.sp, u = g.by;
+    ring(g.x, g.y - 0.1, sp.r, TEAM[g.side]); ring(g.x, g.y - 0.6, sp.r * 0.6, 'spark');
+    for (let i = 0; i < 8; i++) streak(g.x, g.y - 0.2, -Math.PI / 2 + (i - 3.5) * 0.28, 1 + Math.random() * 0.6, 'spark');
+    world.hs = Math.max(world.hs, 6); sfxShake(6);
+    for (const e of U) {
+      if (e.side === g.side || e.state === 'dead') continue;
+      if (Math.abs(e.b.x - g.x) > sp.r || Math.abs(e.b.y - g.y) > 2.2) continue;
+      const save = u.hitDone; u.hitDone = false;
+      applyHit(u, e, sp, Math.sign(e.b.x - g.x) || u.face);
+      u.hitDone = save;
+      const st = bookStatus(u, sp.apply);
+      if (st && e.state !== 'dead') applyStatus(u, e, st, sp.stacks || 1);
+    }
+  }
+  world.sigils = out;
 }
 // A ward: a shell of cold around you, and anything already inside it gets some.
 function castWard(u, wd) {
@@ -4502,7 +4516,8 @@ function castWard(u, wd) {
   for (const e of U) {
     if (e.side === u.side || e.state === 'dead') continue;
     if (Math.hypot(e.b.x - b.x, e.b.y - b.y) > wd.r + (e.bw || W) * 0.5) continue;
-    if (wd.apply) applyStatus(u, e, wd.apply, wd.stacks || 1);
+    const st = bookStatus(u, wd.apply);
+    if (st) applyStatus(u, e, st, wd.stacks || 1);
   }
   u.hitDone = true;
 }
@@ -4532,7 +4547,7 @@ function resolveHits() {
           sparks(a.x, a.y, u.face, 12); ring(a.x, a.y, 0.8, 'spark');
           world.hs = Math.max(world.hs, 5); sfxShake(3);
           world.stats[u.side].deflect++;
-          const what = a.kind === 'arrow' ? 'an arrow' : 'a star';
+          const what = a.kind === 'arrow' ? 'an arrow' : a.kind === 'bolt' ? 'a bolt' : 'a star';
           log(u.side ? `${rivalName()} knocked ${what} out of the air.` : `You knocked ${what} out of the air.`, u.side);
         }
       }
@@ -4623,6 +4638,8 @@ function poseTarget(u) {
       Object.assign(T, sp[ph]); T.ka = ph === 'a' ? 0.6 : 0.32;
     } else { Object.assign(T, sp); T.ka = 0.5; T.kb = 0.35; }
   }
+  // A caster is never quite on the floor: the robe breathes and the book rides on it.
+  if (w === 'spellbook' && st === 'free') { const h = Math.sin(world.t * 0.045) * 0.022; T.hipH += h; T.fy -= h * 1.6; T.by -= h; }
   // Waiting with nothing in reach: now and then twirl the weapon.
   if (u.twirlT > 0) {
     const lift = Math.sin((1 - u.twirlT / 40) * Math.PI);   // the hand rises and settles over the turn
@@ -4840,6 +4857,7 @@ function newWorld(seed) {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
+    sigils: [],
     stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0 })),
   };
 }
@@ -4860,6 +4878,7 @@ function simStep() {
   if (world.duel) stepDuel();
   for (const u of U) act(u);
   resolveHits();
+  stepSigils();
   stepShots();
   for (const u of U) stepHook(u);
   for (const u of U) {
@@ -4908,7 +4927,7 @@ const RIVALS = [
   { name: 'Anvil', trinket: 'static', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
   { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
-  { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'sidestep', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'The puppet does all of it, on a five-tile string. Break the puppet and Marrow has eight seconds with nothing; a shooter can end it in that gap.' },
+  { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'ghostwalk', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'Fights you with a marionette four tiles out, so its own body is never where the blades are. Get inside the strings and it has nothing.' },
   { name: 'Folio', trinket: 'frost', weapon: 'spellbook', skill: 'blink', acro: 1, t: 5, tag: 'Reads out loud.', tip: 'Rooted while it casts, so anything that closes fast beats it — but stand still at range and the nova will find you.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
@@ -4995,7 +5014,7 @@ const WTYPE = {
   bow: { min: 9, max: 13, base: 11, pace: 'Steady', sig: '+30% Crit damage', stats: { critDmg: 0.3 } },
   stars: { min: 3.5, max: 5.5, base: 4.5, pace: 'Very fast', sig: '+5% Evasion', stats: { evasion: 0.05 } },
   spellbook: { min: 8, max: 14, base: 11, pace: 'Slow', sig: 'Statuses deal +25%', flags: { dotMult: 1.25 } },
-  puppet: { min: 7, max: 11, base: 9, pace: 'Strings', sig: 'Your puppet fights in your place' },
+  puppet: { min: 6, max: 10, base: 8, pace: 'Slow', sig: 'Reach 4' },
 };
 
 // Families: each creature drops its family's gear. Two pieces give the set's stats; four bend a rule,
@@ -5042,7 +5061,7 @@ const ITEM = {
   linen_shirt: iA('Linen Shirt', null, 'core', { hp: 10 }),
   // gel: the slime's. Staying power.
   gel_blade: iW('Gel Blade', 'gel', 'sword', { stats: { hp: 10 } }),
-  gel_grimoire: iW('Gel Grimoire', 'gel', 'spellbook', { stats: { regen: 0.8 } }),
+  gel_grimoire: iW('Gel Grimoire', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { spellSt: null }, desc: 'Its pages carry nothing but the hit itself.', flavor: 'The ink never quite dries.' }),
   glob_maul: iW('Glob Maul', 'gel', 'hammer', { stats: { hp: 12 } }),
   jelly_stars: iW('Jelly Stars', 'gel', 'stars', { stats: { regen: 0.5 } }),
   gel_cap: iA('Gel Cap', 'gel', 'head', { hp: 16, regen: 0.6 }),
@@ -5083,7 +5102,7 @@ const ITEM = {
   web_spool: iT('Web Spool', 'silk', { trig: [{ type: 'battleStart', effect: { apply: 'chill', stacks: 2 } }], desc: 'Battle start: 2 Chill on the foe.' }),
   eightfold_eye: iT('Eightfold Eye', 'silk', { stats: { crit: 0.06, critDmg: 0.2 } }),
   silk_line: iS('Silk Line', 'silk', 'hook', { skillHaste: 0.1 }),
-  binding_thread: iS('Binding Thread', 'silk', 'sidestep', { skillHaste: 0.12 }),
+  binding_thread: iS('Binding Thread', 'silk', 'ghostwalk', { skillHaste: 0.12 }),
   // tide: the jellyfish's. Shields and Shock.
   tide_stars: iW('Tide Stars', 'tide', 'stars', oh('shock', 0.15)),
   tide_bow: iW('Tide Bow', 'tide', 'bow', oh('shock')),
@@ -5109,7 +5128,7 @@ const ITEM = {
   toxic_cleaver: iW('Toxic Cleaver', 'toxic', 'sword', { stats: { hp: 8 }, ...oh('poison') }),
   ooze_stars: iW('Ooze Stars', 'toxic', 'stars', oh('poison')),
   sludge_maul: iW('Sludge Maul', 'toxic', 'hammer', oh('poison', 0.25, 2)),
-  spore_codex: iW('Spore Codex', 'toxic', 'spellbook', oh('poison', 0.2)),
+  spore_codex: iW('Spore Codex', 'toxic', 'spellbook', { ...oh('poison', 0.2), flags: { spellSt: 'poison' }, desc: 'Every spell in it carries Poison.', flavor: 'Bound in something that is still growing.' }),
   ooze_helm: iA('Ooze Helm', 'toxic', 'head', { hp: 14, resist: 0.15 }),
   toxic_mantle: iA('Toxic Mantle', 'toxic', 'core', { hp: 24, regen: 0.8 }),
   slick_boots: iA('Slick Boots', 'toxic', 'feet', { evasion: 0.04 }, { acro: 2 }),
@@ -5119,19 +5138,21 @@ const ITEM = {
   frost_fangs: iW('Frost Fangs', 'frost', 'daggers', oh('chill')),
   icicle_bow: iW('Icicle Bow', 'frost', 'bow', { min: 10, max: 14, ...oh('chill') }),
   rime_spear: iW('Rime Spear', 'frost', 'spear', { stats: { crit: 0.03 }, ...oh('chill', 0.15) }),
-  rime_codex: iW('Rime Codex', 'frost', 'spellbook', oh('chill', 0.2)),
+  rime_codex: iW('Rime Codex', 'frost', 'spellbook', { ...oh('chill', 0.2), flags: { spellSt: 'chill' }, desc: 'Every spell in it carries Chill.', flavor: 'The pages stick together.' }),
+  ember_codex: iW('Ember Codex', 'ember', 'spellbook', { ...oh('burn', 0.2), flags: { spellSt: 'burn' }, desc: 'Every spell in it carries Burn.', flavor: 'Warm to hold. Warmer to read.' }),
   frost_cowl: iA('Frost Cowl', 'frost', 'head', { hp: 10, crit: 0.05 }),
   rime_wings: iA('Rime Wings', 'frost', 'core', { hp: 16, def: 1, evasion: 0.04 }),
   glide_boots: iA('Glide Boots', 'frost', 'feet', { speed: 0.04 }, { acro: 4 }),
   frost_bell: iT('Frost Bell', 'frost', { trig: [{ type: 'battleStart', effect: { apply: 'chill', stacks: 2 } }], desc: 'Battle start: 2 Chill on the foe.' }),
   hailstone: iT('Hailstone', 'frost', { trig: [{ type: 'onCrit', effect: { apply: 'chill', stacks: 2 } }], desc: 'On crit: 2 Chill.' }),
   frost_wing: iS('Frost Wing', 'frost', 'blink', { haste: 0.05 }),
-  gutter_pane: iS('Gutter Pane', 'frost', 'sidestep', { def: 1 }),
+  gutter_pane: iS('Gutter Pane', 'frost', 'ghostwalk', { def: 1 }),
   // storm: the storm serpent's. Shock and attack speed.
   storm_pike: iW('Storm Pike', 'storm', 'spear', oh('shock')),
   thunder_maul: iW('Thunder Maul', 'storm', 'hammer', oh('shock', 0.25, 2)),
   arc_daggers: iW('Arc Daggers', 'storm', 'daggers', { stats: { haste: 0.05 }, ...oh('shock', 0.15) }),
-  storm_codex: iW('Storm Codex', 'storm', 'spellbook', oh('shock', 0.2)),
+  storm_codex: iW('Storm Codex', 'storm', 'spellbook', { ...oh('shock', 0.2), flags: { spellSt: 'shock' }, desc: 'Every spell in it carries Shock.', flavor: 'It reads itself when nobody is looking.' }),
+  blood_codex: iW('Blood Codex', 'blood', 'spellbook', { ...oh('bleed', 0.2), stats: { ls: 0.03 }, flags: { spellSt: 'bleed' }, desc: 'Every spell in it carries Bleed.', flavor: 'Written once, in a hurry.' }),
   storm_crest: iA('Storm Crest', 'storm', 'head', { hp: 12, haste: 0.05 }),
   coil_plate: iA('Coil Plate', 'storm', 'core', { hp: 24, def: 3 }),
   surge_boots: iA('Surge Boots', 'storm', 'feet', { speed: 0.06, haste: 0.04 }, { acro: 3 }),
@@ -5374,7 +5395,7 @@ Object.assign(ITEM, {
   black_feather: iT('Black Feather', 'quill', { stats: { crit: 0.04 }, trig: [{ type: 'onCrit', effect: { skillCd: 1 } }], desc: 'Crits bring your skill back 1s sooner.', flavor: 'Found where no crow was.' }),
   stolen_ring: iT('Stolen Ring', 'quill', { stats: { crit: 0.05 }, trig: [{ type: 'onDodge', effect: { shield: 6 } }], desc: 'When you dodge: 6 Shield.', flavor: 'Someone is still looking for it.' }),
   murder_wing: iS('Murder Wing', 'quill', 'blink', { crit: 0.03 }),
-  margin_feather: iS('Margin Feather', 'quill', 'sidestep', { speed: 0.05 }),
+  margin_feather: iS('Margin Feather', 'quill', 'ghostwalk', { speed: 0.05 }),
   // shell: the crab's. Def, Thorns, standing firm.
   claw_maul: iW('Claw Maul', 'shell', 'hammer', { stats: { def: 1 }, flags: { kb: 0.3 }, desc: 'Knockback +30%.', flavor: 'Snapped off, still snapping.' }),
   pincer_blade: iW('Pincer Blade', 'shell', 'sword', { trig: [{ type: 'onExchange', effect: { apply: 'stun', duration: 0.6 } }], desc: 'Winning a blade exchange: Stun 0.6s.', flavor: 'Closes on whatever it catches.' }),
@@ -5487,7 +5508,7 @@ Object.assign(ITEM, {
   drift_slippers: iA('Drift Slippers', 'spectre', 'feet', { evasion: 0.04 }, { acro: 3, flavor: 'Toes never quite touch the floor.' }),
   haunt_lantern: iT('Haunt Lantern', 'spectre', { stats: { skillHaste: 0.1 }, trig: [{ type: 'onSkill', effect: { shield: 8 } }], desc: 'Your skill: 8 Shield.', flavor: 'Lights the way back.' }),
   night_shade: iS('Night Shade', 'spectre', 'darksight', { evasion: 0.03 }),
-  edge_shroud: iS('Edge Shroud', 'spectre', 'sidestep', { evasion: 0.04 }),
+  edge_shroud: iS('Edge Shroud', 'spectre', 'ghostwalk', { evasion: 0.04 }),
   // wisp: the frost wraith's. Chill from anywhere.
   wisp_stars: iW('Wisp Stars', 'wisp', 'stars', oh('chill', 0.15)),
   frostwisp_bow: iW('Rimewisp Bow', 'wisp', 'bow', { ...oh('chill'), flavor: 'Frost trails every arrow.' }),
@@ -6620,6 +6641,27 @@ function drawWeapon(S, side, pal, ink) {
     if (w.a1) drawArrowShape(w.a1.x, w.a1.y, w.a2.x, w.a2.y, pal, side, ink);
   }
 }
+// A spell bolt: a knot of ink with a sweep of tail, spinning as it goes. Nothing about it is fletched.
+function drawBolt(a, pal) {
+  const team = pal[TEAM[a.owner]], t = world.t * 0.3 + a.ttl;
+  if (a.stuck) {   // spent, soaking into whatever it hit
+    ctx.globalAlpha = Math.max(0, 1 - a.ttl / 100);
+    ctx.fillStyle = team; ctx.beginPath(); ctx.arc(a.x, a.y, 0.16, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = 1; return;
+  }
+  const ux = Math.cos(a.ang), uy = Math.sin(a.ang);
+  ctx.globalAlpha = 0.35; ctx.fillStyle = team;
+  ctx.beginPath(); ctx.moveTo(a.x - uy * 0.1, a.y + ux * 0.1); ctx.lineTo(a.x - ux * 0.85, a.y - uy * 0.85); ctx.lineTo(a.x + uy * 0.1, a.y - ux * 0.1); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = pal.ink; ctx.beginPath(); ctx.ellipse(a.x, a.y, 0.17, 0.13, a.ang, 0, 6.283); ctx.fill();
+  ctx.fillStyle = team; ctx.beginPath(); ctx.arc(a.x + ux * 0.03, a.y + uy * 0.03, 0.07, 0, 6.283); ctx.fill();
+  // two ticks turning around it, so it reads as something cast rather than thrown
+  ctx.strokeStyle = team; ctx.lineWidth = 0.035;
+  for (const k of [0, Math.PI]) {
+    const ang = t * 0.25 + k, rx = Math.cos(ang) * 0.26, ry = Math.sin(ang) * 0.14;
+    ctx.beginPath(); ctx.moveTo(a.x + rx, a.y + ry); ctx.lineTo(a.x + rx * 1.35, a.y + ry * 1.35); ctx.stroke();
+  }
+}
 // A glob in flight is a drop stretched along its path with a shine and a couple of droplets trailing;
 // once it lands it's a splat that fades.
 function drawGlob(a, pal) {
@@ -6656,6 +6698,21 @@ function drawTrail(u, pal) {
     ctx.globalAlpha = al * 2; stroke([{ x: a.tx, y: a.ty }, { x: b.tx, y: b.ty }], c, 0.05);
   }
   ctx.globalAlpha = 1;
+}
+// A sigil charging on the floor: a ring that closes, ticks that stand up as it comes due.
+function drawSigils(pal) {
+  for (const g of world.sigils) {
+    const k = 1 - g.t / g.max, team = pal[TEAM[g.side]], r = g.sp.r * (0.45 + 0.55 * k);
+    ctx.globalAlpha = 0.25 + 0.55 * k;
+    ctx.strokeStyle = team; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.ellipse(g.x, g.y - 0.06, r, r * 0.3, 0, 0, 6.283 * Math.max(0.08, k)); ctx.stroke();
+    ctx.lineWidth = 0.035;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * 6.283 + k * 1.2, cx = g.x + Math.cos(a) * r * 0.72, cy = g.y - 0.06 + Math.sin(a) * r * 0.22;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 0.12 - 0.34 * k); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 function drawParts(pal) {
   for (const p of parts) {
@@ -6979,11 +7036,14 @@ function render() {
     if (a.kind === 'star') drawStar(a.x, a.y, 0.14, a.spin, pal.ink, pal[TEAM[a.owner]]);
     else if (a.kind === 'glob') drawGlob(a, pal);
     else if (a.kind === 'quill') drawQuill(a, pal);
+    else if (a.kind === 'bolt') drawBolt(a, pal);
     else drawArrowShape(a.x - Math.cos(a.ang) * 0.62, a.y - Math.sin(a.ang) * 0.62, a.x, a.y, pal, a.owner, pal.ink);
   }
+  drawSigils(pal);
   for (const u of U) drawTrail(u, pal);
   const order = U.slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead')).reverse();
   for (const u of order) drawUnit(u, pal);
+  for (const u of U) if (u.w === 'puppet') drawPuppet(u, pal);
   for (const a of shots) if (!a.stuck) {
     const ux = Math.cos(a.ang), uy = Math.sin(a.ang);
     ctx.globalAlpha = 0.25; stroke([{ x: a.x - ux * 1.4, y: a.y - uy * 1.4 }, { x: a.x - ux * (a.kind === 'star' ? 0.2 : 0.5), y: a.y - uy * (a.kind === 'star' ? 0.2 : 0.5) }], pal[TEAM[a.owner]], 0.05); ctx.globalAlpha = 1;
@@ -6991,6 +7051,7 @@ function render() {
     if (a.kind === 'star') drawStar(a.x, a.y, 0.16, a.spin, pal.ink, pal[TEAM[a.owner]]);
     else if (a.kind === 'glob') drawGlob(a, pal);
     else if (a.kind === 'quill') drawQuill(a, pal);
+    else if (a.kind === 'bolt') drawBolt(a, pal);
     else drawArrowShape(a.x - ux * 0.62, a.y - uy * 0.62, a.x, a.y, pal, a.owner, pal.ink);
   }
   drawParts(pal);
@@ -7123,7 +7184,7 @@ const SKILL_ICON = {
   blink: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="4.5" width="8" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.2 1.8"/><rect x="12" y="4.5" width="8" height="13" fill="currentColor"/><path d="M8 11 H15" stroke="#2358d6" stroke-width="2"/></svg>',
   darksight: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="2.5" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.55"/><g fill="currentColor"><rect x="2.5" y="2.5" width="5.7" height="5.7"/><rect x="13.8" y="2.5" width="5.7" height="5.7"/><rect x="8.2" y="8.2" width="5.7" height="5.7"/><rect x="2.5" y="13.8" width="5.7" height="5.7"/><rect x="13.8" y="13.8" width="5.7" height="5.7"/></g></svg>',
   parry: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M12 2.5 A 9 9 0 0 1 12 19.5" fill="none" stroke="#2358d6" stroke-width="2.6"/><path d="M7.5 19 V3.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M4 15.5 H11" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>',
-  sidestep: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M3 2 V20 M19 2 V20" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 11 H11" stroke="currentColor" stroke-width="2" stroke-dasharray="2 1.6"/><path d="M15.5 7.5 L19 11 L15.5 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg>',
+  ghostwalk: '<svg viewBox="0 0 22 22" aria-hidden="true"><rect x="2.5" y="2.5" width="8" height="17" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M13.5 6.5 A4 4 0 0 1 17.5 10.5 V17.5 L16 16 L14.5 17.5 L13 16 L11.5 17.5 V10.5 A4 4 0 0 1 13.5 6.5 Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" opacity="0.9"/><path d="M6.5 11 H11.5" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2 1.7"/></svg>',
   hook: '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M2.5 19.5 L10 12" stroke="currentColor" stroke-width="2.2" stroke-dasharray="2.4 1.6"/><path d="M10 12 L15 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M15 7 C 18.5 4 21 8.5 17.5 11.5 M15 7 C 12 3.5 7.5 6 10 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/></svg>',
 };
 // Status glyphs: one line drawing each, in the status's own colour.
@@ -7628,7 +7689,8 @@ function demoUnit(side, bd) {
   u.skCd = 0;
   return u;
 }
-const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'] };
+const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'],
+  spellbook: ['cast_bolt', 30, 'cast_nova', 30, 'cast_ward'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
 function demoSteps(u, what) {
   if (what === 'weapon') return WEAPON_DEMO[u.w].map((x) => (typeof x === 'number' ? { wait: x } : { atk: x }));
   if (what === 'acro') {
@@ -7789,7 +7851,6 @@ function startFight(seed, replay = false) {
     u.navOk = reach(u.nav, mid, true);
     u.react = 8 + Math.floor(rng() * 10);
   }
-  for (const u of [...U]) if (!u.mob && u.w === 'puppet') spawnPuppet(u);
   shots = []; parts = [];
   ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = hunt ? 'Hunt' : WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
   skShown[0] = {}; skShown[1] = {}; stShown[0] = stShown[1] = '-';

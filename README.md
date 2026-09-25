@@ -94,7 +94,7 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 305 items: 91 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+  - 308 items: 94 weapons, 87 head, core and feet pieces, 78 trinkets, 13
     skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
@@ -110,17 +110,20 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
-  - **Spellbook:** casts rooted — you cannot move, roll or jump through a cast.
-    The book picks its page from the moment: a bolt at range, a nova when
-    something is inside three tiles, a ward when it is hurting you. Its gear
-    makes your statuses deal +25%, so it is the caster wing of the status
-    builds. Anything that closes fast beats it.
-  - **Puppet:** you carry no blade at all. A jointed marionette fights on a
-    five-tile string, built out of your own gear — it takes three quarters of
-    your HP, your weapon's damage range and your Atk — and a tug on the strings
-    throws it forward with its heavy swing ready. Break it and the puppeteer
-    has five seconds with nothing but a boot before another is strung. Strong
-    against blades, weak against shooters.
+  - **Spellbook:** casts rooted — you cannot move, roll or jump through a cast
+    — and in the air you sink rather than fall. The book picks its page from
+    the moment: an ink bolt at range, a sigil written under a foe that stands
+    still and catches a beat later, a nova when something is inside three
+    tiles, a ward when it is hurting you. Every book is made of one kind of
+    weather, and all four pages carry it: the Spore Codex poisons, the Rime
+    Codex chills, the Storm Codex shocks, the Ember Codex burns, the Blood
+    Codex bleeds. Its gear makes your statuses deal +25%. Anything that closes
+    fast beats it.
+  - **Puppet:** you never touch anybody. The marionette hangs on your strings
+    and your swings land where it is, four tiles out, so you fight from where
+    a bow would stand — with a blade's damage and a hammer's patience. The
+    heavy spin only comes out on an opening: something stunned, frozen or on
+    the floor.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):
@@ -133,10 +136,10 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Parry:** a short guard that catches a swing, a shot or a hook. Shots
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
-  - **Sidestep:** step into the wall at one edge of the page and out of the one
-    opposite, at the same height, and the first hit you land after it is an
-    ambush. The squeeze eats those edges from 20 s, so it is a flank early and
-    a grave late — the clock does the balancing, not the cooldown.
+  - **Ghost Walk:** for three quarters of a second nothing on the page is
+    solid. You drift through blocks, through the floor and through the walls
+    at the edge, nothing can touch you, and you cannot attack. You come out
+    wherever you stopped — pushed clear if that happens to be inside a wall.
 - **Trinkets and statuses:** a trinket puts a status on the rival when a hit
   lands, more often on heavier hits. **Statuses scale with the fighter that
   applied them**, so a burn from a day-seven maul is not the same burn as a
