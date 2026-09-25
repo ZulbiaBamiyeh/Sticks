@@ -112,15 +112,34 @@ fights run themselves. **Start a run** is the front door, and everything else
     needs a clear line.
   - **Spellbook:** a caster holds ground instead of moving on it. It is the
     slowest thing in the game, it cannot roll, wall-run or double jump, it
-    never casts in the air, and it sinks rather than falls. What it has
-    instead is six pages, and five of them are not projectiles: a **wall of
-    ink** that stops three shots dead, a **grasp** that runs up a charger's
-    legs and stops it where it stands, a **sigil** written under anyone who
-    holds still and catching a beat later, a **nova** at arm's length, a
-    **ward** when it is hurting, and an ink **bolt** when nothing else fits.
-    Every book is made of one kind of weather that all six pages carry: the
-    Spore Codex poisons, the Rime Codex chills, the Storm Codex shocks, the
-    Ember Codex burns, the Blood Codex bleeds.
+    sinks rather than falls, and it **plants its feet for the whole
+    incantation** — every page has a cast time, the bar over its head says how
+    much is left on it, and a hit landing during the cast knocks the page out
+    of its hands.
+  - **Every book answers the same six questions** — something to throw,
+    something to hide behind, something to stop what is running at you,
+    something for when it is already too close, something to leave on the
+    floor, and something to put on yourself. What it answers them *with* is
+    the **school** it was written in, and the four schools do all six
+    differently:
+    - **Ink** (the plain book, the Gel Grimoire, the Spore and Blood Codices):
+      a **wall of ink** that stops three shots dead, a **grasp** up a
+      charger's legs, a **sigil** under anyone who holds still, a **nova** at
+      arm's length, a **ward**, and a **bolt**.
+    - **Frost** (the Rime Codex): an ice **lance**, flat and fast; a **slab of
+      ice** instead of a pane of it, which bursts into chilling shards when it
+      goes; legs **encased** rather than held; **spikes** up through the
+      floor; and a **shatter** that hits harder for every Chill already on
+      them and takes the Chill with it.
+    - **Flame** (the Ember Codex): a **fireball** that goes off where it
+      lands, a **pillar of flame** out of the floor tall enough to catch
+      somebody jumping it, a **line of fire** that stops nothing walking but
+      burns anything thrown through it, **embers** to leave behind, and an
+      **immolation** that costs you a little and leaves you burning for three
+      seconds. It is the school for people who keep away from you.
+    - **Storm** (the Storm Codex): **arcs** that are there almost before they
+      are thrown, and a **bolt straight down** out of the top of the page onto
+      whoever you are looking at.
   - **Warlock tomes** are spellbooks that have given up on doing damage now.
     Their pages are a **curse** (no damage at all, just the book's weather
     driven deep, paid for in your own HP), a **drain** that pulls the
@@ -147,8 +166,11 @@ fights run themselves. **Start a run** is the front door, and everything else
     knife-fighter's crouch any more. A caster is upright with the book carried
     flat in front and the free hand working above it, and it keeps that shape
     while it walks; a cast gathers a ring of marks over the open page that
-    tightens as it comes due, with the same light in the hand about to throw
-    it, and a tome runs the ink down out of the fingers instead. A puppeteer
+    tightens as it comes due, in the colour of the school it is casting, with
+    the same light in the hand about to throw it, and a tome runs the ink down
+    out of the fingers instead. A **long** incantation adds a second ring
+    turning the other way around the free hand and draws a circle closing on
+    the ground under the caster's feet, so you can read what is coming. A puppeteer
     stands tall and still with both hands up on the strings, and flicks a
     wrist rather than swinging.
   - In dev mode the weapon page has a **Book** (or **Puppet**) button under
