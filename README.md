@@ -110,20 +110,23 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
-  - **Spellbook:** casts rooted — you cannot move, roll or jump through a cast
-    — and in the air you sink rather than fall. The book picks its page from
-    the moment: an ink bolt at range, a sigil written under a foe that stands
-    still and catches a beat later, a nova when something is inside three
-    tiles, a ward when it is hurting you. Every book is made of one kind of
-    weather, and all four pages carry it: the Spore Codex poisons, the Rime
-    Codex chills, the Storm Codex shocks, the Ember Codex burns, the Blood
-    Codex bleeds. Its gear makes your statuses deal +25%. Anything that closes
-    fast beats it.
+  - **Spellbook:** a caster holds ground instead of moving on it. It is the
+    slowest thing in the game, it cannot roll, wall-run or double jump, it
+    never casts in the air, and it sinks rather than falls. What it has
+    instead is six pages, and five of them are not projectiles: a **wall of
+    ink** that stops three shots dead, a **grasp** that runs up a charger's
+    legs and stops it where it stands, a **sigil** written under anyone who
+    holds still and catching a beat later, a **nova** at arm's length, a
+    **ward** when it is hurting, and an ink **bolt** when nothing else fits.
+    Every book is made of one kind of weather that all six pages carry: the
+    Spore Codex poisons, the Rime Codex chills, the Storm Codex shocks, the
+    Ember Codex burns, the Blood Codex bleeds.
   - **Puppet:** you never touch anybody. The marionette hangs on your strings
-    and your swings land where it is, four tiles out, so you fight from where
-    a bow would stand — with a blade's damage and a hammer's patience. The
-    heavy spin only comes out on an opening: something stunned, frozen or on
-    the floor.
+    and your swings land where it is, **six tiles out**, so you fight from
+    beyond a spear with a blade's damage and a hammer's patience. Between
+    swings it hangs at your shoulder and **takes a shot meant for you** — once
+    every two seconds, which is not an answer to a volley. The heavy spin only
+    comes out on an opening: something stunned, frozen or on the floor.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):

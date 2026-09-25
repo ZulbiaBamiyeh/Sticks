@@ -764,8 +764,8 @@ const WEAP = {
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
-  spellbook: { name: 'Spellbook', speed: 5.8, atk: 'cast_bolt', range: 5.6, float: 0.34, stat: '4 spells', desc: 'Casts rooted, and the book picks its page: a bolt at range, a sigil under a foe that stands still, a nova when something gets close, a ward when it hurts. You cannot move through a cast, but you sink through the air instead of falling.' },
-  puppet: { name: 'Puppet', speed: 6.0, atk: 'pswing', stop: 3.1, stat: '17f · reach 4', desc: 'You never touch anybody. The marionette hangs on your strings four tiles out and your swings land where it is, so you fight from where a bow would stand — but only as far as the strings go.' },
+  spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '6 spells', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it. The book picks its page: a wall of ink against shooters, a grasp that stops whatever is running at you, a sigil under anyone who stands still, a nova at arm\'s length, a ward when it hurts, and a bolt when nothing else fits.' },
+  puppet: { name: 'Puppet', speed: 6.0, atk: 'pswing', stop: 4.4, stat: '17f · reach 6', desc: 'You never touch anybody. The marionette hangs on your strings four tiles out and your swings land where it is, so you fight from where a bow would stand — but only as far as the strings go.' },
 };
 const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
@@ -810,7 +810,7 @@ const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
   star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
   glob: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Brute's lobbed glob
-  bolt: { v: 19, g: 2, len: 0.42, hit: { dmg: 11, kb: [3.5, -2], stun: 14, hs: 4 } },   // a spellbook's ink bolt: slow, flat, heavy
+  bolt: { v: 20, g: 2, len: 0.42, hit: { dmg: 14, kb: [3.5, -2], stun: 14, hs: 4 } },   // a spellbook's ink bolt: slow, flat, heavy
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
 const CRIT = 1.6;
@@ -1141,11 +1141,13 @@ const ATK = {
   plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
   aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
   // a spellbook: long roots, and the book decides which page it opens on
-  cast_bolt: { w: 16, a: 1, r: 10, shot: 'bolt', cd: 4, cast: 1 },
+  cast_bolt: { w: 14, a: 1, r: 9, shot: 'bolt', cd: 3, cast: 1 },
   acast_bolt: { w: 15, a: 1, r: 10, shot: 'bolt', air: 1, cd: 10, cast: 1 },
-  cast_nova: { w: 17, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 2.7, dmg: 11, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
+  cast_nova: { w: 17, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 2.7, dmg: 14, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
   cast_ward: { w: 20, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 16, r: 3, apply: 'chill', stacks: 1 } },
   cast_sigil: { w: 21, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 52, r: 2.3, dmg: 14, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
+  cast_wall: { w: 18, a: 2, r: 14, cd: 8, cast: 1, wall: { secs: 4, h: 3.2, at: 2.4 } },
+  cast_grasp: { w: 19, a: 2, r: 16, cd: 8, cast: 1, grasp: { hold: 42, reach: 7, apply: 'chill', dmg: 9 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -1287,10 +1289,10 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
   const pose = { p: {}, v: {} };
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
-    side, w: weapon, skill: skill || null, trinket: trinket || null, acro, macros: MACROS_BY_ACRO[acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
+    side, w: weapon, skill: skill || null, trinket: trinket || null, acro: WEAP[weapon].noAcro ? 0 : acro, macros: MACROS_BY_ACRO[WEAP[weapon].noAcro ? 0 : acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
     look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
     onHit: trinket ? [TRINKET[trinket]] : [],
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: WEAP[weapon].float || 1 },
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: WEAP[weapon].float || 1 },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
@@ -1324,12 +1326,17 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 // A spellbook casts what the moment needs: a nova when something is on top of you, a ward when it is
 // hurting, a bolt the rest of the time. Each page has its own cooldown, so you cannot lean on one.
-const SPELL_CD = { cast_nova: 170, cast_ward: 280, cast_sigil: 230 };
+const SPELL_CD = { cast_nova: 150, cast_ward: 240, cast_sigil: 190, cast_wall: 260, cast_grasp: 220 };
 function pickSpell(u, fallback) {
   if (u.state === 'dead' || !u.b.gr || world.demo) return fallback;
   const e = foe(u), cd = (u.sCd ||= {});
   const near = e && e.state !== 'dead' && Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) < 3.1;
+  const dist = e ? Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) : 99;
   if (near && !(cd.cast_nova > 0)) return 'cast_nova';
+  // something running at you: catch it in the ink and it stops where it stands
+  if (e && !(cd.cast_grasp > 0) && dist < 7 && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.5))) return 'cast_grasp';
+  // arrows on the way: a pane of ink between you and them
+  if (!(cd.cast_wall > 0) && (shotThreat(u, 40) >= 0 || (e && isRanged(e) && dist > 3.5))) return 'cast_wall';
   if (!(cd.cast_ward > 0) && (u.hp < u.hpMax * 0.65 || shotThreat(u, 26) >= 0) && u.shield < 6) return 'cast_ward';
   // a sigil is for somebody standing off at mid range, where it has time to cook under their feet
   if (e && !(cd.cast_sigil > 0) && e.b.gr && !near && Math.abs(e.b.x - u.b.x) < 8) return 'cast_sigil';
@@ -1462,6 +1469,7 @@ function tryAirAttack(u, e) {
   if (u.react > 0 || u.state !== 'free' || e.state === 'dead' || lying(e)) return false;
   const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, f = Math.sign(dx) || u.face;
   if (isRanged(u)) {
+    if (u.w === 'spellbook') return false;   // a caster casts with both feet down
     // shoot from the top of a jump, once any wall jumps the macro still needs are done
     if (u.cd > 0 || e.ghost || b.vy < -7 || b.wr > 0 || (u.ai.macro && u.ai.ms.wj > 0)) return false;
     // mid-vault, the throw down at the rival from over its head is the whole point
@@ -3839,9 +3847,9 @@ Object.assign(HUNTS, {
 // hangs out on the strings between you and whatever you are looking at, and your swings land where it
 // is, not where you are. You stand still and hit things four tiles away.
 Object.assign(ATK, {
-  pswing: { w: 14, a: 6, r: 16, dmg: 10, kb: [5, -4], stun: 18, hs: 4, box: [1.1, -1.9, 4.3, -0.05], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
-  pswing2: { w: 10, a: 6, r: 18, dmg: 10, kb: [5.5, -5], stun: 18, hs: 4, box: [1.0, -2.0, 4.3, 0.0], melee: 1, trail: 1, pup: 1 },
-  pspin: { w: 22, a: 11, r: 24, dmg: 15, kb: [8, -10], stun: 28, hs: 7, box: [0.5, -2.2, 4.5, 0.1], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
+  pswing: { w: 17, a: 6, r: 17, dmg: 10, kb: [5, -4], stun: 18, hs: 4, box: [1.4, -2.0, 6.0, 0.0], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
+  pswing2: { w: 13, a: 6, r: 19, dmg: 10, kb: [5.5, -5], stun: 18, hs: 4, box: [1.3, -2.1, 6.0, 0.05], melee: 1, trail: 1, pup: 1 },
+  pspin: { w: 24, a: 11, r: 26, dmg: 15, kb: [8, -10], stun: 28, hs: 7, box: [0.6, -2.4, 6.2, 0.15], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
 });
 function pupStep(u) {
   const b = u.b, p = (u.pup ||= { x: b.x + u.face * 1.2, y: b.y - 1.4, sw: 0, bob: Math.random() * 6 });
@@ -4311,6 +4319,8 @@ function atkStep(u) {
     if (d.nova) castNova(u, d.nova);
     if (d.ward) castWard(u, d.ward);
     if (d.sigil) castSigil(u, d.sigil);
+    if (d.wall) castWall(u, d.wall);
+    if (d.grasp) castGrasp(u, d.grasp);
     if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
     if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
   }
@@ -4507,6 +4517,31 @@ function stepSigils() {
   }
   world.sigils = out;
 }
+// A pane of ink stood up between you and them. Nothing of theirs gets through it, three shots break it.
+function castWall(u, wl) {
+  const b = u.b, x = Math.max(1.4, Math.min(COLS - 1.4, b.x + u.face * wl.at));
+  world.walls.push({ x, y: b.y, h: wl.h, side: u.side, t: Math.round(wl.secs * 60), max: Math.round(wl.secs * 60), hits: 0 });
+  for (let i = 0; i < 6; i++) streak(x, b.y - 0.4 - i * 0.45, -Math.PI / 2, 0.6, TEAM[u.side]);
+  ring(x, b.y - wl.h / 2, 0.9, TEAM[u.side]);
+  u.hitDone = true;
+}
+// Ink runs up their legs: whatever they were doing stops, and they stay put while it holds.
+function castGrasp(u, gr) {
+  const e = foe(u);
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > gr.reach) { u.hitDone = true; return; }
+  e.state = 'stun'; e.stunT = Math.max(e.stunT, gr.hold); e.tumble = false;
+  e.b.vx = 0; e.b.vy = Math.min(0, e.b.vy); e.skName = null; e.backflip = false;
+  e.ai.macro = null; e.ai.path.length = 0; e.hitDone = true;
+  if (e.hook && e.hook.phase !== 'back') e.hook.phase = 'back';
+  if (gr.dmg) hurt(e, gr.dmg * powerOf(u), 'hit', u.side, null, [['hits', 1]]);
+  const st = bookStatus(u, gr.apply);
+  if (st) applyStatus(u, e, st);
+  for (let i = 0; i < 5; i++) brushUp(e.b.x + (Math.random() - 0.5) * 0.5, e.b.y, TEAM[u.side]);
+  ring(e.b.x, e.b.y - 0.3, 0.9, TEAM[u.side]); callout(e, 'HELD', u.side);
+  world.hs = Math.max(world.hs, 4);
+  u.hitDone = true;
+}
+const brushUp = (x, y, c) => streak(x, y - 0.3 - Math.random() * 0.8, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, 0.5 + Math.random() * 0.5, c);
 // A ward: a shell of cold around you, and anything already inside it gets some.
 function castWard(u, wd) {
   const b = u.b, cy = b.y - H / 2;
@@ -4562,6 +4597,29 @@ function resolveHits() {
   }
 }
 
+// A shot on its way to a puppeteer runs into the marionette first, and a mage's pane of ink stops one
+// dead. Both need a moment to recover, so neither is an answer to everything.
+function blockedByGuard(a) {
+  for (const u of U) {
+    if (u.side === a.owner || u.state === 'dead') continue;
+    const p = u.pup;
+    if (p && !(u.pupGuard > world.t) && Math.abs(a.x - p.x) < 0.5 && Math.abs(a.y - p.y) < 0.62) {
+      u.pupGuard = world.t + 80;
+      a.dead = true; sparks(a.x, a.y, -Math.sign(a.vx), 10); ring(a.x, a.y, 0.6, TEAM[u.side]);
+      world.hs = Math.max(world.hs, 3); popText(p.x, p.y - 0.7, 'guard', 'steel', 0.4);
+      return true;
+    }
+  }
+  for (const w of world.walls) {
+    if (w.side === a.owner) continue;
+    if (Math.abs(a.x - w.x) > 0.22 || a.y < w.y - w.h || a.y > w.y) continue;
+    a.dead = true; w.hits++;
+    sparks(a.x, a.y, -Math.sign(a.vx), 12, 'ink'); ring(a.x, a.y, 0.5, TEAM[w.side]);
+    if (w.hits >= 3) w.t = 0;
+    return true;
+  }
+  return false;
+}
 function stepShots() {
   for (const a of shots) {
     const K = SHOT[a.kind];
@@ -4576,6 +4634,7 @@ function stepShots() {
         break;
       }
       if (world.demo) continue;
+      if (blockedByGuard(a)) break;
       const t = U.find((x) => x.side !== a.owner && x.state !== 'dead' && !(x.iT > 0) && !lying(x) && overlap(hurtbox(x, 0.06), [a.x, a.y, a.x, a.y]));
       if (t) {
         if (parrying(t) && facingPoint(t, a.x)) {
@@ -4857,7 +4916,7 @@ function newWorld(seed) {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
-    sigils: [],
+    sigils: [], walls: [],
     stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0 })),
   };
 }
@@ -4879,6 +4938,7 @@ function simStep() {
   for (const u of U) act(u);
   resolveHits();
   stepSigils();
+  world.walls = world.walls.filter((w) => --w.t > 0);
   stepShots();
   for (const u of U) stepHook(u);
   for (const u of U) {
@@ -5014,7 +5074,7 @@ const WTYPE = {
   bow: { min: 9, max: 13, base: 11, pace: 'Steady', sig: '+30% Crit damage', stats: { critDmg: 0.3 } },
   stars: { min: 3.5, max: 5.5, base: 4.5, pace: 'Very fast', sig: '+5% Evasion', stats: { evasion: 0.05 } },
   spellbook: { min: 8, max: 14, base: 11, pace: 'Slow', sig: 'Statuses deal +25%', flags: { dotMult: 1.25 } },
-  puppet: { min: 6, max: 10, base: 8, pace: 'Slow', sig: 'Reach 4' },
+  puppet: { min: 6, max: 10, base: 8, pace: 'Slow', sig: 'Reach 6 and a guard, for 15 HP', stats: { hp: -15 } },
 };
 
 // Families: each creature drops its family's gear. Two pieces give the set's stats; four bend a rule,
@@ -6700,6 +6760,22 @@ function drawTrail(u, pal) {
   ctx.globalAlpha = 1;
 }
 // A sigil charging on the floor: a ring that closes, ticks that stand up as it comes due.
+// A wall of ink: a pane that ripples, thinning as its time runs out.
+function drawWalls(pal) {
+  for (const w of world.walls) {
+    const k = w.t / w.max, team = pal[TEAM[w.side]];
+    ctx.globalAlpha = 0.16 + 0.2 * k;
+    ctx.fillStyle = team; ctx.fillRect(w.x - 0.14, w.y - w.h, 0.28, w.h);
+    ctx.globalAlpha = 0.5 + 0.4 * k; ctx.strokeStyle = team; ctx.lineWidth = 0.05;
+    ctx.beginPath();
+    for (let i = 0; i <= 8; i++) {
+      const y = w.y - (i / 8) * w.h, x = w.x + Math.sin(world.t * 0.14 + i * 0.9) * 0.07 * k;
+      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
 function drawSigils(pal) {
   for (const g of world.sigils) {
     const k = 1 - g.t / g.max, team = pal[TEAM[g.side]], r = g.sp.r * (0.45 + 0.55 * k);
@@ -7040,6 +7116,7 @@ function render() {
     else drawArrowShape(a.x - Math.cos(a.ang) * 0.62, a.y - Math.sin(a.ang) * 0.62, a.x, a.y, pal, a.owner, pal.ink);
   }
   drawSigils(pal);
+  drawWalls(pal);
   for (const u of U) drawTrail(u, pal);
   const order = U.slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead')).reverse();
   for (const u of order) drawUnit(u, pal);
