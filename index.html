@@ -826,7 +826,7 @@ const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
   star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
   glob: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Brute's lobbed glob
-  bolt: { v: 20, g: 2, len: 0.42, hit: { dmg: 14, kb: [3.5, -2], stun: 14, hs: 4 } },   // a spellbook's ink bolt: slow, flat, heavy
+  bolt: { v: 21, g: 2, len: 0.42, hit: { dmg: 17, kb: [3.5, -2], stun: 14, hs: 4 } },   // a spellbook's ink bolt: slow, flat, heavy
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
 const CRIT = 1.6;
@@ -1157,17 +1157,17 @@ const ATK = {
   plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
   aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
   // a spellbook: long roots, and the book decides which page it opens on
-  cast_bolt: { w: 14, a: 1, r: 9, shot: 'bolt', cd: 3, cast: 1 },
+  cast_bolt: { w: 16, a: 1, r: 9, shot: 'bolt', cd: 3, cast: 1 },
   acast_bolt: { w: 15, a: 1, r: 10, shot: 'bolt', air: 1, cd: 10, cast: 1 },
-  cast_nova: { w: 17, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 2.7, dmg: 14, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
-  cast_ward: { w: 20, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 16, r: 3, apply: 'chill', stacks: 1 } },
-  cast_sigil: { w: 21, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 52, r: 2.3, dmg: 14, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
-  cast_wall: { w: 18, a: 2, r: 14, cd: 8, cast: 1, wall: { secs: 4, h: 3.2, at: 2.4 } },
+  cast_nova: { w: 30, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 3.1, dmg: 27, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
+  cast_ward: { w: 26, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 34, r: 3.2, apply: 'chill', stacks: 2 } },
+  cast_sigil: { w: 34, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 46, r: 2.6, dmg: 28, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
+  cast_wall: { w: 26, a: 2, r: 14, cd: 8, cast: 1, wall: { secs: 5.5, h: 3.4, at: 2.4 } },
   // a warlock's tome: nothing it does lands now, and all of it lands later
-  cast_curse: { w: 20, a: 2, r: 14, cd: 6, cast: 1, curse: { stacks: 3, reach: 8, cost: 0.022 } },
-  cast_drain: { w: 16, a: 2, r: 20, cd: 8, cast: 1, drain: { per: 6, reach: 7.5, back: 0.55 } },
-  cast_rupture: { w: 24, a: 3, r: 22, cd: 10, cast: 1, rupture: { per: 8.5, reach: 6.5, kb: [6, -7], stun: 22, hs: 7, cost: 0.03 } },
-  cast_grasp: { w: 19, a: 2, r: 16, cd: 8, cast: 1, grasp: { hold: 42, reach: 7, apply: 'chill', dmg: 9 } },
+  cast_curse: { w: 24, a: 2, r: 14, cd: 6, cast: 1, curse: { stacks: 4, reach: 8, cost: 0.022 } },
+  cast_drain: { w: 20, a: 2, r: 20, cd: 8, cast: 1, drain: { per: 8, reach: 7.5, back: 0.55 } },
+  cast_rupture: { w: 40, a: 3, r: 22, cd: 10, cast: 1, rupture: { per: 14, reach: 6.5, kb: [6, -7], stun: 22, hs: 7, cost: 0.03 } },
+  cast_grasp: { w: 22, a: 2, r: 16, cd: 8, cast: 1, grasp: { hold: 60, reach: 7.5, apply: 'chill', dmg: 17 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -1371,25 +1371,28 @@ const SPELL_CD = { cast_nova: 150, cast_ward: 240, cast_sigil: 190, cast_wall: 2
 function pickSpell(u, fallback) {
   if (u.state === 'dead' || !u.b.gr || world.demo) return fallback;
   const e = foe(u), cd = (u.sCd ||= {});
+  if (cd.fizzle > 0) return 'cast_bolt';   // shaken: only the quick page, until the hands settle
+  // a long cast is a commitment, so it is not started with a blade already coming down
+  const rushed = e && (meleeThreat(u, e) >= 0 || shotThreat(u, 22) >= 0);
   const near = e && e.state !== 'dead' && Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) < 3.1;
   const dist = e ? Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) : 99;
   if (u.gs && u.gs.flags.tome) {
     const load = e ? afflicted(e) : 0;
     if (e && !(cd.cast_grasp > 0) && meleeThreat(u, e) >= 0) return 'cast_grasp';
     if (e && load < 1.4 && dist < 8.5) return 'cast_curse';                       // get it on them first
-    if (e && load >= 2.6 && !(cd.cast_rupture > 0) && dist < 6.5) return 'cast_rupture';   // then tear it out
+    if (e && load >= 2.6 && !(cd.cast_rupture > 0) && dist < 6.5 && !rushed) return 'cast_rupture';   // then tear it out
     if (e && load > 0.6 && !(cd.cast_drain > 0) && dist < 7.5) return 'cast_drain';
     if (!(cd.cast_wall > 0) && shotThreat(u, 40) >= 0) return 'cast_wall';
     return e && dist < 8.5 ? 'cast_curse' : fallback;
   }
-  if (near && !(cd.cast_nova > 0)) return 'cast_nova';
+  if (near && !(cd.cast_nova > 0) && !rushed) return 'cast_nova';
   // something running at you: catch it in the ink and it stops where it stands
   if (e && !(cd.cast_grasp > 0) && dist < 7 && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.5))) return 'cast_grasp';
   // arrows on the way: a pane of ink between you and them
   if (!(cd.cast_wall > 0) && (shotThreat(u, 40) >= 0 || (e && isRanged(e) && dist > 3.5))) return 'cast_wall';
   if (!(cd.cast_ward > 0) && (u.hp < u.hpMax * 0.65 || shotThreat(u, 26) >= 0) && u.shield < 6) return 'cast_ward';
   // a sigil is for somebody standing off at mid range, where it has time to cook under their feet
-  if (e && !(cd.cast_sigil > 0) && e.b.gr && !near && Math.abs(e.b.x - u.b.x) < 8) return 'cast_sigil';
+  if (e && !(cd.cast_sigil > 0) && e.b.gr && !near && !rushed && Math.abs(e.b.x - u.b.x) < 8) return 'cast_sigil';
   return fallback;
 }
 function startAtk(u, name) {
@@ -2819,6 +2822,7 @@ function applyHit(att, def, d, dirX, crit) {
     return;
   }
   att.hitLanded = true;
+  if (def.state === 'atk' && def.atkDef && def.atkDef.cast && def.phase === 'w' && def.shield <= 0) fizzle(def);
   const ag = att.gs, dg = def.gs;
   const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
   if (!crit && critCh > 0 && d.dmg && rng() < critCh) crit = true;   // gear crit chance
@@ -4620,6 +4624,14 @@ function landPlunge(u) {
 // A shockwave runs along the floor. It hits anyone standing on it, and a roll doesn't get under it.
 // A nova: everything of theirs standing in the circle, wherever it is in the air.
 const bookStatus = (u, fb) => (u.gs && u.gs.flags.spellSt) || fb;
+// A cast interrupted: the page goes out, and the book will not open again straight away.
+function fizzle(u) {
+  if (!u.atkDef || !u.atkDef.cast) return;
+  (u.sCd ||= {}).fizzle = 30;
+  const S = skel(u), h = S.hb || S.hf;
+  smoke(h.x, h.y, 5); popText(u.b.x, u.b.y - H - 0.7, 'lost', 'ink', 0.45);
+  if (!world.stats[u.side].fizzled++) log('The cast came apart when the hit landed.', 1 - u.side);
+}
 function castNova(u, sh) {
   const b = u.b, cy = b.y - H / 2;
   ring(b.x, cy, sh.r, TEAM[u.side]); ring(b.x, cy, sh.r * 0.55, 'spark');
@@ -5117,7 +5129,7 @@ function newWorld(seed) {
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
     sigils: [], walls: [],
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -7049,6 +7061,15 @@ function drawCast(u, S, pal) {
     // and the same light in the hand that is about to throw it
     ctx.globalAlpha = 0.4 + 0.5 * k; ctx.fillStyle = c;
     ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.04 + 0.08 * k, 0, 6.283); ctx.fill();
+  }
+  // the cast bar: how long is left on this page, over the head where a foe can read it too
+  if (u.phase === 'w' && d.w >= 24) {
+    const wdt = 0.7, x0 = u.b.x - wdt / 2, y0 = u.b.y - H - 0.52;
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = pal.fog; ctx.fillRect(x0 - 0.02, y0 - 0.02, wdt + 0.04, 0.115);
+    ctx.fillStyle = c; ctx.fillRect(x0, y0, wdt * k, 0.075);
+    ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.022; ctx.strokeRect(x0, y0, wdt, 0.075);
+    ctx.globalAlpha = 1;
   }
   ctx.restore(); ctx.globalAlpha = 1;
 }
