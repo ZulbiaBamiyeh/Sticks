@@ -453,6 +453,13 @@
   .evopt b { font: 900 17px/1.1 var(--display); letter-spacing: 0.02em; }
   .evopt small { font-size: 12px; color: var(--ink-2); }
   .evopt.leave { border-color: var(--line); }
+  /* a path: its keystone's mark, the name, and what it drags out of the ink */
+  .evopt.path { gap: 3px; }
+  .p-top { display: flex; align-items: center; gap: 8px; }
+  .p-top svg { width: 26px; height: 26px; flex: none; }
+  .p-top .lbl { margin-left: auto; font-size: 10px; }
+  .p-fam { color: var(--ink-2); font-weight: 700; }
+  .rstats .hpn.low b { color: var(--red); }
   .evopt:disabled { opacity: 0.45; }
   .evpick { grid-template-columns: repeat(5, 1fr); }
   .xstats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
@@ -565,7 +572,14 @@
     .irow .wn .dt { max-height: 14px; overflow: hidden; }
     .actions .go.wide, .actions .ghost.wide { grid-column: auto; }
   }
+  @media (max-height: 660px) {
+    .evhead p { display: none; }
+    .evopt.path small.p-fam { display: none; }
+    .p-top svg { width: 22px; height: 22px; }
+  }
   @media (max-width: 379px) {
+    .rstats .gld { display: none; }
+    .evopt.path .p-top .lbl { display: none; }
     .ladder .lbl, .rec { font-size: 11px; white-space: nowrap; }
     .bring { font-size: 13px; }
     .bring .lbl { white-space: nowrap; }
@@ -4679,6 +4693,15 @@ function setRival(ix) {
 const RUNCFG = { days: 7, perDay: 4, winTarget: 5, lives: 3, bag: 6, rerolls: 2 };
 // The shop is switched off for now: a day opens straight on the hunts. The code stays, as with spikes.
 const SHOP_ON = false;
+// Wounds carry from hunt to hunt. You catch your breath a little between them, you are patched up for the
+// duel that ends the day, and a hunt that goes badly still leaves you on your feet. Walking away from a
+// drop is how you buy back the rest.
+// How much you get back after a hunt depends on how hard it was: an Easy one is close to a rest, an
+// Elite one leaves you ragged. That is what makes dropping a tier while hurt worth doing.
+const HP_FLOOR = 0.3, HP_BREATH = { easy: 0.25, normal: 0.12, elite: 0.04 }, REST_HEAL = 0.35;
+// The duel that ends a day patches you up, but only by so much: come out of the hunts ragged and you
+// fight it ragged. A new day always starts whole.
+const DUEL_HEAL = 0.5;
 const RUN_KEY = 'homeTurf.run.v2', GHOST_KEY = 'homeTurf.ghosts.v2';
 const dayOf = (round) => Math.ceil(round / RUNCFG.perDay);
 const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
@@ -5538,15 +5561,29 @@ const DAY_POOLS = [
 const CARD_GOLD = { easy: 2, normal: 3, elite: 5, duel: 6, duelLoss: 3 };
 const SELL = { common: 1, rare: 2, epic: 4, legend: 9 };
 
+// ---------------------------------------------------------------- paths
+// A run opens on a choice of three: a keystone you keep from the first hunt, and the families that will
+// turn up more often because of it. It is the one decision made before you know anything, and everything
+// after it is made with that rule already on your sheet.
+const PATHS = {
+  rot: { name: 'The Rot', line: 'Everything you touch goes bad, and stays bad.', key: 'alchemists_coil', fams: ['toxic', 'bog', 'mire', 'venom'] },
+  storm: { name: 'The Storm', line: 'Hit it until the air gives out.', key: 'tesla_coil', fams: ['storm', 'thunder', 'tide'] },
+  anvil: { name: 'The Anvil', line: 'Stand still. Let it break itself on you.', key: 'juggernaut_plate', fams: ['iron', 'shell', 'glacier'] },
+  blood: { name: 'The Blood', line: 'Open it up, and drink what runs out.', key: 'bloodletter', fams: ['blood', 'vampire', 'reaper', 'scythe'] },
+  frost: { name: 'The Frost', line: 'Cold things break along the lines.', key: 'frostbite_charm', fams: ['frost', 'frostgel', 'wisp', 'glacier'] },
+  wing: { name: 'The Wing', line: 'Nothing lands on what is never there.', key: 'dervish_slippers', fams: ['wing', 'spectre', 'silk', 'quill'] },
+};
+const PATH_IDS = Object.keys(PATHS), PATHS_OFFERED = 3;
+
 // Duel rivals: generated builds geared for their day, with a name, a record and a half; plus your
 // own builds saved from earlier runs, which turn up half the time when one exists for that round.
 const GHOST_NAMES = ['Quill', 'Lull', 'Pike', 'Gaff', 'Moth', 'Anvil', 'Pinwheel', 'Tack', 'Wick', 'Hatch', 'Smudge', 'Nib', 'Vellum', 'Ferrule', 'Stipple', 'Loop'];
 function makeGhost(seed, round) {
   const r = runRng(seed, round, 'ghost'), day = dayOf(round), fams = r.shuffle(Object.keys(FAMILY)).slice(0, 2), equip = {};
   const card = day >= 6 ? 'elite' : day >= 3 ? 'normal' : 'easy';
-  // a little less geared than a player can be by that day: two pieces more a day, filled in this order
-  // Their gear keeps pace with a real build: one drop a hunt, so a slot or so a day.
-  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + day));
+  // A little less geared than a player can be by that day, filled in this order. Their gear keeps pace
+  // with a real build: one drop a hunt, minus the hunts that go wrong, so about a slot a day.
+  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 1 + day));
   // from day 4 their families' keystones can turn up, from day 6 their relics
   const extra = fams.flatMap((f) => [...(day >= 4 ? KEYSTONE_OF[f] || [] : []), day >= 6 && RELIC_OF[f]]).filter(Boolean);
   for (const s of slots) {
@@ -5566,6 +5603,7 @@ class Run {
     this.seed = seed; this.round = 1; this.lives = RUNCFG.lives; this.wins = 0; this.duelLosses = 0; this.gold = 0;
     this.over = false; this.crown = false; this.history = []; this.bag = []; this.rerolls = RUNCFG.rerolls;
     this.loot = null; this.offer = null; this.event = null;
+    this.hp = 1; this.path = null; this.pathDone = false;
     this.events = planEvents(seed); this.boons = { hpFlat: 0, hpMult: 1, skillHaste: 0 };
     const r = runRng(seed, 'start');
     this.equip = { weapon: rollInstance('rusty_sword', 'common', 1, r), feet: rollInstance('worn_shoes', 'common', 1, r), core: rollInstance('linen_shirt', 'common', 1, r) };
@@ -5589,6 +5627,13 @@ class Run {
         const [hunt, tier] = r.pick(pool[card]).split(':');
         return { card, hunt, tier, family: HUNT_FAMILY[hunt] };
       });
+      // Your path draws its own creatures out: one of the three leans your way whenever the day has one.
+      const P = PATHS[this.path];
+      if (P && !this.offers.some((o) => P.fams.includes(o.family))) {
+        const card = r.pick(['easy', 'normal', 'elite']);
+        const mine = pool[card].filter((h) => P.fams.includes(HUNT_FAMILY[h.split(':')[0]]));
+        if (mine.length) { const [hunt, tier] = r.pick(mine).split(':'); this.offers[['easy', 'normal', 'elite'].indexOf(card)] = { card, hunt, tier, family: HUNT_FAMILY[hunt] }; }
+      }
     }
   }
   // the drops a card can give: its family's gear; skills and the family's keystone only from Normal and
@@ -5599,8 +5644,9 @@ class Run {
     if (offer.card === 'elite' && RELIC_OF[f]) ids.push(RELIC_OF[f]);
     return ids;
   }
-  resolve(won, offer) {
+  resolve(won, offer, hpLeft = 1) {
     const out = { won, duel: this.isDuel, lifeLost: false, gold: 0 };
+    if (!this.isDuel) this.hp = Math.max(HP_FLOOR, Math.min(1, hpLeft + (HP_BREATH[offer && offer.card] || 0.12)));   // you carry the wounds on
     if (this.isDuel) {
       if (won) { this.wins++; out.gold = CARD_GOLD.duel; if (this.wins >= RUNCFG.winTarget) this.crown = true; }
       else { this.lives--; this.duelLosses++; out.lifeLost = true; out.gold = CARD_GOLD.duelLoss; }
@@ -5644,6 +5690,18 @@ class Run {
     this.loot.freeUsed = spent;
     return true;
   }
+  // Leaving the drop where it lies buys back some of what the hunt cost you.
+  skipLoot() { this.loot = null; this.hp = Math.min(1, this.hp + REST_HEAL); }
+  // three of the six, so no two runs open the same way
+  pathOffers() { return runRng(this.seed, 'path').shuffle(PATH_IDS).slice(0, PATHS_OFFERED); }
+  takePath(id) {
+    if (this.pathDone || !PATHS[id]) return false;
+    const P = PATHS[id], r = runRng(this.seed, 'path', id);
+    this.path = id; this.pathDone = true;
+    this.wear(rollInstance(P.key, 'rare', 1, r));
+    this.rollRound();   // the first hunts already know which way you went
+    return true;
+  }
   bagFull() { return this.bag.length >= RUNCFG.bag; }
   // put a piece on: whatever it replaces goes to the bag, or is sold if the bag is full
   wear(inst, to) {
@@ -5681,6 +5739,8 @@ class Run {
     this.round++;
     if (SHOP_ON && slotOf(this.round) === 1) { this.shopRolls = 0; this.rollShop(); }   // a new day opens on the shop
     if (slotOf(this.round) === 1) this.rerolls = RUNCFG.rerolls;
+    if (slotOf(this.round) === 1) this.hp = 1;                       // a new day, and you are whole
+    else if (this.isDuel) this.hp = Math.min(1, this.hp + DUEL_HEAL);   // patched up for the duel, as far as it goes
     this.loot = null; this.rollRound();
   }
   save() { try { localStorage.setItem(RUN_KEY, JSON.stringify(this)); } catch { /* storage may be unavailable */ } }
@@ -5690,6 +5750,8 @@ class Run {
       if (!d || !d.seed) return null;
       const r = Object.assign(Object.create(Run.prototype), { events: [], event: null, boons: { hpFlat: 0, hpMult: 1, skillHaste: 0 } }, d);
       if (!SHOP_ON) r.shop = null;   // a run saved while the shop was on carries on without it
+      if (r.hp === undefined) r.hp = 1;
+      if (r.pathDone === undefined) { r.pathDone = true; r.path = null; }   // a run saved before paths keeps going without one
       return r;
     } catch { return null; }
   }
@@ -7435,6 +7497,9 @@ function startFight(seed, replay = false) {
     world.hunt = { kind: huntKind, tier: huntTier, name: huntTier === 'elite' && hunt.eliteName ? hunt.eliteName : `${huntTier === 'easy' ? '' : TIER[huntTier].label + ' '}${hunt.name}`, max, show: 100 };
     U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket, builds[0].stats), ...mobs];
   } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket, builds[side].stats));
+  // Wounds carried in from an earlier hunt: you start the fight already marked.
+  const hp0 = builds[0].hp0;
+  if (hp0 > 0 && hp0 < 1) U[0].hp = U[0].hpShow = Math.max(1, Math.round(U[0].hpMax * hp0));
   for (const u of U) {
     if (u.mob) continue;
     u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
@@ -7693,7 +7758,7 @@ function compareLine(inst, to = targetSlot(inst)) {
 }
 // A compact row: icon, name, and either a compare line, a price or a tag. Tapping it opens the sheet.
 function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs = '', cls = '' } = {}) {
-  const it = ITEM[inst.item], kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const it = ITEM[inst.item], kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${FAMILY[it.family].name}` : ''}`;
   return `<button class="irow ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
@@ -7715,7 +7780,7 @@ function itemSheet(inst, actions, title = '', note = '') {
 }
 function itemCard(inst, actions = '', compare = false) {
   const it = ITEM[inst.item], fam = it.family ? FAMILY[it.family] : null;
-  const kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   return `<div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
     <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}${fam ? ` · ${fam.name}` : ''}</small></div></div>
@@ -7733,14 +7798,23 @@ function runHeader() {
     return `<i class="${k === 4 ? 'duel ' : ''}${done ? 'done' : r === run.round ? 'now' : ''}"></i>`;
   }).join('');
   const hearts = Array.from({ length: RUNCFG.lives }, (_, i) => `<i class="${i < run.lives ? 'on' : ''}"></i>`).join('');
+  const hp = Math.round(run.hp * 100);
   return `<div class="rhead"><div class="rday"><b>Day ${run.day}</b><span class="rpips" aria-label="Today: three hunts and a duel">${pips}</span></div>
-    <div class="rstats"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span>Duels <b>${run.wins}/${RUNCFG.winTarget}</b></span><span>Gold <b>${run.gold}</b></span></div></div>`;
+    <div class="rstats"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span class="hpn ${hp <= 40 ? 'low' : ''}" title="Wounds carry from hunt to hunt. The duel patches you up.">HP <b>${hp}%</b></span><span>Duels <b>${run.wins}/${RUNCFG.winTarget}</b></span><span class="gld">Gold <b>${run.gold}</b></span></div></div>`;
 }
 function huntTitle(o) { const h = HUNTS[o.hunt]; return o.tier === 'elite' && h.eliteName ? h.eliteName : h.name; }   // the card's chip gives the risk
 function renderRun() {
   const el = ui.runPanel;
   let body = '', actions = '';
-  if (runScreen === 'pick') {
+  if (runScreen === 'path') {
+    body = `<div class="evhead"><span class="lbl">Before the first hunt</span><b>Choose your path</b><p>It sets the rule you build on, and draws its own creatures out of the ink.</p></div>
+      <div class="evopts">${run.pathOffers().map((id) => {
+        const P = PATHS[id], it = ITEM[P.key];
+        return `<button class="evopt path" data-path="${id}"><span class="p-top">${itemIcon({ item: P.key })}<b>${P.name}</b><span class="lbl">${it.name}</span></span>
+          <small>${it.desc}</small><small class="p-fam">Draws out ${P.fams.map((f) => FAMILY[f].name).join(', ')}</small></button>`;
+      }).join('')}</div>`;
+    actions = '';
+  } else if (runScreen === 'pick') {
     // ZereshkStory's hunt cards: the creature, how hard, the rarity odds of its drops, and what it drops
     body = `<div class="row-h"><span class="lbl">Choose your hunt</span><span class="lbl">Hunt ${slotOf(run.round)} of 3</span></div>` + run.offers.map((o, i) => {
       const odds = rarityOdds(o.card, run.day).map(Math.round);
@@ -7757,7 +7831,8 @@ function renderRun() {
     const note = free ? `${slot === 'trinket' ? 'Both trinkets' : slotName(slot)} already worn` : `From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}`;
     body = `<div class="row-h"><span class="lbl">${ITEM[drop.item].legend ? 'A legendary dropped' : 'It dropped'}</span><span class="lbl">${note}</span></div>`
       + itemCard(drop, `${wearBtns(drop, 'data-loot="0" data-act')}<button class="ghost" data-loot="0" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, true);
-    actions = `<button class="ghost" data-go="reroll" ${free || run.rerolls > 0 ? '' : 'disabled'}>Reroll ${free ? '· free' : `(${run.rerolls})`}</button><button class="ghost" data-go="skip">Leave it</button>`;
+    const rest = run.hp < 1 ? ` · rest +${Math.round(Math.min(REST_HEAL, 1 - run.hp) * 100)}%` : '';
+    actions = `<button class="ghost" data-go="reroll" ${free || run.rerolls > 0 ? '' : 'disabled'}>Reroll ${free ? '· free' : `(${run.rerolls})`}</button><button class="ghost" data-go="skip">Leave it${rest}</button>`;
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
@@ -7837,7 +7912,7 @@ function wearBtns(inst, attr) {
   }
   return `<button class="go" ${attr}="wear">Wear</button>`;
 }
-function applyRunBuild() { builds[0] = { ...run.build(freeBuild.pieces), name: 'You' }; }
+function applyRunBuild() { builds[0] = { ...run.build(freeBuild.pieces), name: 'You', hp0: run.hp }; }
 function showRun(screen) {
   closeSheet();
   runScreen = screen; runSel = null; huntKind = null; huntPower = 1;
@@ -7852,11 +7927,11 @@ function showRun(screen) {
   $('#doll').hidden = screen !== 'gear' && screen !== 'loot';
   if (screen === 'event') U[0].face = 1;
   if (!$('#doll').hidden) renderDoll();
-  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over', event: 'Event', shop: 'Shop' }[screen];
+  ui.phase.textContent = { pick: 'Hunt', loot: 'Loot', gear: 'Gear', duel: 'Duel', over: 'Run over', event: 'Event', shop: 'Shop', path: 'Your path' }[screen];
   renderRun();
   if (run.over) Run.clear(); else run.save();
 }
-const runHome = () => (run.over ? 'over' : run.loot ? 'loot' : run.shop ? 'shop' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
+const runHome = () => (run.over ? 'over' : !run.pathDone ? 'path' : run.loot ? 'loot' : run.shop ? 'shop' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
 function startRun(r) {
   if (!freeBuild) freeBuild = builds[0];
   run = r;
@@ -7882,7 +7957,7 @@ function runFight(offer) {
 }
 function runContinue() {
   const won = world.winner === 0;
-  run.resolve(won, runOffer);
+  run.resolve(won, runOffer, U[0] && !U[0].mob ? U[0].hp / U[0].hpMax : 0);
   huntPower = 1;
   if (run.over) Run.clear();
   if (!run.loot && !run.over) run.next();
@@ -7895,6 +7970,7 @@ function runClick(ev) {
   if (t.dataset.set) { setSheet(t.dataset.set); return; }
   if (t.dataset.rule) { ruleSheet(t.dataset.rule); return; }
   if (t.dataset.status) { statusSheet(t.dataset.status); return; }
+  if (t.dataset.path) { run.takePath(t.dataset.path); toast(`${PATHS[t.dataset.path].name}. ${ITEM[PATHS[t.dataset.path].key].name} is yours.`); applyRunBuild(); showRun(runHome()); return; }
   if (t.dataset.offer !== undefined) { runFight(run.offers[+t.dataset.offer]); return; }
   // a drop, a ware or a piece of your own gear: the full card and its choices, over the top
   if (t.dataset.lootrow !== undefined) {
@@ -7949,7 +8025,7 @@ function runClick(ev) {
   else if (go === 'reroll') { run.rerollLoot(); renderRun(); }
   else if (go === 'shopreroll') { run.rerollShop(); run.save(); renderRun(); }
   else if (go === 'shopleave') { run.leaveShop(); showRun(runHome()); }
-  else if (go === 'skip') { run.loot = null; if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
+  else if (go === 'skip') { run.skipLoot(); if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
 }
 // Traits explain themselves: tap a set, a keystone or a status and it says what it does for you.
 function setSheet(f) {
@@ -8045,7 +8121,7 @@ window.__inkfall = window.__homeTurf = {
       simStep();
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
-    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, dmg: world.dmg, fired: world.fired || null, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
+    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), hpFrac: U[0].hp / U[0].hpMax, stats: world.stats, dmg: world.dmg, fired: world.fired || null, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
     builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; huntPower = savedPower; headless = false;
     return res;
   },
@@ -8056,7 +8132,7 @@ window.__inkfall = window.__homeTurf = {
   cam(o) { camOverride = o; cam.init = false; },
   shiftNow(u, kind, secs) { startShift(u, kind, secs); },
   get runState() { return run; }, showRun,
-  run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
+  run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES, PATHS }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);

@@ -12,12 +12,24 @@ fights run themselves. **Start a run** is the front door, and everything else
 - **Roguelike run** (the run bar at the top of the rival page), built on
   ZereshkStory's structure with this game's fights:
   - Seven days, each three hunts and then a duel. Win five duels for the Crown;
-    lose three and the run is over. Losing a hunt only costs its drop.
+    lose three and the run is over.
+  - **A run opens on a path.** Three of six, each a keystone you keep from the
+    first hunt and the families it draws out of the ink: The Rot (Alchemist's
+    Coil), The Storm (Tesla Coil), The Anvil (Juggernaut Plate), The Blood
+    (Bloodletter), The Frost (Frostbite Charm), The Wing (Dervish Slippers).
+    From then on one of the three hunts on offer leans your way whenever the
+    day has a creature of yours in it.
+  - **Wounds carry from hunt to hunt.** You start each day whole. What a hunt
+    takes out of you, you take into the next one: you get some of it back
+    afterwards depending on how hard the hunt was (Easy +25%, Normal +12%,
+    Elite +4%), never dropping below 30%, and the duel that ends the day
+    patches you up by half, not to full. Leaving a drop where it lies is a
+    rest worth +35%. Losing a hunt costs its drop, not a life.
   - Each hunt offers three creatures, Easy, Normal and Elite. A card shows the
     creature, its difficulty, the rarity odds of its drops and an icon for each
     drop (keystones rimmed in bronze, relics in gold). Win, then pick one of
-    three drops, with one reroll a day. Harder creatures and variants turn up on
-    later days, and creatures grow a little faster than gear does.
+    three drops. Harder creatures and variants turn up on later days, and
+    creatures grow a little faster than gear does.
   - Gear works like ZereshkStory's. Weapons roll a damage range and carry
     their type's pace and signature. The Sword gets +8% Crit, Daggers ×1.5
     status chances, the Spear Pierce 3, the Hammer a 10% Stun, the Bow +30%
@@ -36,7 +48,8 @@ fights run themselves. **Start a run** is the front door, and everything else
     Feather (rise once at 25% HP) and Gilded Hourglass (turn to gold below 40%
     HP).
   - **A creature drops one thing.** No picking from three: what it drops is
-    what you get, with two rerolls a day to change your mind. Elite hunts can
+    what you get, with two rerolls a day to change your mind — and a free one
+    whenever the drop is for a slot you have already filled. Elite hunts can
     turn up a **legendary** instead, the only place they come from: nineteen
     rule-breaking items like the Gambler's Die (every hit is half or double),
     Pacifist's Vow (your hits do nothing, your statuses deal triple) and
@@ -72,10 +85,9 @@ fights run themselves. **Start a run** is the front door, and everything else
     Chest, the Echo Shrine, the Fortune Well, and an Old Sensei who trains
     your shoes' acrobatics. Each character is drawn beside your fighter.
     Two of the same item at the same rarity merge into one a rarity up.
-  - **The shop** opens each new day, as in ZereshkStory. It stocks five
-    wares, each with a reason: pieces for sets you've started, a twin of
-    something you own to merge, a keystone, and pieces from today's
-    creatures. You can reroll it for 2 gold.
+  - **The shop is off for now** (`SHOP_ON`), so a day opens straight on the
+    hunts. Gold still buys the gremlin's junk, the smith's hone, the well's
+    toss and the sensei's lesson.
   - **Tap a trait to read it.** Set chips, keystones, relics, legendaries and
     the status icons on the gear screen all open a card explaining what they
     do for this build and where they came from.
@@ -85,9 +97,9 @@ fights run themselves. **Start a run** is the front door, and everything else
   - 293 items: 79 weapons, 87 head, core and feet pieces, 78 trinkets, 13
     skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
-    ZereshkStory has. `tools/runbot.mjs` plays whole runs headless, shop
-    included. A careful bot that always takes Normal hunts wins the Crown
-    in about half its runs.
+    ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
+    always takes the Normal hunt wins the Crown in about a third of its runs
+    and reaches day 5 or later in nearly all of them.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
     reach, and it knocks arrows and stars out of the air.

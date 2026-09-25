@@ -33,13 +33,18 @@ for (const [W, H] of SIZES) {
   await p.click('.tabs [data-tab="turf"]'); await over('build-turf');
   await p.click('#scoutBtn');
   await p.click('#devHome'); await over('home-run');
+  // a fresh run opens on the path pick
+  await p.evaluate(() => localStorage.removeItem('homeTurf.run.v2'));
+  await p.reload(); await p.evaluate(() => document.fonts.ready);
+  await p.click('#runStart'); await over('run-path');
   // a run, mid-way, with a full bag and every screen reachable
   await p.evaluate(() => {
     const R = window.__homeTurf.run, run = new R.Run(21);
     const mk = (item, rarity = 'epic') => ({ uid: 'u' + item, item, rarity, day: 4, affixes: ['hp', 'crit'], perks: ['crit_heal', 'vs_poison'] });
     Object.assign(run.equip, { head: mk('plague_mask'), core: mk('wing_cloak'), feet: mk('web_boots'), skill: mk('night_wing'), trinket1: mk('metronome'), trinket2: mk('viper_fang') });
     run.bag = ['gel_cap', 'iron_sword', 'frost_bell', 'web_boots', 'toad_vial', 'brute_maul'].map((i) => mk(i));
-    run.round = 8; run.next(); run.gold = 40;
+    run.takePath('rot');
+    run.round = 8; run.next(); run.gold = 40; run.hp = 0.42;
     localStorage.setItem('homeTurf.run.v2', JSON.stringify(run));
   });
   await p.reload(); await p.evaluate(() => document.fonts.ready);
