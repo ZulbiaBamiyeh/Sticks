@@ -780,7 +780,7 @@ const WEAP = {
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
-  spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '4 schools', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it, and plants its feet for the whole incantation. Every book answers the same six questions — something to throw, something to hide behind, something to stop what is running at you, something for when it is already too close, something to leave on the floor, and something to put on yourself — but what it answers them *with* is the school it was written in. Ink, frost, flame and storm each do all six differently.' },
+  spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '5 schools', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it, and plants its feet for the whole incantation. Every book answers the same six questions — something to throw, something to hide behind, something to stop what is running at you, something for when it is already too close, something to leave on the floor, and something to put on yourself — but what it answers them *with* is the school it was written in. Frost, flame, storm and slime each do all six their own way, and a warlock\'s tome curses, drains, ruptures and frightens instead.' },
   puppet: { name: 'Puppet', speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, noDuel: 1, stat: '6 forms · reach', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. Everything happens out on the strings, and which puppet hangs on them changes what your attack is — a blade arm that swings, a tail that pins them down, a kite thrown out and back, a slab dropped on their head, a bobbin trailing a wire across the floor, or a lantern that hangs over them and pours.' },
 };
 const WEAPONS = Object.keys(WEAP);
@@ -826,9 +826,9 @@ const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
   star: { v: 21, g: 3, len: 0.2, hit: { dmg: 4.5, kb: [2.5, -1.2], stun: 7, hs: 2 } },
   glob: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Brute's lobbed glob
-  bolt: { v: 21, g: 2, len: 0.42, hit: { dmg: 17, kb: [3.5, -2], stun: 14, hs: 4 } },   // a spellbook's ink bolt: slow, flat, heavy
   lance: { v: 30, g: 1, len: 0.8, hit: { dmg: 14, kb: [2.5, -1], stun: 12, hs: 4, apply: 'chill', stacks: 1 } },   // a frost lance: flat, fast, cold
   fireball: { v: 19, g: 9, len: 0.4, hit: { dmg: 12, kb: [4, -3], stun: 14, hs: 4 }, burst: { r: 2.3, dmg: 18, kb: [7, -6], stun: 20, hs: 6, apply: 'burn', stacks: 2, big: 1 } },   // lobbed, and it goes off where it lands
+  goo: { v: 17, g: 11, len: 0.3, hit: { dmg: 12, kb: [2, -1.5], stun: 10, hs: 3, snare: 0.8 } },   // a gob of gel: it hardly hurts, and it sticks
   arc: { v: 38, g: 0.6, len: 1.1, hit: { dmg: 12, kb: [2, -1], stun: 16, hs: 4, apply: 'shock', stacks: 2 } },   // a storm arc: there almost before it is thrown
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
@@ -841,13 +841,14 @@ const PAL = {
   blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
   tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
   burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#eda100', ice: 'rgba(61,156,196,0.16)',
+  goo: '#2fa58a',
 };
 const PAL_INV = {
   out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
   ink: '#ffffff', far: '#d9ddd6', hatch: 'rgba(0,0,0,0)', grid: 'rgba(0,0,0,0)',
   blue: '#7fa3ff', red: '#ff7c66', spark: '#ffffff', steel: '#16191d', fog: 'rgba(22,25,29,0.9)',
   tintB: 'rgba(0,0,0,0)', tintR: 'rgba(0,0,0,0)', label: 'rgba(0,0,0,0)',
-  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)',
+  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)', goo: '#6fe0c2',
 };
 const TEAM = ['blue', 'red'];
 
@@ -1160,18 +1161,16 @@ const ATK = {
   athrow2: { w: 4, a: 1, r: 10, shot: 'star', air: 1, back: 1, cd: 14 },
   plunge: { w: 5, a: 90, r: 12, dmg: 12, kb: [5, -9], stun: 24, hs: 6, box: [-0.35, -1.0, 0.75, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, tumble: 1 },
   aslam: { w: 9, a: 90, r: 18, dmg: 16, kb: [8, -10], stun: 30, hs: 9, box: [-0.4, -1.3, 1.0, 0.3], melee: 1, trail: 1, air: 1, plunge: 1, big: 1, tumble: 1, shock: { r: 2.1, dmg: 9, kb: [9, -9], stun: 26, hs: 8, tumble: 1 } },
-  // a spellbook: long roots, and the book decides which page it opens on
-  cast_bolt: { w: 16, a: 1, r: 9, shot: 'bolt', cd: 3, cast: 1 },
-  acast_bolt: { w: 15, a: 1, r: 10, shot: 'bolt', air: 1, cd: 10, cast: 1 },
-  cast_nova: { w: 30, a: 2, r: 16, cd: 8, cast: 1, nova: { r: 3.1, dmg: 27, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', tumble: 1, big: 1 } },
-  cast_ward: { w: 26, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 34, r: 3.2, apply: 'chill', stacks: 2 } },
-  cast_sigil: { w: 34, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 46, r: 2.6, dmg: 28, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
-  cast_wall: { w: 26, a: 2, r: 14, cd: 8, cast: 1, wall: { secs: 5.5, h: 3.4, at: 2.4 } },
+  // a spellbook: these two are only ever the question "cast something now" — the book always turns the
+  // page to one of its own school's spells before anything is said
+  cast_bolt: { w: 16, a: 1, r: 9, cd: 3, cast: 1 },
+  acast_bolt: { w: 15, a: 1, r: 10, air: 1, cd: 10, cast: 1 },
   // a warlock's tome: nothing it does lands now, and all of it lands later
   cast_curse: { w: 20, a: 2, r: 13, cd: 6, cast: 1, curse: { stacks: 4, reach: 8, cost: 0.022 } },
   cast_drain: { w: 20, a: 2, r: 20, cd: 8, cast: 1, drain: { per: 10, reach: 7.5, back: 0.55 } },
   cast_rupture: { w: 40, a: 3, r: 22, cd: 10, cast: 1, rupture: { per: 14, reach: 6.5, kb: [6, -7], stun: 22, hs: 7, cost: 0.03 } },
-  cast_grasp: { w: 22, a: 2, r: 16, cd: 8, cast: 1, grasp: { hold: 60, reach: 7.5, apply: 'chill', dmg: 17 } },
+  // fear: whatever it is stops fighting and runs from you for a second and a half, blade or bow
+  cast_fear: { w: 22, a: 2, r: 15, cd: 8, cast: 1, fear: { secs: 1.5, reach: 7.5 } },
   // a rime codex: everything it does is cold, and half of it is still standing there afterwards
   cast_lance: { w: 18, a: 1, r: 10, shot: 'lance', cd: 3, cast: 1 },
   acast_lance: { w: 17, a: 1, r: 11, shot: 'lance', air: 1, cd: 10, cast: 1 },
@@ -1179,6 +1178,8 @@ const ATK = {
   cast_encase: { w: 26, a: 2, r: 16, cd: 8, cast: 1, encase: { hold: 74, reach: 7.5, stacks: 2, dmg: 10 } },
   cast_shatter: { w: 32, a: 2, r: 17, cd: 8, cast: 1, shatter: { r: 3.2, dmg: 16, per: 9, kb: [8, -7], stun: 24, hs: 7, tumble: 1, big: 1 } },
   cast_spike: { w: 34, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 40, kind: 'spike', r: 1.5, col: 2.6, dmg: 24, kb: [4, -12], stun: 30, hs: 7, apply: 'chill', stacks: 2, tumble: 1, big: 1 } },
+  // ice armour: a shell that will not be knocked about, and anything that hits it close up comes away cold
+  cast_icearmor: { w: 26, a: 2, r: 16, cd: 10, cast: 1, armor: { shield: 30, secs: 5, apply: 'chill', stacks: 2, steady: 0.7, col: 'chill' } },
   // an ember codex: nothing it does is subtle, and all of it is still burning a second later
   cast_fireball: { w: 19, a: 1, r: 11, shot: 'fireball', cd: 4, cast: 1 },
   acast_fireball: { w: 18, a: 1, r: 12, shot: 'fireball', air: 1, cd: 10, cast: 1 },
@@ -1186,10 +1187,29 @@ const ATK = {
   cast_pillar: { w: 22, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 16, kind: 'pillar', hold: 1, r: 1.0, col: 4.4, dmg: 22, kb: [3, -16], stun: 28, hs: 8, apply: 'burn', stacks: 3, tumble: 1, big: 1 } },
   cast_immolate: { w: 26, a: 2, r: 17, cd: 8, cast: 1, immolate: { r: 3.4, dmg: 30, kb: [9, -7], stun: 24, hs: 7, apply: 'burn', stacks: 3, tumble: 1, big: 1, cost: 0.02, secs: 3 } },
   cast_cinder: { w: 30, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 44, kind: 'cinder', r: 3.0, dmg: 9, kb: [5, -5], stun: 18, hs: 6, apply: 'burn', stacks: 4 } },
+  // cauterise: burn out everything that is in you, and be paid for each thing burned
+  cast_cauterize: { w: 24, a: 2, r: 16, cd: 10, cast: 1, cauterize: { heal: 12, per: 10, secs: 2 } },
   // a storm codex: it does not travel so much as arrive
   cast_arc: { w: 17, a: 1, r: 9, shot: 'arc', cd: 3, cast: 1 },
   acast_arc: { w: 16, a: 1, r: 10, shot: 'arc', air: 1, cd: 10, cast: 1 },
-  cast_thunder: { w: 34, a: 2, r: 18, cd: 8, cast: 1, thunder: { r: 1.5, dmg: 30, kb: [5, -6], stun: 28, hs: 9, apply: 'shock', stacks: 3, tumble: 1, big: 1 } },
+  // a cloud gathers over them, and then it is not a cloud any more
+  cast_thunder: { w: 28, a: 2, r: 16, cd: 8, cast: 1, sigil: { delay: 40, kind: 'cloud', r: 1.4, col: 5.5, dmg: 28, kb: [5, -6], stun: 28, hs: 9, apply: 'shock', stacks: 3, tumble: 1, big: 1 } },
+  // a rod driven into the floor: it pulls every shot near it into itself, and spits some of it back
+  cast_rod: { w: 24, a: 2, r: 14, cd: 8, cast: 1, rod: { secs: 5, at: 1.8, r: 2.3, every: 44, dmg: 5, stacks: 1 } },
+  // a tether: a line of lightning from your hand to them, and they do not leave the end of it
+  cast_tether: { w: 24, a: 2, r: 16, cd: 8, cast: 1, tether: { hold: 58, reach: 7.5, every: 14, dmg: 3, stacks: 2 } },
+  // a discharge: everything you have been holding, out through the skin at once
+  cast_discharge: { w: 28, a: 2, r: 17, cd: 8, cast: 1, discharge: { r: 3.1, dmg: 22, per: 5, kb: [9, -7], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
+  cast_static: { w: 24, a: 2, r: 16, cd: 10, cast: 1, armor: { shield: 20, secs: 5, apply: 'shock', stacks: 2, col: 'shock' } },
+  // a gel grimoire: it hardly hurts at all. It sticks.
+  cast_goo: { w: 18, a: 1, r: 10, shot: 'goo', cd: 3, cast: 1 },
+  acast_goo: { w: 17, a: 1, r: 11, shot: 'goo', air: 1, cd: 10, cast: 1 },
+  cast_membrane: { w: 22, a: 2, r: 14, cd: 8, cast: 1, membrane: { hits: 3, secs: 6 } },
+  cast_snare: { w: 22, a: 2, r: 15, cd: 8, cast: 1, snare: { secs: 1.9, reach: 7.5, dmg: 8 } },
+  cast_splash: { w: 26, a: 2, r: 16, cd: 8, cast: 1, splash: { r: 3.1, dmg: 18, kb: [10, -5], stun: 20, hs: 6, snare: 1.1, big: 1 } },
+  cast_slick: { w: 26, a: 2, r: 15, cd: 8, cast: 1, slick: { secs: 6, span: 1.7, every: 30, dmg: 3 } },
+  // regrowth: nothing now, and a little every third of a second for the next six
+  cast_regrow: { w: 24, a: 2, r: 14, cd: 10, cast: 1, regrow: { per: 2.4, every: 20, secs: 6 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -1213,7 +1233,7 @@ const STANCE = {
   bow: { hipH: 0.72, lean: 0.06, head: -0.02, fx: 0.3, fy: 0.3, bx: -0.06, by: 0.3, wa: 0, wb: 0, ffx: 0.2, ffy: 0.72, bfx: -0.2, bfy: 0.72, drop: 0, ai: 0.95, draw: 0 },
   stars: { hipH: 0.66, lean: 0.2, head: -0.06, fx: 0.2, fy: 0.3, bx: 0.1, by: 0.2, wa: -0.3, wb: 0, ffx: 0.26, ffy: 0.66, bfx: -0.24, bfy: 0.66, drop: 0, ai: 0.9, draw: 0 },
   // a caster: upright, the book carried flat in front and the other hand working above it
-  spellbook: { hipH: 0.76, lean: -0.02, head: 0.02, fx: 0.36, fy: 0.12, bx: 0.3, by: -0.22, wa: -0.08, wb: 0, ffx: 0.16, ffy: 0.76, bfx: -0.2, bfy: 0.76, drop: 0, ai: 0.9, draw: 0 },
+  spellbook: { hipH: 0.76, lean: -0.02, head: 0.24, fx: 0.52, fy: 0.25, bx: 0.13, by: 0.26, wa: -0.08, wb: 0, ffx: 0.16, ffy: 0.76, bfx: -0.2, bfy: 0.76, drop: 0, ai: 0.9, draw: 0 },
   // a puppeteer: still, tall, both hands up on the strings
   puppet: { hipH: 0.76, lean: 0.02, head: -0.02, fx: 0.32, fy: -0.34, bx: 0.14, by: -0.4, wa: -1.2, wb: 0, ffx: 0.18, ffy: 0.76, bfx: -0.22, bfy: 0.76, drop: 0, ai: 0.9, draw: 0 },
 };
@@ -1228,12 +1248,12 @@ const RUN = {
   bow: { lean: 0.3, hipH: 0.68, ai: 1.2 },
   stars: { lean: 0.52, hipH: 0.62, head: 0.14, fx: -0.28, fy: 0.3, bx: -0.3, by: 0.28 },
   // neither of them runs: the caster glides with the book steady, the puppeteer walks with its hands up
-  spellbook: { lean: 0.12, hipH: 0.74, head: 0.04, fx: 0.34, fy: 0.14, bx: 0.26, by: -0.18, wa: -0.08 },
+  spellbook: { lean: 0.1, hipH: 0.74, head: 0.2, fx: 0.52, fy: 0.25, bx: 0.13, by: 0.26, wa: -0.08 },
   puppet: { lean: 0.14, hipH: 0.74, head: 0.0, fx: 0.3, fy: -0.3, bx: 0.12, by: -0.36, wa: -1.2 },
 };
 const AIR = {
   sword: { fx: 0.1, fy: -0.1, wa: -1.5, bx: -0.25, by: -0.15, lean: 0.1 },
-  spellbook: { fx: 0.32, fy: 0.06, bx: 0.28, by: -0.3, lean: 0.06, hipH: 0.78 },
+  spellbook: { fx: 0.5, fy: 0.19, bx: 0.11, by: 0.2, lean: 0.06, hipH: 0.78 },
   puppet: { fx: 0.3, fy: -0.38, bx: 0.12, by: -0.44, lean: 0.06, hipH: 0.78 },
   daggers: { fx: 0.16, fy: -0.06, wa: -0.9, bx: -0.2, by: 0.08, lean: 0.22 },
   spear: { wa: -0.6, lean: 0.05 },
@@ -1267,12 +1287,24 @@ const ATK_POSE = {
   shoot: { w: { lean: -0.06 }, a: {}, r: {} },
   // A cast: the book stays where it is, held flat and forward. The free hand gathers over the page and
   // then throws. Nothing about it is a knife-fighter's lunge.
-  cast_bolt: { w: { fx: 0.34, fy: 0.14, bx: 0.22, by: -0.12, lean: -0.04, hipH: 0.76, head: 0.06 }, a: { fx: 0.36, fy: 0.1, bx: 0.62, by: -0.26, lean: 0.12, hipH: 0.74 }, r: { fx: 0.35, fy: 0.12, bx: 0.4, by: -0.2, lean: 0.06, hipH: 0.75 } },
-  cast_nova: { w: { fx: 0.3, fy: 0.2, bx: 0.2, by: 0.04, lean: -0.1, hipH: 0.66, head: 0.12 }, a: { fx: 0.44, fy: -0.16, bx: -0.34, by: -0.3, lean: 0, hipH: 0.82 }, r: { fx: 0.36, fy: 0.02, bx: -0.14, by: -0.08, lean: 0.02, hipH: 0.74 } },
-  cast_ward: { w: { fx: 0.32, fy: 0.16, bx: 0.16, by: 0.06, lean: -0.06, hipH: 0.72 }, a: { fx: 0.3, fy: -0.06, bx: 0.3, by: -0.34, lean: 0, hipH: 0.8, head: -0.12 }, r: { fx: 0.32, fy: 0.06, bx: 0.26, by: -0.2, lean: 0.02, hipH: 0.76 } },
-  cast_sigil: { w: { fx: 0.32, fy: 0.18, bx: 0.18, by: 0.02, lean: 0.06, hipH: 0.7, head: 0.12 }, a: { fx: 0.34, fy: 0.16, bx: 0.44, by: 0.3, lean: 0.16, hipH: 0.64, head: 0.18 }, r: { fx: 0.34, fy: 0.14, bx: 0.3, by: 0.18, lean: 0.08, hipH: 0.72 } },
-  cast_wall: { w: { fx: 0.32, fy: 0.16, bx: 0.14, by: 0.04, lean: -0.06, hipH: 0.74 }, a: { fx: 0.34, fy: 0.12, bx: 0.56, by: -0.04, lean: 0.06, hipH: 0.76 }, r: { fx: 0.34, fy: 0.14, bx: 0.4, by: -0.06, lean: 0.02, hipH: 0.76 } },
-  cast_grasp: { w: { fx: 0.32, fy: 0.16, bx: 0.16, by: 0.1, lean: -0.08, hipH: 0.72, head: 0.06 }, a: { fx: 0.36, fy: 0.14, bx: 0.6, by: 0.16, lean: 0.14, hipH: 0.7 }, r: { fx: 0.34, fy: 0.14, bx: 0.36, by: 0.14, lean: 0.06, hipH: 0.74 } },
+  // fear: the free hand thrown up and open at them, the book pulled back against the chest
+  cast_fear: { w: { fx: 0.26, fy: 0.18, bx: 0.1, by: -0.1, lean: -0.1, hipH: 0.74, head: -0.06 }, a: { fx: 0.24, fy: 0.16, bx: 0.64, by: -0.2, lean: 0.16, hipH: 0.72, head: 0.04 }, r: { fx: 0.28, fy: 0.16, bx: 0.4, by: -0.1, lean: 0.06, hipH: 0.75 } },
+  // wards: the free hand drawn in to the chest, then pressed flat and out
+  cast_icearmor: { w: { fx: 0.3, fy: 0.18, bx: 0.08, by: 0.06, lean: -0.08, hipH: 0.72, head: 0.08 }, a: { fx: 0.3, fy: 0.02, bx: 0.26, by: -0.36, lean: 0, hipH: 0.82, head: -0.12 }, r: { fx: 0.32, fy: 0.1, bx: 0.22, by: -0.16, lean: 0.02, hipH: 0.76 } },
+  cast_cauterize: { w: { fx: 0.3, fy: 0.16, bx: 0.02, by: 0.1, lean: 0.1, hipH: 0.66, head: 0.16 }, a: { fx: 0.36, fy: -0.1, bx: -0.3, by: -0.36, lean: -0.08, hipH: 0.84, head: -0.2 }, r: { fx: 0.32, fy: 0.06, bx: -0.1, by: -0.1, lean: 0, hipH: 0.76 } },
+  cast_static: { w: { fx: 0.3, fy: 0.16, bx: 0.14, by: -0.24, lean: -0.06, hipH: 0.76, head: -0.08 }, a: { fx: 0.32, fy: 0.1, bx: 0.2, by: -0.5, lean: -0.04, hipH: 0.84, head: -0.16 }, r: { fx: 0.32, fy: 0.12, bx: 0.24, by: -0.24, lean: 0.02, hipH: 0.76 } },
+  cast_regrow: { w: { fx: 0.3, fy: 0.18, bx: 0.1, by: 0.2, lean: 0.12, hipH: 0.64, head: 0.18 }, a: { fx: 0.32, fy: 0.12, bx: 0.16, by: -0.44, lean: -0.06, hipH: 0.84, head: -0.18 }, r: { fx: 0.32, fy: 0.14, bx: 0.2, by: -0.12, lean: 0.02, hipH: 0.76 } },
+  // storm: the rod is driven down, the tether hauled, the discharge let out through open arms
+  cast_rod: { w: { fx: 0.3, fy: 0.12, bx: 0.3, by: -0.42, lean: -0.1, hipH: 0.8, head: -0.1 }, a: { fx: 0.34, fy: 0.16, bx: 0.56, by: 0.3, lean: 0.24, hipH: 0.62, head: 0.14 }, r: { fx: 0.34, fy: 0.14, bx: 0.4, by: 0.12, lean: 0.1, hipH: 0.72 } },
+  cast_tether: { w: { fx: 0.32, fy: 0.14, bx: 0.6, by: -0.1, lean: 0.14, hipH: 0.72 }, a: { fx: 0.3, fy: 0.12, bx: 0.16, by: -0.14, lean: -0.18, hipH: 0.78, head: -0.08 }, r: { fx: 0.31, fy: 0.12, bx: 0.3, by: -0.1, lean: -0.04, hipH: 0.76 } },
+  cast_discharge: { w: { fx: 0.18, fy: 0.12, bx: -0.14, by: 0.14, lean: 0.12, hipH: 0.62, head: 0.14 }, a: { fx: 0.48, fy: -0.26, bx: -0.44, by: -0.3, lean: 0, hipH: 0.86, head: -0.16 }, r: { fx: 0.34, fy: 0.0, bx: -0.2, by: -0.08, lean: 0.02, hipH: 0.74 } },
+  // slime: flicked, flung, poured
+  cast_goo: { w: { fx: 0.32, fy: 0.14, bx: 0.04, by: 0.1, lean: -0.08, hipH: 0.74, head: 0.04 }, a: { fx: 0.34, fy: 0.12, bx: 0.64, by: -0.16, lean: 0.14, hipH: 0.73 }, r: { fx: 0.34, fy: 0.13, bx: 0.42, by: -0.06, lean: 0.06, hipH: 0.76 } },
+  acast_goo: { w: { fx: 0.3, fy: 0.1, bx: 0.06, by: 0.08, lean: -0.04, hipH: 0.78 }, a: { fx: 0.32, fy: 0.08, bx: 0.6, by: -0.18, lean: 0.1, hipH: 0.78 }, r: { fx: 0.32, fy: 0.1, bx: 0.4, by: -0.08, lean: 0.04, hipH: 0.78 } },
+  cast_membrane: { w: { fx: 0.3, fy: 0.16, bx: 0.1, by: 0.02, lean: -0.04, hipH: 0.74 }, a: { fx: 0.34, fy: -0.04, bx: -0.1, by: -0.4, lean: -0.04, hipH: 0.82, head: -0.12 }, r: { fx: 0.32, fy: 0.08, bx: 0.06, by: -0.16, lean: 0, hipH: 0.76 } },
+  cast_snare: { w: { fx: 0.32, fy: 0.16, bx: 0.2, by: -0.2, lean: -0.04, hipH: 0.76 }, a: { fx: 0.34, fy: 0.16, bx: 0.58, by: 0.32, lean: 0.22, hipH: 0.64, head: 0.14 }, r: { fx: 0.34, fy: 0.15, bx: 0.4, by: 0.18, lean: 0.1, hipH: 0.72 } },
+  cast_splash: { w: { fx: 0.22, fy: 0.2, bx: -0.08, by: 0.2, lean: 0.14, hipH: 0.62, head: 0.12 }, a: { fx: 0.5, fy: 0.06, bx: -0.46, by: 0.02, lean: 0.02, hipH: 0.8 }, r: { fx: 0.36, fy: 0.1, bx: -0.2, by: 0.04, lean: 0.02, hipH: 0.74 } },
+  cast_slick: { w: { fx: 0.32, fy: 0.18, bx: 0.3, by: -0.06, lean: 0.04, hipH: 0.72 }, a: { fx: 0.34, fy: 0.2, bx: 0.52, by: 0.36, lean: 0.24, hipH: 0.6, head: 0.18 }, r: { fx: 0.34, fy: 0.18, bx: 0.36, by: 0.22, lean: 0.12, hipH: 0.7 } },
   // a warlock's free hand: turned palm-down over the page on the curse, hauling back on the drain,
   // thrown wide on the rupture. The tome itself never leaves the other hand.
   cast_curse: { w: { fx: 0.3, fy: 0.2, bx: 0.2, by: 0.12, lean: 0.06, hipH: 0.68, head: 0.16 }, a: { fx: 0.32, fy: 0.18, bx: 0.56, by: 0.22, lean: 0.2, hipH: 0.64 }, r: { fx: 0.32, fy: 0.18, bx: 0.36, by: 0.2, lean: 0.1, hipH: 0.7 } },
@@ -1302,7 +1334,6 @@ const ATK_POSE = {
   acast_arc: { w: { fx: 0.32, fy: 0.08, bx: 0.24, by: -0.18, lean: 0, hipH: 0.78 }, a: { fx: 0.34, fy: 0.06, bx: 0.62, by: -0.22, lean: 0.1, hipH: 0.78 }, r: { fx: 0.33, fy: 0.08, bx: 0.42, by: -0.2, lean: 0.04, hipH: 0.78 } },
   cast_thunder: { w: { fx: 0.28, fy: 0.02, bx: 0.1, by: -0.4, lean: -0.16, hipH: 0.82, head: -0.18 }, a: { fx: 0.36, fy: 0.14, bx: 0.62, by: 0.26, lean: 0.22, hipH: 0.64, head: 0.12 }, r: { fx: 0.33, fy: 0.1, bx: 0.4, by: 0.04, lean: 0.06, hipH: 0.74 } },
   // a tug on the strings: both hands snap up and forward
-  acast_bolt: { w: { fx: 0.32, fy: 0.1, bx: 0.24, by: -0.18, lean: 0.04, hipH: 0.78 }, a: { fx: 0.34, fy: 0.08, bx: 0.58, by: -0.28, lean: 0.1, hipH: 0.78 }, r: { fx: 0.33, fy: 0.1, bx: 0.38, by: -0.22, lean: 0.06, hipH: 0.78 } },
   // the puppeteer: a wrist flick, both hands riding the strings, feet planted
   pswing: { w: { fx: 0.22, fy: -0.42, bx: 0.08, by: -0.46, lean: -0.08, hipH: 0.78 }, a: { fx: 0.46, fy: -0.2, bx: 0.3, by: -0.3, lean: 0.14, hipH: 0.74 }, r: { fx: 0.36, fy: -0.3, bx: 0.2, by: -0.38, lean: 0.06, hipH: 0.76 } },
   pswing2: { w: { fx: 0.4, fy: -0.24, bx: 0.26, by: -0.32, lean: 0.1, hipH: 0.75 }, a: { fx: 0.2, fy: -0.46, bx: 0.36, by: -0.18, lean: -0.06, hipH: 0.78 }, r: { fx: 0.3, fy: -0.36, bx: 0.28, by: -0.28, lean: 0.02, hipH: 0.77 } },
@@ -1415,41 +1446,51 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 // A spellbook casts what the moment needs: a nova when something is on top of you, a ward when it is
 // hurting, a bolt the rest of the time. Each page has its own cooldown, so you cannot lean on one.
 const SPELL_CD = {
-  cast_nova: 150, cast_ward: 240, cast_sigil: 190, cast_wall: 260, cast_grasp: 220, cast_drain: 130, cast_rupture: 330,
-  cast_icewall: 260, cast_encase: 210, cast_shatter: 160, cast_spike: 190,
-  cast_firewall: 250, cast_pillar: 170, cast_immolate: 175, cast_cinder: 260,
-  cast_thunder: 190,
+  cast_icewall: 260, cast_encase: 210, cast_shatter: 160, cast_spike: 190, cast_icearmor: 270,
+  cast_firewall: 250, cast_pillar: 170, cast_immolate: 175, cast_cinder: 260, cast_cauterize: 300,
+  cast_rod: 260, cast_tether: 210, cast_discharge: 160, cast_thunder: 190, cast_static: 260,
+  cast_membrane: 250, cast_snare: 200, cast_splash: 160, cast_slick: 220, cast_regrow: 380,
+  cast_drain: 130, cast_rupture: 330, cast_fear: 230,
 };
 // A caster needs the same six answers every fight — something to throw, something to hide behind,
 // something to stop what is running at it, something for when it is already too close, something to
-// leave on the floor, and something to put on itself. What a book actually *does* for each of those is
-// the school it was written in, so a rime codex answers "stop it" with ice up the legs and an ember
-// codex answers it with a column of fire out of the floor.
+// leave on the floor, and something to put on itself. There is no common stock of spells: every book
+// is written in one school, and a school answers all six in its own element. A plain book is frost.
 const SCHOOL = {
-  ink: { name: 'Ink', col: null, bolt: 'cast_bolt', air: 'acast_bolt', guard: 'cast_wall', stop: 'cast_grasp', burst: 'cast_nova', trap: 'cast_sigil', ward: 'cast_ward' },
-  frost: { name: 'Frost', col: 'chill', bolt: 'cast_lance', air: 'acast_lance', guard: 'cast_icewall', stop: 'cast_encase', burst: 'cast_shatter', trap: 'cast_spike', ward: 'cast_ward' },
-  flame: { name: 'Flame', col: 'burn', bolt: 'cast_fireball', air: 'acast_fireball', guard: 'cast_firewall', stop: 'cast_pillar', burst: 'cast_immolate', trap: 'cast_cinder', ward: 'cast_ward' },
-  storm: { name: 'Storm', col: 'shock', bolt: 'cast_arc', air: 'acast_arc', guard: 'cast_wall', stop: 'cast_grasp', burst: 'cast_thunder', trap: 'cast_sigil', ward: 'cast_ward' },
+  frost: { name: 'Frost', col: 'chill', bolt: 'cast_lance', air: 'acast_lance', guard: 'cast_icewall', stop: 'cast_encase', burst: 'cast_shatter', trap: 'cast_spike', ward: 'cast_icearmor' },
+  flame: { name: 'Flame', col: 'burn', bolt: 'cast_fireball', air: 'acast_fireball', guard: 'cast_firewall', stop: 'cast_pillar', burst: 'cast_immolate', trap: 'cast_cinder', ward: 'cast_cauterize' },
+  storm: { name: 'Storm', col: 'shock', bolt: 'cast_arc', air: 'acast_arc', guard: 'cast_rod', stop: 'cast_tether', burst: 'cast_discharge', trap: 'cast_thunder', ward: 'cast_static' },
+  slime: { name: 'Slime', col: 'goo', bolt: 'cast_goo', air: 'acast_goo', guard: 'cast_membrane', stop: 'cast_snare', burst: 'cast_splash', trap: 'cast_slick', ward: 'cast_regrow' },
+  // a warlock does not throw anything: the curse is its bolt, and fear is how it keeps people off it
+  tome: { name: 'Warlock', col: null, bolt: 'cast_curse', air: 'cast_curse', aim: 'lance' },
 };
-const schoolOf = (u) => SCHOOL[(u && u.gs && u.gs.flags.school) || 'ink'] || SCHOOL.ink;
+const schoolOf = (u) => (u && u.gs && u.gs.flags.tome ? SCHOOL.tome : SCHOOL[(u && u.gs && u.gs.flags.school) || 'frost'] || SCHOOL.frost);
+// whether a ward is worth saying now: a shell wants something coming, a regrowth wants a wound, and
+// cauterising wants something in you to burn out
+function wardWanted(u, name) {
+  const hurt = u.hp < u.hpMax * 0.65;
+  if (name === 'cast_regrow') return hurt && !(u.hot && u.hot.t > 0);
+  if (name === 'cast_cauterize') return hurt || afflicted(u) > 1.2;
+  return (hurt || shotThreat(u, 26) >= 0) && u.shield < 6;
+}
 function pickSpell(u, fallback) {
-  if (u.state === 'dead' || world.demo) return fallback;
-  const S = schoolOf(u), air = !u.b.gr;
-  if (air) return S.air;
+  const S = schoolOf(u);
+  if (u.state === 'dead' || world.demo) return S.bolt;
+  if (!u.b.gr) return S.air;
   const e = foe(u), cd = (u.sCd ||= {});
   if (cd.fizzle > 0) return S.bolt;   // shaken: only the quick page, until the hands settle
   // a long cast is a commitment, so it is not started with a blade already coming down
   const rushed = e && (meleeThreat(u, e) >= 0 || shotThreat(u, 22) >= 0);
   const near = e && e.state !== 'dead' && Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) < 3.1;
   const dist = e ? Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) : 99;
-  if (u.gs && u.gs.flags.tome) {
+  if (S === SCHOOL.tome) {
     const load = e ? afflicted(e) : 0;
-    if (e && !(cd.cast_grasp > 0) && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.2))) return 'cast_grasp';
+    // anything that gets inside, or that is shooting: it runs, and stops doing either
+    if (e && !(cd.cast_fear > 0) && dist < 7.5 && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.2) || shotThreat(u, 40) >= 0)) return 'cast_fear';
     if (e && load < 1.4 && dist < 8.5) return 'cast_curse';                       // get it on them first
     if (e && load >= 2.6 && !(cd.cast_rupture > 0) && dist < 6.5 && !rushed) return 'cast_rupture';   // then tear it out
     if (e && load > 0.6 && !(cd.cast_drain > 0) && dist < 7.5) return 'cast_drain';
-    if (!(cd.cast_wall > 0) && shotThreat(u, 40) >= 0) return 'cast_wall';
-    return e && dist < 8.5 ? 'cast_curse' : fallback;
+    return 'cast_curse';
   }
   const ready = (role) => { const n = S[role]; return n && !(cd[n] > 0) ? n : null; };
   // already inside your robes: the page that clears the room
@@ -1458,7 +1499,7 @@ function pickSpell(u, fallback) {
   if (e && dist < 7 && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.5))) { const n = ready('stop'); if (n) return n; }
   // arrows on the way: put something between you and them
   if (shotThreat(u, 40) >= 0 || (e && isRanged(e) && dist > 3.5)) { const n = ready('guard'); if (n) return n; }
-  if ((u.hp < u.hpMax * 0.65 || shotThreat(u, 26) >= 0) && u.shield < 6) { const n = ready('ward'); if (n) return n; }
+  { const n = ready('ward'); if (n && wardWanted(u, n)) return n; }
   // something standing off at mid range has time to be caught by the floor
   if (e && e.b.gr && !near && !rushed && Math.abs(e.b.x - u.b.x) < 8) { const n = ready('trap'); if (n) return n; }
   return S.bolt;
@@ -1539,6 +1580,18 @@ function think(u) {
   if (world.intro > 0 || world.over) return;
   if (u.react > 0) u.react--;
   if (u.surprise > 0) u.surprise--;
+  if (u.fearT > 0) {
+    u.fearT--;
+    if (u.state === 'free') {
+      const from = u.fearFrom && u.fearFrom.state !== 'dead' ? u.fearFrom.b.x : e.b.x;
+      inp.dir = Math.sign(b.x - from) || -u.face;
+      const c = Math.floor(b.x + inp.dir * 0.5), r = Math.floor(b.y - 1e-3);
+      if (!standable(c, r) || inZone(b.x + inp.dir * 0.6)) inp.dir = 0;
+      if (inp.dir) u.face = inp.dir;
+    }
+    ai.macro = null;
+    return;
+  }
   if (u.state === 'atk') {
     comboLogic(u, e);
     if (u.atkDef.air && !u.atkDef.shot) { const dx = e.b.x - b.x; inp.dir = Math.abs(dx) > 0.3 ? Math.sign(dx) : 0; }
@@ -2454,7 +2507,7 @@ function arcClear(ox, oy, v, tx, g) {
 // Which projectile this fighter is about to throw: the move it is already in, or the one its book opens on.
 function shotKindOf(u) {
   if (u.state === 'atk' && u.atkDef && u.atkDef.shot) return u.atkDef.shot;
-  if (u.w === 'spellbook') return (ATK[schoolOf(u).bolt] || {}).shot;
+  if (u.w === 'spellbook') { const S = schoolOf(u); return (ATK[S.bolt] || {}).shot || S.aim; }
   return ATK[WEAP[u.w].atk].shot;
 }
 function aimAt(u, e) {
@@ -2919,7 +2972,7 @@ function applyHit(att, def, d, dirX, crit) {
     if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
     def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
     // knockback: more from gear that hits hard, less on gear that stands firm
-    const steady = Math.min(0.85, (dg ? dg.flags.steady || 0 : 0) + ((dSh && dSh.steady) || 0));
+    const steady = Math.min(0.85, (dg ? dg.flags.steady || 0 : 0) + ((dSh && dSh.steady) || 0) + (def.retal && def.retal.t > 0 && def.shield > 0 ? def.retal.steady : 0));
     const kbm = (ag ? 1 + (ag.flags.kb || 0) : 1) * (1 - steady);
     def.b.vx = dirX * d.kb[0] * kbm; def.b.vy = d.kb[1] * kbm; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
     def.face = -dirX;
@@ -3005,6 +3058,12 @@ function applyHit(att, def, d, dirX, crit) {
       hurt(att, dg.thorns, 'hit', def.side, null, [['hits', 1]]);
       if (dg.flags.thornsProc) for (const o of dg.onHit) if (rng() < o.chance) applyStatus(def, att, o.apply, o.stacks || 1, o);   // Briar Crown
     }
+  }
+  // ice armour or a static shell: whatever hits it up close comes away with some of it
+  const rt = def.retal;
+  if (d.melee && rt && rt.t > 0 && att.state !== 'dead' && def.state !== 'dead') {
+    applyStatus(def, att, bookStatus(def, rt.st), rt.stacks);
+    sparks(hx, hy, -dirX, 6, rt.col);
   }
 }
 
@@ -4622,6 +4681,7 @@ function mobAct(u) {
     if (K.fly && K.fly(u)) { b.vx = approach(b.vx, 0, 16 * DT); b.vy = approach(b.vy, 0, 16 * DT); }
     if (--u.stunT <= 0 && !u.st.frozen) { u.state = 'free'; u.tumble = false; u.react = K.recover ? 1 : 10; u.juggle = 0; }
   }
+  if (u.snareT > 0) { u.snareT--; b.vx *= 0.35; if (K.fly && K.fly(u)) b.vy *= 0.6; }
   const pre = b.vy, ev = mobPhys(u);
   if (u.state === 'atk') mobAtkStep(u, ev);
   if (ev & EV_LAND) { u.squash = -Math.min(0.5, pre / 30); if (pre > 9) dust(b.x, b.y, 3, u.bw); }
@@ -4709,18 +4769,25 @@ function atkStep(u) {
     if (d.lunge) b.vx = u.face * d.lunge * (world.demo ? 0.4 : 1);
     if (d.hop) { b.vy = d.hop; b.gr = false; }
     if (d.shot) fireShot(u);
-    if (d.nova) castNova(u, d.nova);
-    if (d.ward) castWard(u, d.ward);
+    if (d.fear) castFear(u, d.fear);
+    if (d.armor) castArmor(u, d.armor);
+    if (d.cauterize) castCauterize(u, d.cauterize);
+    if (d.rod) castRod(u, d.rod);
+    if (d.tether) castTether(u, d.tether);
+    if (d.discharge) castDischarge(u, d.discharge);
+    if (d.membrane) castMembrane(u, d.membrane);
+    if (d.snare) castSnare(u, d.snare);
+    if (d.splash) castSplash(u, d.splash);
+    if (d.slick) castSlick(u, d.slick);
+    if (d.regrow) castRegrow(u, d.regrow);
     if (d.sigil) castSigil(u, d.sigil);
     if (d.wall) castWall(u, d.wall);
-    if (d.grasp) castGrasp(u, d.grasp);
     if (d.curse) castCurse(u, d.curse);
     if (d.drain) castDrain(u, d.drain);
     if (d.rupture) castRupture(u, d.rupture);
     if (d.encase) castEncase(u, d.encase);
     if (d.shatter) castShatter(u, d.shatter);
     if (d.immolate) castImmolate(u, d.immolate);
-    if (d.thunder) castThunder(u, d.thunder);
     if (d.firewall) castFireWall(u, d.firewall);
     if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
     if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
@@ -4786,6 +4853,19 @@ function act(u) {
   statusStep(u);
   if (u.state === 'dead') return;
   u.fade = approach(u.fade, u.hidden ? 1 : 0, u.hidden ? 0.12 : 0.2);
+  if (u.hot && u.hot.t > 0) {
+    if (--u.hot.t % u.hot.every === 0) {
+      heal(u, u.hot.per * powerOf(u));
+      streak(u.b.x + (Math.random() - 0.5) * 0.5, u.b.y - Math.random() * H, -Math.PI / 2, 0.4, 'goo');
+    }
+  }
+  if (u.retal && u.retal.t > 0) u.retal.t--;
+  if (u.bubble && u.bubble.t > 0) u.bubble.t--;
+  if (u.tether && u.tether.t > 0) {
+    const te = u.tether, e = te.e;
+    if (--te.t <= 0 || !e || e.state === 'dead' || u.state === 'stun' || u.state === 'dead') u.tether = null;
+    else if (te.t % te.every === 0) { hurt(e, te.dmg * powerOf(u), 'status', u.side, 'shock'); sparks(e.b.x, e.b.y - 0.9, 0, 3, 'shock'); }
+  }
   if (u.alight > 0) {
     u.alight--;
     if (world.t % 4 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - H * (0.2 + Math.random() * 0.8), vx: (Math.random() - 0.5) * 0.7, vy: -2 - Math.random(), ph: Math.random() * 6, life: 0, max: 24, c: 'burn' });
@@ -4795,6 +4875,7 @@ function act(u) {
     case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
     case 'atk':
       atkStep(u); hasteStep(u);
+      if (u.fearT > 0 && u.state === 'atk' && u.phase === 'w') u.state = 'free';
       if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; }
       else if (u.state === 'atk' && u.atkDef.cast && b.gr) { b.vx = 0; fr = 3; }   // planted for the incantation
       break;
@@ -4822,6 +4903,7 @@ function act(u) {
     case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
   }
   const vyBefore = b.vy;
+  if (u.snareT > 0) { u.snareT--; if (b.gr) { dir = 0; press = false; b.vx *= 0.55; } }
   const ev = physStep(b, dir, press, hold, world.demo ? -2 : u.side, ctl, fr);   // pads stay still during demos
   if (ev & EV_JUMP) dust(b.x, b.y + 0.02, 3, 0.4);
   if (ev & EV_WJ) {
@@ -4901,20 +4983,6 @@ function fizzle(u) {
   smoke(h.x, h.y, 5); popText(u.b.x, u.b.y - H - 0.7, 'lost', 'ink', 0.45);
   if (!world.stats[u.side].fizzled++) log('The cast came apart when the hit landed.', 1 - u.side);
 }
-function castNova(u, sh) {
-  const b = u.b, cy = b.y - H / 2;
-  ring(b.x, cy, sh.r, TEAM[u.side]); ring(b.x, cy, sh.r * 0.55, 'spark');
-  for (let i = 0; i < 10; i++) streak(b.x, cy, (i / 10) * 6.283, 0.7 + Math.random() * 0.5, 'spark');
-  world.hs = Math.max(world.hs, 5); world.impact = Math.max(world.impact, 2); sfxShake(6);
-  for (const e of U) {
-    if (e.side === u.side || e.state === 'dead') continue;
-    if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh ? e.bh / 2 : H / 2)) - cy) > sh.r + (e.bw || W) * 0.5) continue;
-    applyHit(u, e, sh, Math.sign(e.b.x - b.x) || u.face);
-    const st = bookStatus(u, sh.apply);
-    if (st && e.state !== 'dead') applyStatus(u, e, st);
-  }
-  u.hitDone = true;
-}
 // A sigil: written on the floor under whoever you are looking at, and it takes a beat to catch.
 function castSigil(u, sp) {
   const e = foe(u);
@@ -4937,6 +5005,7 @@ function stepSigils() {
       for (let i = 0; i < 14; i++) streak(g.x + (Math.random() - 0.5) * sp.r * 1.4, g.y - Math.random() * tall, -Math.PI / 2, 0.5 + Math.random() * 0.9, col);
       for (let i = 0; i < 3; i++) ring(g.x, g.y - tall * (0.25 + i * 0.3), sp.r * (1 - i * 0.2), col);
       g.flash = tall;
+      if (g.kind === 'cloud') world.bolt = { x: g.x, y: g.y, t: 14 };
     } else for (let i = 0; i < 8; i++) streak(g.x, g.y - 0.2, -Math.PI / 2 + (i - 3.5) * 0.28, 1 + Math.random() * 0.6, 'spark');
     world.hs = Math.max(world.hs, 6); sfxShake(6);
     for (const e of U) {
@@ -5024,27 +5093,149 @@ function castImmolate(u, im) {
   u.alight = Math.round((im.secs || 3) * 60);   // still burning, and it shows
   u.hitDone = true;
 }
-// Nothing travels. It is simply there, from the top of the page down onto them.
-function castThunder(u, th) {
+// Snared: stuck to the floor. It can still swing at whatever is in reach — it just cannot go anywhere,
+// so a caster that snares something and steps back has all the time it wants.
+function snareOn(e, secs) {
+  if (!e || e.state === 'dead') return;
+  if (!(e.snareT > 0)) popText(e.b.x, e.b.y - (e.bh || H) - 0.45, 'SNARED', 'goo', 0.45);
+  e.snareT = Math.max(e.snareT || 0, Math.round(secs * 60));
+}
+// Fear: it stops fighting and runs from you. A creature has nowhere to run to, so it cowers instead.
+function castFear(u, fe) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > fe.reach) return;
+  const f = Math.round(fe.secs * 60), c = ST_COL[bookStatus(u, 'poison')] || TEAM[u.side];
+  if (e.mob) { e.state = 'stun'; e.stunT = Math.max(e.stunT, Math.round(f * 0.6)); }
+  else {
+    e.fearT = f; e.fearFrom = u; e.ai.macro = null; e.ai.path.length = 0;
+    if (e.state === 'atk' && e.phase === 'w') e.state = 'free';   // it drops whatever it was about to do
+  }
+  for (let i = 0; i < 8; i++) streak(e.b.x + (Math.random() - 0.5) * 0.6, e.b.y - 1.6 - Math.random() * 0.4, -Math.PI / 2 + (Math.random() - 0.5), 0.4 + Math.random() * 0.4, c);
+  ring(e.b.x, e.b.y - 1.1, 1.2, c); callout(e, 'FEARED', u.side);
+}
+// A shell that answers back: anything that hits you up close while it holds comes away with some of it.
+function castArmor(u, ar) {
+  const b = u.b, cy = b.y - H / 2;
+  u.shield += ar.shield;
+  u.retal = { st: ar.apply, stacks: ar.stacks || 1, t: Math.round(ar.secs * 60), steady: ar.steady || 0, col: ar.col };
+  ring(b.x, cy, 1.4, ar.col); ring(b.x, cy, 0.9, 'steel');
+  for (let i = 0; i < 10; i++) streak(b.x, cy, (i / 10) * 6.283, 0.5, ar.col);
+  popText(b.x, cy - 0.7, `+${ar.shield}`, 'steel', 0.5);
+  u.hitDone = true;
+}
+// Cauterise: everything in you burned out at once, and paid back for every bit of it.
+function castCauterize(u, ca) {
+  const b = u.b, s = u.st, load = afflicted(u) + (s.chill > 0 ? 0.6 : 0) + (s.shock > 0 ? 0.6 : 0);
+  Object.assign(s, { burn: 0, poison: 0, bleed: 0, chill: 0, shock: 0 });
+  const amt = (ca.heal + ca.per * load) * powerOf(u);
+  heal(u, amt);
+  u.alight = Math.max(u.alight || 0, Math.round(ca.secs * 60));
+  for (let i = 0; i < 14; i++) streak(b.x + (Math.random() - 0.5) * 0.5, b.y - Math.random() * H, -Math.PI / 2, 0.5 + Math.random() * 0.6, 'burn');
+  ring(b.x, b.y - H / 2, 1.1, 'burn'); popText(b.x, b.y - H - 0.4, `+${Math.round(amt)}`, 'burn', 0.5);
+  u.hitDone = true;
+}
+// A lightning rod: shots that come near it go into it instead, and it hands some back to whoever is close.
+function castRod(u, rd) {
+  const b = u.b, x = Math.max(1.2, Math.min(COLS - 1.2, b.x + u.face * rd.at));
+  world.fires.push({ kind: 'rod', x, y: b.y, span: rd.r, t: Math.round(rd.secs * 60), max: Math.round(rd.secs * 60), side: u.side, by: u, rd });
+  zapLine(x, b.y - 1.9, x, b.y - 5, 'shock');
+  ring(x, b.y - 1.7, 0.7, 'shock');
+  u.hitDone = true;
+}
+// A jagged run of sparks from one point to another: what the rod and the tether leave in the air.
+function zapLine(x0, y0, x1, y1, c) {
+  const n = Math.max(3, Math.round(Math.hypot(x1 - x0, y1 - y0) / 0.4));
+  for (let i = 0; i < n; i++) {
+    const k = i / n, x = x0 + (x1 - x0) * k + (Math.random() - 0.5) * 0.18, y = y0 + (y1 - y0) * k + (Math.random() - 0.5) * 0.18;
+    streak(x, y, Math.atan2(y1 - y0, x1 - x0), 0.45, c);
+  }
+}
+// A tether: they are held at the end of a line of lightning, and it keeps biting while it holds.
+function castTether(u, te) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > te.reach) return;
+  e.state = 'stun'; e.stunT = Math.max(e.stunT, te.hold); e.tumble = false;
+  e.b.vx = 0; e.b.vy = Math.min(0, e.b.vy); e.skName = null; e.backflip = false; e.hitDone = true;
+  if (e.ai) { e.ai.macro = null; e.ai.path.length = 0; }
+  if (e.hook && e.hook.phase !== 'back') e.hook.phase = 'back';
+  applyStatus(u, e, bookStatus(u, 'shock'), te.stacks || 1);
+  u.tether = { e, t: te.hold, every: te.every, dmg: te.dmg };
+  zapLine(u.b.x, u.b.y - 1.1, e.b.x, e.b.y - 0.9, 'shock');
+  callout(e, 'TETHERED', u.side); world.hs = Math.max(world.hs, 4);
+}
+// A discharge: everything held in, out through the skin at once — and worse for anyone already charged.
+function castDischarge(u, dc) {
+  const b = u.b, cy = b.y - H / 2;
+  ring(b.x, cy, dc.r, 'shock'); ring(b.x, cy, dc.r * 0.55, 'spark');
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * 6.283; zapLine(b.x, cy, b.x + Math.cos(a) * dc.r * 0.9, cy + Math.sin(a) * dc.r * 0.6, 'shock'); }
+  world.hs = Math.max(world.hs, 6); world.impact = Math.max(world.impact, 2); sfxShake(7);
+  for (const e of U) {
+    if (e.side === u.side || e.state === 'dead') continue;
+    if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh ? e.bh / 2 : H / 2)) - cy) > dc.r + (e.bw || W) * 0.5) continue;
+    applyHit(u, e, { ...dc, dmg: dc.dmg + dc.per * (e.st.shock || 0) }, Math.sign(e.b.x - b.x) || u.face);
+    if (e.state !== 'dead') applyStatus(u, e, bookStatus(u, dc.apply), dc.stacks || 1);
+  }
+  u.hitDone = true;
+}
+// A membrane: a skin of gel around you that swallows the next few things thrown at you.
+function castMembrane(u, mb) {
+  u.bubble = { hits: mb.hits, t: Math.round(mb.secs * 60), max: Math.round(mb.secs * 60) };
+  ring(u.b.x, u.b.y - H / 2, 1.1, 'goo'); ring(u.b.x, u.b.y - H / 2, 0.8, 'steel');
+  u.hitDone = true;
+}
+// Gel poured on them from above: it barely hurts, and they are not going anywhere for a while.
+function castSnare(u, sn) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > sn.reach) return;
+  if (sn.dmg) hurt(e, sn.dmg * powerOf(u), 'hit', u.side, null, [['hits', 1]]);
+  snareOn(e, sn.secs);
+  const st = bookStatus(u, null);
+  if (st) applyStatus(u, e, st, 2);
+  gooSplat(e.b.x, e.b.y, 12);
+  world.hs = Math.max(world.hs, 3);
+}
+const gooSplat = (x, y, n) => {
+  for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, sp = 2 + Math.random() * 4; parts.push({ k: 'p', x: x + (Math.random() - 0.5) * 0.4, y: y - 0.3 - Math.random() * 0.8, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0, max: 30 + Math.random() * 20, c: 'goo' }); }
+  ring(x, y - 0.1, 0.8, 'goo');
+};
+// A splash: everything near you knocked back and stuck wherever it lands.
+function castSplash(u, sp) {
+  const b = u.b, cy = b.y - H / 2;
+  ring(b.x, cy, sp.r, 'goo'); ring(b.x, cy, sp.r * 0.55, 'steel');
+  gooSplat(b.x, b.y, 22);
+  world.hs = Math.max(world.hs, 5); sfxShake(5);
+  const st = bookStatus(u, null);
+  for (const e of U) {
+    if (e.side === u.side || e.state === 'dead') continue;
+    if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh ? e.bh / 2 : H / 2)) - cy) > sp.r + (e.bw || W) * 0.5) continue;
+    applyHit(u, e, sp, Math.sign(e.b.x - b.x) || u.face);
+    if (e.state !== 'dead') { snareOn(e, sp.snare); if (st) applyStatus(u, e, st, 2); }
+  }
+  u.hitDone = true;
+}
+// A slick: a patch of gel on the floor under them. Whatever stands in it stays in it.
+function castSlick(u, sl) {
   const e = foe(u);
   u.hitDone = true;
   if (!e || e.state === 'dead') return;
-  const x = e.b.x + e.b.vx * 0.12, y = e.b.y;
-  for (let i = 0; i < 9; i++) streak(x + (Math.random() - 0.5) * 0.5, y - 0.4 - i * 0.9, -Math.PI / 2, 0.9, 'shock');
-  ring(x, y - 0.2, th.r + 0.8, 'shock'); ring(x, y - 0.2, th.r * 0.5, 'spark');
-  world.hs = Math.max(world.hs, 7); world.impact = Math.max(world.impact, 2); sfxShake(8);
-  world.bolt = { x, y, t: 14 };
-  for (const o of U) {
-    if (o.side === u.side || o.state === 'dead') continue;
-    if (Math.abs(o.b.x - x) > th.r || Math.abs(o.b.y - y) > 2.4) continue;
-    applyHit(u, o, th, Math.sign(o.b.x - x) || u.face);
-    if (o.state !== 'dead') applyStatus(u, o, bookStatus(u, th.apply), th.stacks || 1);
-  }
+  const x = Math.max(1.2, Math.min(COLS - 1.2, e.b.x + e.b.vx * 0.2)), y = e.b.gr ? e.b.y : groundBelow(e.b.x, e.b.y);
+  world.fires.push({ kind: 'slick', x, y, span: sl.span, t: Math.round(sl.secs * 60), max: Math.round(sl.secs * 60), side: u.side, by: u, sl });
+  gooSplat(x, y, 10);
+}
+// Regrowth: nothing now, and a little back every third of a second for the next six.
+function castRegrow(u, rg) {
+  u.hot = { per: rg.per, every: rg.every, t: Math.round(rg.secs * 60) };
+  ring(u.b.x, u.b.y - H / 2, 1, 'goo');
+  for (let i = 0; i < 8; i++) streak(u.b.x + (Math.random() - 0.5) * 0.6, u.b.y - Math.random() * 0.4, -Math.PI / 2, 0.5, 'goo');
+  u.hitDone = true;
 }
 // A line of fire on the floor. It stops nothing, but nobody crosses it for free.
 function castFireWall(u, fw) {
   const b = u.b, x = Math.max(1.2, Math.min(COLS - 1.2, b.x + u.face * fw.at));
-  world.fires.push({ x, y: b.y, span: fw.span, t: Math.round(fw.secs * 60), max: Math.round(fw.secs * 60), side: u.side, by: u, fw });
+  world.fires.push({ kind: 'fire', x, y: b.y, span: fw.span, t: Math.round(fw.secs * 60), max: Math.round(fw.secs * 60), side: u.side, by: u, fw });
   for (let i = 0; i < 10; i++) streak(x + (Math.random() - 0.5) * fw.span * 2, b.y, -Math.PI / 2, 0.4 + Math.random() * 0.5, 'burn');
   u.hitDone = true;
 }
@@ -5053,9 +5244,33 @@ function stepFires() {
   for (const f of world.fires) {
     if (--f.t <= 0) continue;
     out.push(f);
+    const u = f.by;
+    if (f.kind === 'slick') {
+      for (const e of U) {
+        if (e.side === f.side || e.state === 'dead' || !e.b.gr) continue;
+        if (Math.abs(e.b.x - f.x) > f.span || Math.abs(e.b.y - f.y) > 0.6) continue;
+        snareOn(e, 0.25);
+        if (world.t % f.sl.every === 0) {
+          hurt(e, f.sl.dmg * powerOf(u), 'hit', f.side, null, [['hits', 1]]);
+          const st = bookStatus(u, null);
+          if (st) applyStatus(u, e, st);
+        }
+      }
+      continue;
+    }
+    if (f.kind === 'rod') {
+      if (world.t % f.rd.every) continue;
+      for (const e of U) {
+        if (e.side === f.side || e.state === 'dead') continue;
+        if (Math.hypot(e.b.x - f.x, (e.b.y - 0.9) - (f.y - 1.7)) > f.rd.r + 0.4) continue;
+        zapLine(f.x, f.y - 1.8, e.b.x, e.b.y - 0.9, 'shock');
+        hurt(e, f.rd.dmg * powerOf(u), 'hit', f.side, null, [['hits', 1]]);
+        applyStatus(u, e, bookStatus(u, 'shock'), f.rd.stacks || 1);
+      }
+      continue;
+    }
     if (world.t % 3 === 0) parts.push({ k: 'e', x: f.x + (Math.random() - 0.5) * f.span * 2, y: f.y - 0.1, vx: (Math.random() - 0.5) * 0.5, vy: -1.8 - Math.random(), ph: Math.random() * 6, life: 0, max: 22, c: 'burn' });
     if (world.t % f.fw.every) continue;
-    const u = f.by;
     for (const e of U) {
       if (e.side === f.side || e.state === 'dead' || !e.b.gr) continue;
       if (Math.abs(e.b.x - f.x) > f.span || Math.abs(e.b.y - f.y) > 0.9) continue;
@@ -5064,22 +5279,6 @@ function stepFires() {
     }
   }
   world.fires = out;
-}
-// Ink runs up their legs: whatever they were doing stops, and they stay put while it holds.
-function castGrasp(u, gr) {
-  const e = foe(u);
-  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > gr.reach) { u.hitDone = true; return; }
-  e.state = 'stun'; e.stunT = Math.max(e.stunT, gr.hold); e.tumble = false;
-  e.b.vx = 0; e.b.vy = Math.min(0, e.b.vy); e.skName = null; e.backflip = false;
-  e.ai.macro = null; e.ai.path.length = 0; e.hitDone = true;
-  if (e.hook && e.hook.phase !== 'back') e.hook.phase = 'back';
-  if (gr.dmg) hurt(e, gr.dmg * powerOf(u), 'hit', u.side, null, [['hits', 1]]);
-  const st = bookStatus(u, gr.apply);
-  if (st) applyStatus(u, e, st);
-  for (let i = 0; i < 5; i++) brushUp(e.b.x + (Math.random() - 0.5) * 0.5, e.b.y, TEAM[u.side]);
-  ring(e.b.x, e.b.y - 0.3, 0.9, TEAM[u.side]); callout(e, 'HELD', u.side);
-  world.hs = Math.max(world.hs, 4);
-  u.hitDone = true;
 }
 // How much affliction is already on somebody, counted in the same units the tome's pages pay out in.
 // Poison comes in stacks and the others in seconds, so they are weighed against each other here.
@@ -5126,20 +5325,6 @@ function castRupture(u, rp) {
   callout(e, 'RUPTURE', u.side); sfxShake(8);
 }
 const brushUp = (x, y, c) => streak(x, y - 0.3 - Math.random() * 0.8, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, 0.5 + Math.random() * 0.5, c);
-// A ward: a shell of cold around you, and anything already inside it gets some.
-function castWard(u, wd) {
-  const b = u.b, cy = b.y - H / 2;
-  u.shield += wd.shield;
-  ring(b.x, cy, wd.r, 'steel'); ring(b.x, cy, wd.r * 0.7, TEAM[u.side]);
-  popText(b.x, cy - 0.7, `+${wd.shield}`, 'steel', 0.5);
-  for (const e of U) {
-    if (e.side === u.side || e.state === 'dead') continue;
-    if (Math.hypot(e.b.x - b.x, e.b.y - b.y) > wd.r + (e.bw || W) * 0.5) continue;
-    const st = bookStatus(u, wd.apply);
-    if (st) applyStatus(u, e, st, wd.stacks || 1);
-  }
-  u.hitDone = true;
-}
 function shockwave(u, sh, x, y) {
   const fy = y === undefined ? u.b.y : y;
   ring(x, fy - 0.1, sh.r, TEAM[u.side]); ring(x, fy - 0.1, sh.r * 0.6, 'spark');
@@ -5167,7 +5352,7 @@ function resolveHits() {
           sparks(a.x, a.y, u.face, 12); ring(a.x, a.y, 0.8, 'spark');
           world.hs = Math.max(world.hs, 5); sfxShake(3);
           world.stats[u.side].deflect++;
-          const what = { arrow: 'an arrow', bolt: 'a bolt', lance: 'a lance', fireball: 'a fireball', arc: 'an arc' }[a.kind] || 'a star';
+          const what = { arrow: 'an arrow', goo: 'a gob of gel', lance: 'a lance', fireball: 'a fireball', arc: 'an arc' }[a.kind] || 'a star';
           log(u.side ? `${rivalName()} knocked ${what} out of the air.` : `You knocked ${what} out of the air.`, u.side);
         }
       }
@@ -5196,9 +5381,24 @@ function blockedByGuard(a) {
       return true;
     }
   }
-  // a line of fire does not stop anybody walking, but nothing thrown gets through it intact
+  // a skin of gel swallows what is thrown at whoever is inside it
+  for (const u of U) {
+    const bb = u.bubble;
+    if (!bb || bb.t <= 0 || u.side === a.owner || u.state === 'dead') continue;
+    if (Math.hypot(a.x - u.b.x, a.y - (u.b.y - H / 2)) > 1.0) continue;
+    a.dead = true; gooSplat(a.x, a.y + 0.3, 5);
+    if (--bb.hits <= 0) { bb.t = 0; ring(u.b.x, u.b.y - H / 2, 1.1, 'goo'); }
+    return true;
+  }
   for (const f of world.fires) {
-    if (f.side === a.owner) continue;
+    if (f.side === a.owner || f.kind === 'slick') continue;
+    // a lightning rod takes anything that comes near its head
+    if (f.kind === 'rod') {
+      if (Math.hypot(a.x - f.x, a.y - (f.y - 1.8)) > f.rd.r) continue;
+      a.dead = true; zapLine(f.x, f.y - 1.8, a.x, a.y, 'shock');
+      return true;
+    }
+    // a line of fire does not stop anybody walking, but nothing thrown gets through it intact
     if (Math.abs(a.x - f.x) > f.span || a.y < f.y - (f.fw.h || 2.6) || a.y > f.y + 0.3) continue;
     a.dead = true;
     for (let i = 0; i < 5; i++) streak(a.x, a.y, Math.random() * 6.283, 0.3 + Math.random() * 0.4, 'burn');
@@ -5257,7 +5457,9 @@ function stepShots() {
         }
         const by = a.src || U[a.owner];
         applyHit(by, t, K.hit, Math.sign(a.vx) || 1, a.crit);
-        if (K.hit.apply && t.state !== 'dead' && by) applyStatus(by, t, bookStatus(by, K.hit.apply), K.hit.stacks || 1);
+        const st = by && by.w === 'spellbook' ? bookStatus(by, K.hit.apply || null) : K.hit.apply;
+        if (st && t.state !== 'dead' && by) applyStatus(by, t, st, K.hit.stacks || 1);
+        if (K.hit.snare && t.state !== 'dead') { snareOn(t, K.hit.snare); gooSplat(a.x, a.y + 0.4, 6); }
         if (K.burst) shotBurst(a, K.burst);
         a.dead = true;
       }
@@ -5313,7 +5515,13 @@ function poseTarget(u) {
     } else { Object.assign(T, sp); T.ka = 0.5; T.kb = 0.35; }
   }
   // A caster is never quite on the floor: the robe breathes and the book rides on it.
-  if (w === 'spellbook' && st === 'free') { const h = Math.sin(world.t * 0.045) * 0.022; T.hipH += h; T.fy -= h * 1.6; T.by -= h; }
+  if (w === 'spellbook' && st === 'free') { const h = Math.sin(world.t * 0.045) * 0.022; T.hipH += h; T.fy -= h * 1.6; T.by -= h * 1.6; }
+  // a book hand slides under the spine to cast; a staff is carried in one hand with the other held up
+  if (w === 'spellbook') {
+    T.draw = st === 'atk' ? 1 : 0;
+    if (st === 'atk' && !(u.gs && u.gs.flags.staff)) { T.fx += 0.14; T.fy += 0.07; }
+    if (u.gs && u.gs.flags.staff && st !== 'atk') { T.fx = 0.36; T.fy = 0.12; T.bx = 0.3; T.by = -0.22; }
+  }
   // A warlock carries the book shut and low, hunched over it, and barely picks its feet up to move.
   if (u.gs && u.gs.flags.tome) {
     T.lean += 0.16; T.hipH -= 0.06; T.head += 0.14; T.fy += 0.1; T.by += 0.12; T.bx -= 0.06;
@@ -5415,10 +5623,28 @@ function weaponGeom(w, hf, hb, wd, draw, wdb = wd) {
   }
   if (w === 'spear') return { butt: at(hf, -0.95), neck: at(hf, 1.06), tip: at(hf, 1.36), h1: at(hf, 1.15, 0.08), h2: at(hf, 1.15, -0.08), base: at(hf, 0.6) };
   if (w === 'stars') return { s1: at(hf, 0.02), s2: hb };
-  // an open book lying across the front hand, and a puppeteer's empty hands
-  if (w === 'spellbook') return { spine: at(hf, -0.04), a1: at(hf, 0.34, 0.26), a2: at(hf, 0.34, -0.26), b1: at(hf, 0.42, 0.17), b2: at(hf, 0.42, -0.17),
-    // a staff shares the hand: butt below, head above, held upright whatever the wrist is doing
-    sButt: { x: hf.x - 0.05, y: hf.y + 0.66 }, sTop: { x: hf.x + 0.03, y: hf.y - 0.86 }, sMid: { x: hf.x, y: hf.y - 0.1 } };
+  // A book is held level whatever the wrist is doing, open, and tipped back so its pages face the one
+  // reading them. At rest both hands have it by the bottom corners; in a cast (draw → 1) the book hand
+  // slides in under the spine and the other hand is free to work.
+  if (w === 'spellbook') {
+    const th = -0.26, ca = Math.cos(th), sa = Math.sin(th), W2 = 0.23;
+    const sx = hf.x - 0.2 + 0.16 * draw, sy = hf.y - 0.09;
+    const P = (u2, v2) => ({ x: sx + ca * u2 - sa * v2, y: sy + sa * u2 + ca * v2 });
+    return {
+      st: P(0, -0.075), sb: P(0, 0.07),
+      lt: P(-W2, -0.11), lb: P(-W2, 0.045), ltc: P(-W2 * 0.5, -0.15), lbc: P(-W2 * 0.5, 0.028),
+      rt: P(W2, -0.11), rb: P(W2, 0.045), rtc: P(W2 * 0.5, -0.15), rbc: P(W2 * 0.5, 0.028),
+      cl: P(-W2 - 0.035, -0.1), clb: P(-W2 - 0.035, 0.075), cbc: P(-W2 * 0.5, 0.1), cb: P(0, 0.115), cbc2: P(W2 * 0.5, 0.1), crb: P(W2 + 0.035, 0.075), cr: P(W2 + 0.035, -0.1),
+      l1a: P(-W2 + 0.045, -0.075), l1b: P(-0.045, -0.05), l2a: P(-W2 + 0.045, -0.04), l2b: P(-0.045, -0.018), l3a: P(-W2 + 0.045, -0.006), l3b: P(-0.09, 0.012),
+      r1a: P(0.045, -0.05), r1b: P(W2 - 0.045, -0.075), r2a: P(0.045, -0.018), r2b: P(W2 - 0.045, -0.04), r3a: P(0.045, 0.012), r3b: P(W2 - 0.1, -0.006),
+      rib2: P(0.03, 0.22), rib3: P(-0.015, 0.2),
+      // a shut tome sits in the same place: a thick slab, the page block showing along its top, a clasp
+      ta: P(-0.21, -0.085), tb: P(0.21, -0.085), tc: P(0.21, 0.085), td: P(-0.21, 0.085),
+      tpa: P(-0.18, -0.06), tpb: P(0.19, -0.06), tpc: P(0.19, -0.015), tpd: P(-0.18, -0.015), clasp: P(0.21, 0.02), clasp2: P(0.14, 0.02),
+      // a staff shares the hand: butt below, head above, held upright whatever the wrist is doing
+      sButt: { x: hf.x - 0.05, y: hf.y + 0.66 }, sTop: { x: hf.x + 0.03, y: hf.y - 0.86 }, sMid: { x: hf.x, y: hf.y - 0.1 },
+    };
+  }
   if (w === 'puppet') return { hand: hf, back: hb };
   if (w === 'hammer') return { end: at(hf, -0.36), neck: at(hf, 0.6), c1: at(hf, 0.6, 0.21), c2: at(hf, 0.86, 0.21), c3: at(hf, 0.86, -0.21), c4: at(hf, 0.6, -0.21), base: at(hf, 0.35), tip: at(hf, 0.88) };
   const drawn = draw > 0.04;
@@ -5615,7 +5841,7 @@ const RIVALS = [
   { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
   { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'ghostwalk', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'Fights you with a marionette six tiles out, so its own body is never where the blades are. Get inside the strings and all it has left is a boot.' },
-  { name: 'Folio', trinket: 'frost', weapon: 'spellbook', skill: 'blink', acro: 1, t: 5, tag: 'Reads out loud.', tip: 'Rooted while it casts, so anything that closes fast beats it — but stand still at range and the nova will find you.' },
+  { name: 'Folio', trinket: 'frost', weapon: 'spellbook', skill: 'blink', acro: 1, t: 5, tag: 'Reads out loud.', tip: 'A frost caster, rooted while it casts: anything that closes fast beats it — but stand still at range and the spikes will find you.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
@@ -5748,7 +5974,8 @@ const ITEM = {
   linen_shirt: iA('Linen Shirt', null, 'core', { hp: 10 }),
   // gel: the slime's. Staying power.
   gel_blade: iW('Gel Blade', 'gel', 'sword', { stats: { hp: 10 } }),
-  gel_grimoire: iW('Gel Grimoire', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { spellSt: null }, desc: 'Its pages carry nothing but the hit itself.', flavor: 'The ink never quite dries.' }),
+  gel_grimoire: iW('Gel Grimoire', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { spellSt: null, school: 'slime' },
+    desc: 'The slime school. It hardly hurts anybody: it sticks them. Gobs that snare what they hit, gel poured on a charger so it cannot move, a slick left on the floor, a splash that throws everything near you back and glues it where it lands, a skin that swallows three shots — and a regrowth that heals you a little every third of a second for six.', flavor: 'The ink never quite dries.' }),
   glob_maul: iW('Glob Maul', 'gel', 'hammer', { stats: { hp: 12 } }),
   jelly_stars: iW('Jelly Stars', 'gel', 'stars', { stats: { regen: 0.5 } }),
   gel_cap: iA('Gel Cap', 'gel', 'head', { hp: 16, regen: 0.6 }),
@@ -5818,7 +6045,8 @@ const ITEM = {
   toxic_censer: iW('Toxic Censer', 'toxic', 'puppet', { stats: { regen: 0.8 }, flags: { pupForm: 'lantern', spellSt: 'poison' }, desc: 'A lantern that barely strikes at all. It drifts over whoever you are looking at, Poisons them every second or so, and pours a little of that back into you.' }),
   ooze_stars: iW('Ooze Stars', 'toxic', 'stars', oh('poison')),
   sludge_maul: iW('Sludge Maul', 'toxic', 'hammer', oh('poison', 0.25, 2)),
-  spore_codex: iW('Spore Codex', 'toxic', 'spellbook', { ...oh('poison', 0.2), flags: { spellSt: 'poison' }, desc: 'Every spell in it carries Poison.', flavor: 'Bound in something that is still growing.' }),
+  spore_codex: iW('Spore Codex', 'toxic', 'spellbook', { ...oh('poison', 0.2), flags: { spellSt: 'poison', school: 'slime' },
+    desc: 'The slime school, gone bad: every gob, slick and splash that sticks them also Poisons them.', flavor: 'Bound in something that is still growing.' }),
   ooze_helm: iA('Ooze Helm', 'toxic', 'head', { hp: 14, resist: 0.15 }),
   toxic_mantle: iA('Toxic Mantle', 'toxic', 'core', { hp: 24, regen: 0.8 }),
   slick_boots: iA('Slick Boots', 'toxic', 'feet', { evasion: 0.04 }, { acro: 2 }),
@@ -5829,9 +6057,9 @@ const ITEM = {
   icicle_bow: iW('Icicle Bow', 'frost', 'bow', { min: 10, max: 14, ...oh('chill') }),
   rime_spear: iW('Rime Spear', 'frost', 'spear', { stats: { crit: 0.03 }, ...oh('chill', 0.15) }),
   rime_codex: iW('Rime Codex', 'frost', 'spellbook', { ...oh('chill', 0.2), flags: { spellSt: 'chill', school: 'frost' },
-    desc: 'The frost school: a lance instead of a bolt, a slab of ice instead of a pane of it (and it bursts into shards when it goes), legs locked in ice instead of held in it, spikes up through the floor, and a shatter that hits harder for every Chill already on them.', flavor: 'The pages stick together.' }),
+    desc: 'The frost school: an ice lance, a slab of ice that bursts into shards when it goes, legs locked in ice, spikes up through the floor, a shatter that hits harder for every Chill already on them, and ice armour that will not be knocked about and chills whatever hits it.', flavor: 'The pages stick together.' }),
   ember_codex: iW('Ember Codex', 'ember', 'spellbook', { ...oh('burn', 0.2), flags: { spellSt: 'burn', school: 'flame' },
-    desc: 'The flame school: a fireball that bursts where it lands, a pillar of flame out of the floor that catches anyone jumping it, a line of fire nobody crosses for free, embers to leave behind, and an immolation that costs you a little and leaves you burning.', flavor: 'Warm to hold. Warmer to read.' }),
+    desc: 'The flame school: a fireball that bursts where it lands, a pillar of flame out of the floor that catches anyone jumping it, a line of fire that burns whatever is thrown through it, embers to leave behind, an immolation that costs you a little, and a cauterise that burns everything out of you and heals you for each thing it burned.', flavor: 'Warm to hold. Warmer to read.' }),
   frost_cowl: iA('Frost Cowl', 'frost', 'head', { hp: 10, crit: 0.05 }),
   rime_wings: iA('Rime Wings', 'frost', 'core', { hp: 16, def: 1, evasion: 0.04 }),
   glide_boots: iA('Glide Boots', 'frost', 'feet', { speed: 0.04 }, { acro: 4 }),
@@ -5844,18 +6072,20 @@ const ITEM = {
   thunder_maul: iW('Thunder Maul', 'storm', 'hammer', oh('shock', 0.25, 2)),
   arc_daggers: iW('Arc Daggers', 'storm', 'daggers', { stats: { haste: 0.05 }, ...oh('shock', 0.15) }),
   storm_codex: iW('Storm Codex', 'storm', 'spellbook', { ...oh('shock', 0.2), flags: { spellSt: 'shock', school: 'storm' },
-    desc: 'The storm school: arcs that are there almost before they are thrown, and a bolt straight down out of the top of the page onto whoever you are looking at.', flavor: 'It reads itself when nobody is looking.' }),
-  blood_codex: iW('Blood Codex', 'blood', 'spellbook', { ...oh('bleed', 0.2), stats: { ls: 0.03 }, flags: { spellSt: 'bleed' }, desc: 'Every spell in it carries Bleed.', flavor: 'Written once, in a hurry.' }),
+    desc: 'The storm school: arcs that are there almost before they are thrown, a lightning rod that pulls every shot near it into itself, a tether that holds them at the end of a line and keeps biting, a discharge that hits harder the more Shock they already carry, a cloud that gathers over them and then strikes, and a static shell that shocks whatever hits it.', flavor: 'It reads itself when nobody is looking.' }),
+  blood_codex: iW('Tome of Blood', 'blood', 'spellbook', { ...oh('bleed', 0.2), stats: { ls: 0.03 },
+    flags: { tome: true, spellSt: 'bleed', dotMult: 1.6, agony: 0.06, dotHeal: 0.25, selfCost: 0.003 },
+    desc: 'Curse, drain, rupture and fear instead of casting, in blood. Your Bleed deals +60% and deepens as it runs, and every tick of it heals you a quarter.', flavor: 'Written once, in a hurry.' }),
   // Warlock tomes: no page of one does damage now. They curse, they drink it back, and they tear it out.
   rot_tome: iW('Tome of Rot', 'rot', 'spellbook', { stats: { hp: 12 },
     flags: { tome: true, spellSt: 'poison', dotMult: 1.7, agony: 0.05, dotHeal: 0.2, selfCost: 0.004 },
-    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +70% and get worse the longer they burn, every tick of them heals you a fifth, and every page costs you a little.', flavor: 'The margins are wet.' }),
+    desc: 'Curse, drain, rupture and fear instead of casting. Your statuses deal +70% and get worse the longer they burn, every tick of them heals you a fifth, and every page costs you a little.', flavor: 'The margins are wet.' }),
   ash_tome: iW('Ashen Staff', 'blaze', 'spellbook', { stats: { resist: 0.08 },
     flags: { tome: true, staff: true, spellSt: 'burn', dotMult: 1.9, agony: 0.055, dotHeal: 0.2, selfCost: 0.004 },
-    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +90% and deepen as they burn, every tick heals you a fifth, and the staff takes its price in your own skin.', flavor: 'The head of it is still warm.' }),
+    desc: 'Curse, drain, rupture and fear instead of casting. Your statuses deal +90% and deepen as they burn, every tick heals you a fifth, and the staff takes its price in your own skin.', flavor: 'The head of it is still warm.' }),
   mire_tome: iW('Mire Staff', 'mire', 'spellbook', { stats: { regen: 1 },
     flags: { tome: true, staff: true, spellSt: 'poison', dotMult: 1.55, agony: 0.07, dotHeal: 0.28, selfCost: 0.003 },
-    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +55%, deepen fast, and every tick of them heals you more than a quarter.', flavor: 'Cut green, and never dried.' }),
+    desc: 'Curse, drain, rupture and fear instead of casting. Your statuses deal +55%, deepen fast, and every tick of them heals you more than a quarter.', flavor: 'Cut green, and never dried.' }),
   storm_crest: iA('Storm Crest', 'storm', 'head', { hp: 12, haste: 0.05 }),
   coil_plate: iA('Coil Plate', 'storm', 'core', { hp: 24, def: 3 }),
   surge_boots: iA('Surge Boots', 'storm', 'feet', { speed: 0.06, haste: 0.04 }, { acro: 3 }),
@@ -7362,25 +7592,43 @@ function drawWeapon(S, side, pal, ink) {
     ctx.beginPath(); ctx.arc(w.sTop.x + 0.07, w.sTop.y - 0.12, 0.085, 0, 6.283); ctx.stroke();
     stroke([{ x: w.sMid.x - 0.05, y: w.sMid.y }, { x: w.sMid.x + 0.05, y: w.sMid.y }], team, 0.05);
   } else if (S.w === 'spellbook' && S.tome) {
-    // a tome stays shut in the hand: a slab of a cover with a clasp and a line of the team's ink
+    // a tome stays shut: a thick dark slab, the page block pale along its top, and a clasp of your ink
     ctx.fillStyle = ink; ctx.beginPath();
-    ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a1.x, w.a1.y); ctx.lineTo(w.b1.x, w.b1.y);
-    ctx.lineTo(w.b2.x, w.b2.y); ctx.lineTo(w.a2.x, w.a2.y); ctx.closePath(); ctx.fill();
-    stroke([w.a1, w.b1], pal.steel, 0.028);
-    stroke([w.spine, { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 }], team, 0.04);
-  } else if (S.w === 'spellbook') {
-    // an open book: ink covers with pale pages between them, and the team's ribbon down the spine
-    const mid = { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 };
-    ctx.fillStyle = ink; ctx.beginPath();
-    ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a1.x, w.a1.y); ctx.lineTo(w.b1.x, w.b1.y); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a2.x, w.a2.y); ctx.lineTo(w.b2.x, w.b2.y); ctx.closePath(); ctx.fill();
+    ctx.moveTo(w.ta.x, w.ta.y); ctx.lineTo(w.tb.x, w.tb.y); ctx.lineTo(w.tc.x, w.tc.y); ctx.lineTo(w.td.x, w.td.y); ctx.closePath(); ctx.fill();
     ctx.fillStyle = pal.steel; ctx.beginPath();
-    ctx.moveTo(w.spine.x, w.spine.y);
-    ctx.lineTo(w.a1.x * 0.82 + w.spine.x * 0.18, w.a1.y * 0.82 + w.spine.y * 0.18);
-    ctx.lineTo(mid.x, mid.y);
-    ctx.lineTo(w.a2.x * 0.82 + w.spine.x * 0.18, w.a2.y * 0.82 + w.spine.y * 0.18);
-    ctx.closePath(); ctx.fill();
-    stroke([w.spine, mid], team, 0.04);
+    ctx.moveTo(w.tpa.x, w.tpa.y); ctx.lineTo(w.tpb.x, w.tpb.y); ctx.lineTo(w.tpc.x, w.tpc.y); ctx.lineTo(w.tpd.x, w.tpd.y); ctx.closePath(); ctx.fill();
+    stroke([w.clasp2, w.clasp], team, 0.05);
+    ctx.fillStyle = team; ctx.beginPath(); ctx.arc(w.clasp.x, w.clasp.y, 0.035, 0, 6.283); ctx.fill();
+  } else if (S.w === 'spellbook') {
+    // an open book: a dark cover showing under two pale pages that curve up from the spine, a few lines
+    // of writing on each, and your ribbon hanging out of the bottom
+    ctx.fillStyle = ink; ctx.beginPath();
+    ctx.moveTo(w.cl.x, w.cl.y); ctx.lineTo(w.clb.x, w.clb.y);
+    ctx.quadraticCurveTo(w.cbc.x, w.cbc.y, w.cb.x, w.cb.y); ctx.quadraticCurveTo(w.cbc2.x, w.cbc2.y, w.crb.x, w.crb.y);
+    ctx.lineTo(w.cr.x, w.cr.y); ctx.lineTo(w.st.x, w.st.y); ctx.closePath(); ctx.fill();
+    stroke([w.sb, w.rib2], team, 0.035); stroke([w.sb, w.rib3], team, 0.028);
+    const page = (t, tc, b, bc) => { ctx.beginPath(); ctx.moveTo(w.st.x, w.st.y); ctx.quadraticCurveTo(tc.x, tc.y, t.x, t.y); ctx.lineTo(b.x, b.y); ctx.quadraticCurveTo(bc.x, bc.y, w.sb.x, w.sb.y); ctx.closePath(); };
+    for (const [t, tc, b, bc] of [[w.lt, w.ltc, w.lb, w.lbc], [w.rt, w.rtc, w.rb, w.rbc]]) {
+      page(t, tc, b, bc); ctx.fillStyle = pal.steel; ctx.fill();
+      // the pages light up in the school's colour as the words come due
+      if (S.castK > 0) { ctx.globalAlpha = 0.2 + 0.5 * S.castK; ctx.fillStyle = S.castC; ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.022; ctx.stroke();
+    }
+    ctx.globalAlpha = 0.6;
+    for (const [a, b] of [[w.l1a, w.l1b], [w.l2a, w.l2b], [w.l3a, w.l3b], [w.r1a, w.r1b], [w.r2a, w.r2b], [w.r3a, w.r3b]]) stroke([a, b], S.castK > 0.5 ? ink : pal.far, 0.016);
+    ctx.globalAlpha = 1;
+    stroke([w.st, w.sb], ink, 0.026);
+    // mid-incantation the pages turn over by themselves, twice
+    if (S.castK > 0 && S.castK < 1) {
+      const ph = (S.castK * 2) % 1, lift = Math.sin(ph * Math.PI) * 0.2;
+      const ux = w.st.x - w.sb.x, uy = w.st.y - w.sb.y, L = Math.hypot(ux, uy) || 1;
+      const lx = ux / L * lift, ly = uy / L * lift;
+      const tt = { x: w.rt.x + (w.lt.x - w.rt.x) * ph + lx, y: w.rt.y + (w.lt.y - w.rt.y) * ph + ly };
+      const bb2 = { x: w.rb.x + (w.lb.x - w.rb.x) * ph + lx, y: w.rb.y + (w.lb.y - w.rb.y) * ph + ly };
+      ctx.fillStyle = pal.steel; ctx.beginPath();
+      ctx.moveTo(w.st.x, w.st.y); ctx.lineTo(tt.x, tt.y); ctx.lineTo(bb2.x, bb2.y); ctx.lineTo(w.sb.x, w.sb.y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = ink; ctx.lineWidth = 0.02; ctx.stroke();
+    }
   } else if (S.w === 'puppet') {
     // nothing in the hands but the strings, which the puppet draws from its own end
     ctx.globalAlpha = 0.45; stroke([w.hand, { x: w.hand.x, y: w.hand.y - 0.22 }], team, 0.02);
@@ -7390,27 +7638,6 @@ function drawWeapon(S, side, pal, ink) {
     ctx.moveTo(w.t1.x, w.t1.y); ctx.quadraticCurveTo(w.ctl.x, w.ctl.y, w.t2.x, w.t2.y); ctx.stroke();
     stroke([w.t1, w.nock, w.t2], pal.far, 0.018);
     if (w.a1) drawArrowShape(w.a1.x, w.a1.y, w.a2.x, w.a2.y, pal, side, ink);
-  }
-}
-// A spell bolt: a knot of ink with a sweep of tail, spinning as it goes. Nothing about it is fletched.
-function drawBolt(a, pal) {
-  const team = pal[TEAM[a.owner]], t = world.t * 0.3 + a.ttl;
-  if (a.stuck) {   // spent, soaking into whatever it hit
-    ctx.globalAlpha = Math.max(0, 1 - a.ttl / 100);
-    ctx.fillStyle = team; ctx.beginPath(); ctx.arc(a.x, a.y, 0.16, 0, 6.283); ctx.fill();
-    ctx.globalAlpha = 1; return;
-  }
-  const ux = Math.cos(a.ang), uy = Math.sin(a.ang);
-  ctx.globalAlpha = 0.35; ctx.fillStyle = team;
-  ctx.beginPath(); ctx.moveTo(a.x - uy * 0.1, a.y + ux * 0.1); ctx.lineTo(a.x - ux * 0.85, a.y - uy * 0.85); ctx.lineTo(a.x + uy * 0.1, a.y - ux * 0.1); ctx.closePath(); ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = pal.ink; ctx.beginPath(); ctx.ellipse(a.x, a.y, 0.17, 0.13, a.ang, 0, 6.283); ctx.fill();
-  ctx.fillStyle = team; ctx.beginPath(); ctx.arc(a.x + ux * 0.03, a.y + uy * 0.03, 0.07, 0, 6.283); ctx.fill();
-  // two ticks turning around it, so it reads as something cast rather than thrown
-  ctx.strokeStyle = team; ctx.lineWidth = 0.035;
-  for (const k of [0, Math.PI]) {
-    const ang = t * 0.25 + k, rx = Math.cos(ang) * 0.26, ry = Math.sin(ang) * 0.14;
-    ctx.beginPath(); ctx.moveTo(a.x + rx, a.y + ry); ctx.lineTo(a.x + rx * 1.35, a.y + ry * 1.35); ctx.stroke();
   }
 }
 // A lance of ice: a long four-sided shard with a bright core and frost coming off the back of it.
@@ -7440,6 +7667,23 @@ function drawLance(a, pal) {
     const o = 0.16 * sgn + Math.sin(world.t * 0.4 + sgn) * 0.03;
     ctx.beginPath(); ctx.moveTo(a.x - ux * 0.25 + nx * o, a.y - uy * 0.25 + ny * o); ctx.lineTo(a.x - ux * 0.75 + nx * o, a.y - uy * 0.75 + ny * o); ctx.stroke();
   }
+}
+// A gob of gel: a wobbling drop with a shine on it and strings trailing off the back.
+function drawGoo(a, pal) {
+  const c = pal.goo, ang = Math.atan2(a.vy, a.vx), ux = Math.cos(ang), uy = Math.sin(ang);
+  if (a.stuck) {
+    ctx.globalAlpha = Math.max(0, 1 - a.ttl / 90); ctx.fillStyle = c;
+    ctx.beginPath(); ctx.ellipse(a.x, a.y + 0.06, 0.26, 0.07, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; return;
+  }
+  ctx.strokeStyle = c; ctx.lineWidth = 0.035; ctx.globalAlpha = 0.6;
+  ctx.beginPath(); ctx.moveTo(a.x - ux * 0.1, a.y - uy * 0.1); ctx.quadraticCurveTo(a.x - ux * 0.35 + uy * 0.08, a.y - uy * 0.35 - ux * 0.08, a.x - ux * 0.55, a.y - uy * 0.55); ctx.stroke();
+  ctx.globalAlpha = 1;
+  const wob = Math.sin(world.t * 0.6) * 0.03;
+  ctx.save(); ctx.translate(a.x, a.y); ctx.rotate(ang);
+  ctx.fillStyle = c; ctx.beginPath(); ctx.ellipse(0, 0, 0.19 + wob, 0.15 - wob, 0, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = pal.ink; ctx.lineWidth = 0.028; ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.03; ctx.beginPath(); ctx.arc(a.x - 0.03, a.y - 0.03, 0.08, Math.PI * 1.1, Math.PI * 1.5); ctx.stroke();
 }
 // A fireball: a lump of flame with the fire streaming off the back of it as it falls.
 function drawFireball(a, pal) {
@@ -7516,9 +7760,9 @@ function drawTrail(u, pal) {
 function drawCast(u, S, pal) {
   const d = u.atkDef, tome = !!(u.gs && u.gs.flags.tome);
   const sch = schoolOf(u), st = (u.gs && u.gs.flags.spellSt) || sch.col;
-  const c = (st && ST_COL[st]) || pal[TEAM[u.side]];
+  const c = (st && (ST_COL[st] || pal[st])) || pal[TEAM[u.side]];
   const k = u.phase === 'w' ? Math.min(1, u.af / d.w) : 1;
-  const w = S.wp, page = w && w.b1 ? { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 } : S.hf;
+  const w = S.wp, page = w && w.st ? { x: (w.st.x + w.sb.x) / 2, y: (w.st.y + w.sb.y) / 2 + 0.12 } : S.hf;
   const hand = S.hb || S.hf;
   ctx.save();
   if (tome) {
@@ -7531,15 +7775,19 @@ function drawCast(u, S, pal) {
       ctx.beginPath(); ctx.moveTo(hand.x + dx, hand.y + 0.04); ctx.lineTo(hand.x + dx, hand.y + 0.04 + len); ctx.stroke();
     }
   } else {
-    // a ring of marks over the open page, closing as the cast comes due
-    const r = 0.42 - 0.2 * k, n = 6;
-    ctx.globalAlpha = 0.3 + 0.55 * k; ctx.strokeStyle = c; ctx.lineWidth = 0.035;
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * 6.283 + world.t * 0.06, cx = page.x + Math.cos(a) * r, cy = page.y - 0.3 + Math.sin(a) * r * 0.45;
-      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 0.07 - 0.1 * k); ctx.stroke();
+    // the words lift off the open pages as they are read out, and drift up and away
+    ctx.strokeStyle = c; ctx.lineWidth = 0.03; ctx.lineCap = 'round';
+    const top = w && w.st ? w.st.y : page.y - 0.2;
+    for (let i = 0; i < 7; i++) {
+      const ph = (world.t * 0.028 + i / 7) % 1, gx = page.x + ((i % 3) - 1) * 0.13 + Math.sin(world.t * 0.08 + i * 2) * 0.05, gy = top - 0.04 - ph * (0.35 + 0.35 * k);
+      ctx.globalAlpha = (1 - ph) * (0.25 + 0.7 * k);
+      const g = 0.035 + 0.02 * k;
+      ctx.beginPath();
+      if (i % 3 === 0) { ctx.moveTo(gx - g, gy); ctx.lineTo(gx, gy - g); ctx.lineTo(gx + g, gy); }
+      else if (i % 3 === 1) { ctx.arc(gx, gy, g * 0.7, 0, 6.283); ctx.moveTo(gx, gy - g * 0.7); ctx.lineTo(gx, gy - g * 1.6); }
+      else { ctx.moveTo(gx - g, gy - g); ctx.lineTo(gx + g, gy + g); ctx.moveTo(gx + g, gy - g); ctx.lineTo(gx - g * 0.2, gy); }
+      ctx.stroke();
     }
-    ctx.globalAlpha = 0.25 + 0.45 * k;
-    ctx.beginPath(); ctx.ellipse(page.x, page.y - 0.3, r, r * 0.45, 0, 0, 6.283); ctx.stroke();
     // and the same light in the hand that is about to throw it
     ctx.globalAlpha = 0.4 + 0.5 * k; ctx.fillStyle = c;
     ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.04 + 0.08 * k, 0, 6.283); ctx.fill();
@@ -7621,6 +7869,17 @@ function drawSigils(pal) {
       for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.moveTo(g.x + sgn * r * 0.85, g.y); ctx.lineTo(g.x + sgn * r * 0.85, g.y - (g.sp.col || 3) * k * 0.8); ctx.stroke(); }
       ctx.globalAlpha = 0.18 + 0.3 * k; ctx.fillStyle = col;
       ctx.fillRect(g.x - r * 0.85, g.y - (g.sp.col || 3) * k * 0.8, r * 1.7, (g.sp.col || 3) * k * 0.8);
+    } else if (g.kind === 'cloud') {
+      // a cloud gathering high over them, darker and lower as it comes due, flickering at the end
+      const cyc = g.y - 4.6 + k * 0.8, w2 = 0.6 + 0.6 * k;
+      ctx.globalAlpha = 0.25 + 0.55 * k; ctx.fillStyle = pal.far;
+      for (const [dx, dy, r2] of [[-0.55, 0.05, 0.36], [0, -0.12, 0.46], [0.55, 0.04, 0.34], [0.25, 0.14, 0.3], [-0.25, 0.14, 0.3]]) {
+        ctx.beginPath(); ctx.arc(g.x + dx * w2, cyc + dy * w2, r2 * w2, 0, 6.283); ctx.fill();
+      }
+      if (k > 0.6 && (world.t >> 2) % 2) {
+        ctx.globalAlpha = (k - 0.6) * 2; ctx.strokeStyle = pal.shock; ctx.lineWidth = 0.04;
+        ctx.beginPath(); ctx.moveTo(g.x - 0.1, cyc + 0.3); ctx.lineTo(g.x + 0.08, cyc + 0.6); ctx.lineTo(g.x - 0.05, cyc + 0.85); ctx.stroke();
+      }
     } else if (g.kind === 'cinder') {
       // embers, catching one by one across the whole patch
       ctx.fillStyle = col;
@@ -7640,8 +7899,50 @@ function drawSigils(pal) {
 }
 // A line of fire burning on the floor, and the flash left behind by a bolt out of the sky.
 function drawFires(pal) {
+  const t = world.t * 0.3;
   for (const f of world.fires) {
-    const k = Math.min(1, f.t / 30), t = world.t * 0.3;
+    const k = Math.min(1, f.t / 30);
+    if (f.kind === 'slick') {
+      // a patch of gel: a flat glossy puddle with bubbles coming up through it
+      ctx.globalAlpha = 0.55 * k; ctx.fillStyle = pal.goo;
+      ctx.beginPath();
+      for (let i = 0; i <= 16; i++) {
+        const a = (i / 16) * Math.PI, x = f.x - Math.cos(a) * f.span * (1 + Math.sin(i * 2.1 + t * 0.2) * 0.05);
+        const y = f.y - Math.sin(a) * (0.16 + Math.sin(i * 1.7 + t * 0.3) * 0.03);
+        if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 0.9 * k; ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.04; ctx.stroke();
+      ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.025; ctx.globalAlpha = 0.6 * k;
+      ctx.beginPath(); ctx.moveTo(f.x - f.span * 0.5, f.y - 0.1); ctx.lineTo(f.x - f.span * 0.15, f.y - 0.13); ctx.stroke();
+      for (let i = 0; i < 4; i++) {
+        const ph = (t * 0.12 + i * 0.37) % 1, bx = f.x + Math.sin(i * 5.3) * f.span * 0.7;
+        ctx.globalAlpha = (1 - ph) * 0.8 * k; ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.025;
+        ctx.beginPath(); ctx.arc(bx, f.y - 0.08 - ph * 0.3, 0.04 + ph * 0.03, 0, 6.283); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    if (f.kind === 'rod') {
+      // a rod driven into the floor, crackling at the head, with its reach drawn faintly round it
+      const top = f.y - 1.9;
+      ctx.globalAlpha = 0.14 * k; ctx.strokeStyle = pal.shock; ctx.lineWidth = 0.03;
+      ctx.beginPath(); ctx.arc(f.x, top, f.rd.r, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = k;
+      stroke([{ x: f.x, y: f.y + 0.05 }, { x: f.x, y: top }], pal.ink, 0.07);
+      stroke([{ x: f.x - 0.14, y: top + 0.25 }, { x: f.x + 0.14, y: top + 0.25 }], pal.ink, 0.05);
+      ctx.fillStyle = pal.shock; ctx.beginPath(); ctx.arc(f.x, top, 0.1, 0, 6.283); ctx.fill();
+      ctx.strokeStyle = pal.shock; ctx.lineWidth = 0.03;
+      for (let i = 0; i < 3; i++) {
+        const a = t * 0.9 + i * 2.1;
+        ctx.beginPath(); ctx.moveTo(f.x, top);
+        ctx.lineTo(f.x + Math.cos(a) * 0.18, top + Math.sin(a) * 0.18);
+        ctx.lineTo(f.x + Math.cos(a + 0.5) * 0.32, top + Math.sin(a + 0.5) * 0.32);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      continue;
+    }
     ctx.globalAlpha = 0.85 * k;
     ctx.fillStyle = pal.burn;
     for (let i = 0; i <= 10; i++) {
@@ -7662,6 +7963,71 @@ function drawFires(pal) {
     ctx.stroke();
     ctx.globalAlpha = k * 0.8; ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.035; ctx.stroke();
     ctx.globalAlpha = 1;
+  }
+  // what the spells leave on the fighters themselves
+  for (const u of U) {
+    if (u.state === 'dead') continue;
+    const b = u.b, cy = b.y - (u.bh || H) / 2;
+    if (u.snareT > 0) {
+      // gel up round the feet, strands stretching when it pulls against them
+      const k = Math.min(1, u.snareT / 20), w2 = (u.bw || W) * 0.9;
+      ctx.globalAlpha = 0.75 * k; ctx.fillStyle = pal.goo;
+      ctx.beginPath(); ctx.ellipse(b.x, b.y - 0.04, w2, 0.12, 0, Math.PI, 0); ctx.fill();
+      ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.035;
+      for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(b.x + s2 * w2 * 0.5, b.y - 0.1); ctx.quadraticCurveTo(b.x + s2 * w2 * 0.3, b.y - 0.3, b.x + s2 * 0.1, b.y - 0.42 - Math.sin(t + s2) * 0.04); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+    }
+    if (u.bubble && u.bubble.t > 0) {
+      // a skin of gel: wobbling, with a shine on it and a dimple for each shot it has swallowed
+      const bb = u.bubble, k = Math.min(1, bb.t / 20), r = 0.95;
+      ctx.globalAlpha = 0.16 * k; ctx.fillStyle = pal.goo;
+      ctx.beginPath();
+      for (let i = 0; i <= 20; i++) { const a = (i / 20) * 6.283, rr = r * (1 + Math.sin(a * 3 + t * 0.5) * 0.04); const x = b.x + Math.cos(a) * rr, y = cy + Math.sin(a) * rr * 1.08; if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 0.7 * k; ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.04; ctx.stroke();
+      ctx.globalAlpha = 0.7 * k; ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.035;
+      ctx.beginPath(); ctx.arc(b.x - 0.1, cy - 0.12, r * 0.7, Math.PI * 1.1, Math.PI * 1.4); ctx.stroke();
+      ctx.fillStyle = pal.goo; ctx.globalAlpha = k;
+      for (let i = 0; i < bb.hits; i++) { ctx.beginPath(); ctx.arc(b.x - 0.16 + i * 0.16, cy - r - 0.12, 0.045, 0, 6.283); ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+    if (u.retal && u.retal.t > 0 && u.shield > 0) {
+      // ice armour or a static shell: a hard outline that flickers
+      const k = Math.min(1, u.retal.t / 20), c = pal[u.retal.col] || pal.steel;
+      ctx.globalAlpha = (0.35 + 0.2 * Math.sin(t * 1.3)) * k; ctx.strokeStyle = c; ctx.lineWidth = 0.035;
+      ctx.beginPath();
+      for (let i = 0; i <= 8; i++) { const a = (i / 8) * 6.283 + (u.retal.col === 'shock' ? t * 0.2 : 0), rr = 0.72 + (i % 2) * 0.1; const x = b.x + Math.cos(a) * rr * 0.8, y = cy + Math.sin(a) * rr; if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.closePath(); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (u.hot && u.hot.t > 0) {
+      // regrowth: a slow green shimmer climbing the body
+      const ph = (t * 0.1) % 1;
+      ctx.globalAlpha = 0.5 * (1 - ph); ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.04;
+      ctx.beginPath(); ctx.ellipse(b.x, b.y - ph * H, 0.34, 0.09, 0, 0, 6.283); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    if (u.fearT > 0) {
+      // fear: a crooked mark over the head, shaking
+      const jx = Math.sin(world.t * 1.7) * 0.03;
+      ctx.globalAlpha = Math.min(1, u.fearT / 15); ctx.strokeStyle = pal.poison; ctx.lineWidth = 0.05;
+      ctx.beginPath(); ctx.moveTo(b.x - 0.12 + jx, b.y - H - 0.55); ctx.quadraticCurveTo(b.x + 0.14 + jx, b.y - H - 0.62, b.x + jx, b.y - H - 0.42); ctx.lineTo(b.x + jx, b.y - H - 0.34); ctx.stroke();
+      ctx.fillStyle = pal.poison; ctx.beginPath(); ctx.arc(b.x + jx, b.y - H - 0.25, 0.035, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    const te = u.tether;
+    if (te && te.t > 0 && te.e && te.e.state !== 'dead') {
+      // a tether: a line of lightning from the caster's hand to them, never the same shape twice
+      const e = te.e, x0 = b.x + u.face * 0.35, y0 = b.y - 1.15, x1 = e.b.x, y1 = e.b.y - 0.9;
+      const n = 9, nx = -(y1 - y0), ny = x1 - x0, L = Math.hypot(nx, ny) || 1;
+      for (const [w2, c, al] of [[0.08, pal.shock, 0.5], [0.03, pal.spark, 0.9]]) {
+        ctx.globalAlpha = al; ctx.strokeStyle = c; ctx.lineWidth = w2; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(x0, y0);
+        for (let i = 1; i < n; i++) { const k2 = i / n, o = (((i + world.t) % 3) - 1) * 0.12; ctx.lineTo(x0 + (x1 - x0) * k2 + nx / L * o, y0 + (y1 - y0) * k2 + ny / L * o); }
+        ctx.lineTo(x1, y1); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
   }
 }
 function drawParts(pal) {
@@ -7757,6 +8123,12 @@ function drawUnit(u, pal) {
   if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
   if (u.shift) { drawShifted(u, pal); return; }
   const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
+  if (u.w === 'spellbook') {
+    const d = u.state === 'atk' && u.atkDef && u.atkDef.cast ? u.atkDef : null;
+    S.castK = d ? (u.phase === 'w' ? Math.min(1, u.af / d.w) : 1) : 0;
+    const sc = (u.gs && u.gs.flags.spellSt) || schoolOf(u).col;
+    S.castC = (sc && (pal[sc] || ST_COL[sc])) || pal[TEAM[u.side]];
+  }
   for (const g of u.ghosts) {
     if (g.age < 0) continue;
     ctx.globalAlpha = 0.5 * (1 - g.age / g.max);
@@ -7987,7 +8359,7 @@ function render() {
     if (a.kind === 'star') drawStar(a.x, a.y, 0.14, a.spin, pal.ink, pal[TEAM[a.owner]]);
     else if (a.kind === 'glob') drawGlob(a, pal);
     else if (a.kind === 'quill') drawQuill(a, pal);
-    else if (a.kind === 'bolt') drawBolt(a, pal);
+    else if (a.kind === 'goo') drawGoo(a, pal);
     else if (a.kind === 'lance') drawLance(a, pal);
     else if (a.kind === 'fireball') drawFireball(a, pal);
     else if (a.kind === 'arc') drawArc(a, pal);
@@ -8007,7 +8379,7 @@ function render() {
     if (a.kind === 'star') drawStar(a.x, a.y, 0.16, a.spin, pal.ink, pal[TEAM[a.owner]]);
     else if (a.kind === 'glob') drawGlob(a, pal);
     else if (a.kind === 'quill') drawQuill(a, pal);
-    else if (a.kind === 'bolt') drawBolt(a, pal);
+    else if (a.kind === 'goo') drawGoo(a, pal);
     else if (a.kind === 'lance') drawLance(a, pal);
     else if (a.kind === 'fireball') drawFireball(a, pal);
     else if (a.kind === 'arc') drawArc(a, pal);
@@ -8447,10 +8819,10 @@ const VARIANTS = (w) => ['', ...Object.keys(ITEM).filter((id) => ITEM[id].weapon
 const plainName = (w) => (w === 'puppet' ? 'A plain marionette' : 'A plain book');
 const bookName = (id) => (id ? ITEM[id].name : plainName(builds[0].weapon));
 const bookKind = (id) => {
-  if (!id) return builds[0].weapon === 'puppet' ? 'a blade arm, six tiles out' : 'the six pages, no weather of its own';
+  if (!id) return builds[0].weapon === 'puppet' ? 'a blade arm, six tiles out' : 'frost, and no weather of its own';
   const f = ITEM[id].flags || {};
   if (f.pupForm) { const F = PUPFORM[f.pupForm]; return `${F.name}: ${F.short}`; }
-  return f.tome ? 'Warlock tome' : f.spellSt ? `Codex of ${f.spellSt}` : 'Codex';
+  return f.tome ? 'Warlock tome' : `${SCHOOL[f.school || 'frost'].name} school`;
 };
 // The picker opens over the top, because the weapon row is already three deep.
 function bookSheet() {
@@ -8531,7 +8903,8 @@ function renderGearStats() {
   const bd = builds[0], wp = WEAP[bd.weapon];
   // a puppeteer's numbers are the puppet's: how far out it hangs, and how long it takes to get there
   const pf = bd.weapon === 'puppet' ? PUPFORM[(bd.book && ITEM[bd.book].flags.pupForm) || 'marionette'] : null;
-  const a = ATK[pf ? pf.light : wp.atk], reach = pf ? pf.reach : wp.range || a.box[2];
+  const book = bd.weapon === 'spellbook' ? SCHOOL[(bd.book && ITEM[bd.book].flags.tome) ? 'tome' : (bd.book && ITEM[bd.book].flags.school) || 'frost'] : null;
+  const a = ATK[pf ? pf.light : book ? book.bolt : wp.atk], reach = pf ? pf.reach : wp.range || a.box[2];
   const cells = [
     ['Speed', wp.speed.toFixed(1), false], ['Hit in', `${a.w}f`, false], ['Reach', reach.toFixed(1), false],
     ['Skill', bd.skill ? SKILL[bd.skill].stat : '—', !bd.skill], ['On hit', bd.trinket ? `${stSvg(TRINKET[bd.trinket].status)}${STATUS[TRINKET[bd.trinket].status].name}` : '—', !bd.trinket],
@@ -8728,12 +9101,13 @@ function demoUnit(side, bd) {
   return u;
 }
 const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'],
-  spellbook: ['cast_bolt', 30, 'cast_nova', 30, 'cast_ward'], frost: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'],
-  flame: ['cast_fireball', 34, 'cast_pillar', 34, 'cast_immolate'], storm: ['cast_arc', 24, 'cast_arc', 34, 'cast_thunder'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
+  spellbook: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'], frost: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'],
+  flame: ['cast_fireball', 34, 'cast_pillar', 34, 'cast_immolate'], storm: ['cast_arc', 24, 'cast_rod', 34, 'cast_discharge'],
+  slime: ['cast_goo', 30, 'cast_membrane', 34, 'cast_splash'], tome: ['cast_curse', 30, 'cast_fear', 34, 'cast_drain'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
 function demoSteps(u, what) {
   // a caster demonstrates the school it is actually holding, not the plain book's pages
   if (what === 'weapon') {
-    const sc = u.w === 'spellbook' && u.gs && u.gs.flags.school;
+    const sc = u.w === 'spellbook' && u.gs && (u.gs.flags.tome ? 'tome' : u.gs.flags.school);
     return (WEAPON_DEMO[sc] || WEAPON_DEMO[u.w]).map((x) => (typeof x === 'number' ? { wait: x } : { atk: x }));
   }
   if (what === 'acro') {
