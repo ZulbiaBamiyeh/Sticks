@@ -1,12 +1,13 @@
 # Sticks
 
-Stick-figure fighting games. The first one is **Home Turf**.
+Stick-figure fighting games. The first one is **Inkfall**.
 
-## Home Turf
+## Inkfall
 
-An autobattler prototype built for phones. Each player builds their half of a
-small arena and picks a weapon, a skill, a trinket and an acrobatics level.
-Then two stick figures fight it out on their own.
+An autobattler roguelike built for phones. A run is seven days of hunting ink
+creatures for gear and duelling another player's build every night; the
+fights run themselves. **Start a run** is the front door, and everything else
+— the rival ladder, free build and every hunt — sits behind **Dev mode**.
 
 - **Roguelike run** (the run bar at the top of the rival page), built on
   ZereshkStory's structure with this game's fights:
@@ -34,7 +35,17 @@ Then two stick figures fight it out on their own.
     per stack), Echo Conch (statuses land twice 30% of the time), Phoenix
     Feather (rise once at 25% HP) and Gilded Hourglass (turn to gold below 40%
     HP).
-  - Items are Common, Rare or Epic. Rarer items are stronger, roll affixes, and
+  - **A creature drops one thing.** No picking from three: what it drops is
+    what you get, with two rerolls a day to change your mind. Elite hunts can
+    turn up a **legendary** instead, the only place they come from: sixteen
+    rule-breaking items like the Gambler's Die (every hit is half or double),
+    Pacifist's Vow (your hits do nothing, your statuses deal triple) and
+    Thousand Cuts (every hit deals exactly 6, and you swing 60% faster).
+  - **Builds compound.** Engine pieces turn one stat into another — HP into
+    Atk, Def into Crit, Crit into status damage, every completed set into
+    both — and payoff pieces multiply per status stack on the foe. The gear
+    screen lists every synergy you have working, with its live value.
+  - Items are Common, Rare, Epic or Legendary. Rarer items are stronger, roll affixes, and
     roll perks such as "On crit: 2 Shock", "+25% damage vs Poisoned" or "When
     you dodge: 10 Shield". Two pieces of a family give its set stats. Four
     bend a rule, often the one a keystone bends, so the two can double down.
@@ -58,12 +69,15 @@ Then two stick figures fight it out on their own.
     wares, each with a reason: pieces for sets you've started, a twin of
     something you own to merge, a keystone, and pieces from today's
     creatures. You can reroll it for 2 gold.
+  - **Tap a trait to read it.** Set chips, keystones, relics, legendaries and
+    the status icons on the gear screen all open a card explaining what they
+    do for this build and where they came from.
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 257 items: 78 weapons, 81 head, core and feet pieces, 54 trinkets, 13
-    skill items, 10 keystones and 21 relics, in 29 families, one per
-    creature. There are 29 creatures at three tiers, as many families as
+  - 290 items: 79 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+    skill items, 12 keystones, 21 relics and 16 legendaries, in 29 families,
+    one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless, shop
     included. A careful bot that always takes Normal hunts wins the Crown
     in about half its runs.
@@ -90,9 +104,13 @@ Then two stick figures fight it out on their own.
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
 - **Trinkets and statuses:** a trinket puts a status on the rival when a hit
-  lands, more often on heavier hits. Statuses change the fight, never how anyone
-  runs or jumps, and each one reads from a single mark on the figure plus a chip
-  under the HP bar:
+  lands, more often on heavier hits. **Statuses scale with the fighter that
+  applied them**, so a burn from a day-seven maul is not the same burn as a
+  day-one sword's: every tick reads that fighter's weapon damage and Atk. For a
+  burn build, Burn holds at about 40% of its damage from day one to day seven,
+  where it used to fade from 23% to 7%. Statuses change the fight, never how
+  anyone runs or jumps, and each one reads from a single mark on the figure plus
+  a chip under the HP bar:
   - **Ember Charm, Burn:** damage every half second that no guard stops.
     Small flames lick off the figure.
   - **Viper Fang, Poison:** stacks up to six, each stack ticking, and wears off

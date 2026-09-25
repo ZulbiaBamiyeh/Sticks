@@ -23,14 +23,16 @@ for (const [W, H] of SIZES) {
     rows.push([name, px]);
     if (px > 0) bad.push(`${W}x${H} ${name}: ${px}px`);
   };
-  // the free-play pages
-  await over('rival');
+  // the front door, then the dev pages behind it
+  await over('home');
+  await p.click('#devMode'); await over('rival');
   await p.click('#rvHunt'); await over('rival-hunts');
   await p.click('[data-sheet="close"]');
   await p.click('#rvEdit'); await over('build-gear');
   for (const slot of ['weapon', 'skill', 'trinket1', 'feet']) { await p.click(`#doll .slot[data-slot="${slot}"]`); await over(`build-${slot}`); }
   await p.click('.tabs [data-tab="turf"]'); await over('build-turf');
   await p.click('#scoutBtn');
+  await p.click('#devHome'); await over('home-run');
   // a run, mid-way, with a full bag and every screen reachable
   await p.evaluate(() => {
     const R = window.__homeTurf.run, run = new R.Run(21);

@@ -16,7 +16,7 @@ const out = await p.evaluate(([N, strat]) => {
     const tough = (100 + st.hp) * (1 + st.def / 26) / (1 - Math.min(0.4, st.evasion)) * (1 + st.regen * 0.03) * (1 + st.resist * 0.2) * (1 + st.thorns * 0.02);
     return off * tough * (1 + b.acro * 0.03) * (b.skill ? 1.08 : 1) * (1 + 0.08 * Object.keys(st.flags).length);
   };
-  const res = { crowns: 0, duelWins: [], endDay: [], huntWin: { easy: [0, 0], normal: [0, 0], elite: [0, 0] }, duel: [0, 0], bought: 0 };
+  const res = { crowns: 0, duelWins: [], endDay: [], huntWin: { easy: [0, 0], normal: [0, 0], elite: [0, 0] }, duel: [0, 0], bought: 0, legends: 0 };
   for (let k = 0; k < N; k++) {
     const run = new R.Run(1000 + k);
     let guard = 0;
@@ -35,13 +35,17 @@ const out = await p.evaluate(([N, strat]) => {
         res.huntWin[o.card][1]++; if (won) res.huntWin[o.card][0]++;
         run.resolve(won, o);
         if (run.loot) {
-          // take whichever drop raises the score most, else bag it
-          let best = -1, bestAct = 'wear', bs = score(b);
-          run.loot.items.forEach((inst, i) => {
-            const k = R.ITEM[inst.item].slot, targets = k === 'trinket' ? ['trinket1', 'trinket2'] : [k];
-            for (const t of targets) { const s = score(R.runBuild({ ...run.equip, [t]: inst })); if (s > bs) { bs = s; best = i; bestAct = k === 'trinket' ? t : 'wear'; } }
-          });
-          run.takeLoot(Math.max(0, best), best >= 0 ? bestAct : 'bag');
+          // one drop: wear it if it helps, else bag it
+          const inst = run.loot.items[0], k = R.ITEM[inst.item].slot;
+          let best = 'bag', bs = score(b);
+          for (const t of k === 'trinket' ? ['trinket1', 'trinket2'] : [k]) { const s = score(R.runBuild({ ...run.equip, [t]: inst })); if (s > bs) { bs = s; best = k === 'trinket' ? t : 'wear'; } }
+          // a weak drop is worth a reroll while they last
+          if (best === 'bag' && run.rerolls > 0 && run.rerollLoot()) {
+            const i2 = run.loot.items[0], k2 = R.ITEM[i2.item].slot;
+            for (const t of k2 === 'trinket' ? ['trinket1', 'trinket2'] : [k2]) { const s = score(R.runBuild({ ...run.equip, [t]: i2 })); if (s > bs) { bs = s; best = k2 === 'trinket' ? t : 'wear'; } }
+          }
+          if (best === 'bag' && run.bagFull()) run.loot = null; else run.takeLoot(0, best);
+          if (run.loot) run.takeLoot(0, 'bag');
         }
       }
       run.next();
@@ -60,12 +64,13 @@ const out = await p.evaluate(([N, strat]) => {
     }
     if (run.crown) res.crowns++;
     res.duelWins.push(run.wins); res.endDay.push(run.day);
+    res.legends += [...run.bag, ...Object.values(run.equip)].filter((i) => i && R.ITEM[i.item].legend).length;
   }
   return res;
 }, [+N, strat]);
 const pct = ([a, b]) => (b ? `${Math.round(100 * a / b)}% of ${b}` : '-');
 console.log(`crowns ${out.crowns}/${N}  duel wins ${out.duelWins.join(',')}  ended on day ${out.endDay.join(',')}`);
-console.log(`bought ${out.bought} from the shop`);
+console.log(`bought ${out.bought} from the shop · ${out.legends} legendaries found`);
 console.log('hunts', Object.fromEntries(Object.entries(out.huntWin).map(([k, v]) => [k, pct(v)])), 'duels', pct(out.duel));
 console.log(errs.slice(0, 3).join('\n') || 'no errors');
 await browser.close();

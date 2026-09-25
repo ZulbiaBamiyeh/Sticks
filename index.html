@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <!-- artifact:start -->
-<title>Home Turf</title>
+<title>Inkfall</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap">
@@ -54,7 +54,7 @@
     gap: 12px;
     padding-block: 10px 8px;
   }
-  .mark { font: 900 27px/1 var(--display); letter-spacing: 0.03em; }
+  .mark { font: 900 27px/1 var(--display); letter-spacing: 0.04em; }
   .mark .h { color: var(--blue); }
   .mark .t { color: var(--red); }
   .phase {
@@ -341,6 +341,13 @@
   .bring { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
   .bring b { color: var(--blue); font-weight: 700; }
   /* the run */
+  .hero { display: grid; gap: 4px; }
+  .hero b { font: 900 30px/1 var(--display); letter-spacing: 0.02em; }
+  .hero p { margin: 0; font-size: 14px; color: var(--ink-2); }
+  .hstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hstats div { border: 2px solid var(--line); border-radius: 6px; padding: 7px 9px; display: grid; gap: 1px; }
+  .hstats b { font: 900 20px/1 var(--display); font-variant-numeric: tabular-nums; }
+  .hstats span { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
   .runbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 2px solid var(--ink); border-radius: 8px; padding: 10px 12px; }
   .runbar b { display: block; font: 900 18px/1.1 var(--display); letter-spacing: 0.02em; }
   .runbar small { font-size: 12px; color: var(--ink-2); }
@@ -381,6 +388,9 @@
   .ihead small { font-size: 11px; font-weight: 700; color: var(--ink-2); text-transform: capitalize; }
   .icard.key { box-shadow: inset 0 0 0 1px #b5651d; }
   .icard.relic { background: #fbf6e6; }
+  .icard.legend { background: #fff3e0; box-shadow: inset 0 0 0 1px #d98324; }
+  .icard.legend .il-rule { color: #a8560e; }
+  .irow.legend { border-color: #d98324; background: #fff3e0; }
   .ilines { display: grid; gap: 2px; }
   .ilines p, .icmp { margin: 0; font-size: 13px; }
   .il-head { font-weight: 800; }
@@ -403,9 +413,14 @@
   .sets { display: flex; flex-wrap: wrap; gap: 6px; }
   .sets .set { font-size: 11px; font-weight: 800; border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; color: var(--ink-2); }
   .sets .set.on { border-color: #1b8a3a; color: #1b8a3a; }
+  .sets button, .stbtn { cursor: pointer; font: inherit; }
+  .stbtn { background: none; border: 0; padding: 0 1px; display: inline-grid; place-items: center; }
+  .stbtn svg { width: 17px; height: 17px; }
+  .hc-fam { cursor: pointer; }
   .sets .set.full { background: #1b8a3a; border-color: #1b8a3a; color: #fff; }
-  .sets .key, .sets .relic { font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px; color: #fff; background: #b5651d; }
+  .sets .key, .sets .relic, .sets .legend { font-size: 11px; font-weight: 800; border: 0; border-radius: 4px; padding: 2px 6px; color: #fff; background: #b5651d; }
   .sets .relic { background: #c9961a; }
+  .sets .legend { background: #d98324; }
   /* Every screen fits without scrolling: lists are compact rows, and the details open in a sheet. */
   .irow { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; border: 2px solid var(--rc, var(--line)); border-radius: 8px; background: #f3f4f0; padding: 6px 8px; min-height: 54px; }
   .irow.key { border-color: #b5651d; }
@@ -441,6 +456,9 @@
   .evopt:disabled { opacity: 0.45; }
   .evpick { grid-template-columns: repeat(5, 1fr); }
   .xstats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .syn { display: grid; gap: 3px; }
+  .syn span { font-size: 12px; color: var(--ink-2); line-height: 1.25; }
+  .syn b { color: #1b8a3a; font-weight: 800; }
   .bag { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
   .bslot { aspect-ratio: 1; border: 2px solid var(--rc, var(--line)); border-radius: 6px; background: #f3f4f0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; overflow: hidden; }
   .bslot.empty { border-style: dashed; border-color: var(--line); background: none; }
@@ -566,7 +584,7 @@
 <body>
 <div id="app">
   <header class="top">
-    <div class="mark"><span class="h">HOME</span> <span class="t">TURF</span></div>
+    <div class="mark"><span class="h">INK</span><span class="t">FALL</span></div>
     <div class="top-r">
       <div class="phase" id="phase">Scouting</div>
       <button class="snd" id="sndBtn" aria-pressed="true" aria-label="Music">
@@ -605,8 +623,21 @@
     </div>
   </div>
 
+  <section class="panel" id="homePanel" hidden>
+    <div class="hero">
+      <b id="homeTitle">Seven days in the ink</b>
+      <p id="homeSub">Hunt creatures for gear, and duel another player's build every night. Win five duels for the Crown.</p>
+    </div>
+    <div class="hstats" id="homeStats"></div>
+    <div class="actions">
+      <button class="ghost" id="devMode">Dev mode</button>
+      <button class="go" id="runStart">Start a run</button>
+    </div>
+    <div class="actions" id="homeExtra" hidden><button class="ghost wide" id="runAbandon">Abandon this run</button></div>
+  </section>
+
   <section class="panel" id="rivalPanel" hidden>
-    <div class="runbar"><div><b>Roguelike run</b><small id="runBarSub">Seven days: hunt for gear, win five duels.</small></div><button class="go" id="runStart">Start a run</button></div>
+    <div class="runbar"><div><b>Dev mode</b><small id="runBarSub">Rivals, free build and every hunt.</small></div><button class="go" id="devHome">Home</button></div>
     <div class="row-h">
       <span class="ladder">
         <button class="nav-b" id="rvPrev" aria-label="Previous rival"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 L5 8 L10 13" /></svg></button>
@@ -731,11 +762,11 @@ const SKILLS = Object.keys(SKILL);
 // Statuses change the fight, never how anyone runs or jumps, and each reads from one mark on the figure.
 // Times are in frames; damage ticks every half second.
 const STATUS = {
-  burn: { name: 'Burn', dur: 240, tick: 1.1 },
-  poison: { name: 'Poison', max: 6, decay: 150, tick: 0.35 },
-  bleed: { name: 'Bleed', dur: 240, cut: 0.15 },
-  chill: { name: 'Chill', dur: 240, slow: 0.22, freeze: 3, frozen: 50, thaw: 150, shatter: 4 },
-  shock: { name: 'Shock', dur: 300, max: 5, per: 1, burst: 8 },
+  burn: { name: 'Burn', dur: 240, tick: 1.6 },
+  poison: { name: 'Poison', max: 6, decay: 150, tick: 0.52 },
+  bleed: { name: 'Bleed', dur: 240, cut: 0.19 },
+  chill: { name: 'Chill', dur: 240, slow: 0.26, freeze: 3, frozen: 50, thaw: 150, shatter: 6 },
+  shock: { name: 'Shock', dur: 300, max: 5, per: 1.4, burst: 12 },
 };
 // Passive trinkets: a landed hit can carry the trinket's status. Heavier hits carry it more often.
 const TRINKET = {
@@ -746,6 +777,16 @@ const TRINKET = {
   static: { name: 'Static Charm', status: 'shock', desc: 'Hits add Shock, so every hit the rival takes lands harder. Five stacks discharge.' },
 };
 const TRINKETS = Object.keys(TRINKET);
+// What each status does, in a line, for the cards that explain themselves.
+const STATUS_HELP = {
+  burn: 'Damage every half second for four seconds. No guard stops it.',
+  poison: 'Stacks up to six. Every stack ticks, and they wear off one at a time.',
+  bleed: 'Every attack the bleeder starts costs it a cut of that attack\'s own damage.',
+  chill: 'Each stack slows wind-ups. Three stacks freeze solid, and the next hit shatters for extra.',
+  shock: 'Every hit taken lands harder per stack. Five stacks discharge for a burst and a stun.',
+  stun: 'The fighter is stopped where it stands for a moment.',
+  frozen: 'Frozen solid: no attacks, and the next hit shatters the ice.',
+};
 // Projectiles. v is launch speed and g is gravity, both in tiles per second.
 const SHOT = {
   arrow: { v: 23, g: 12, len: 0.62, hit: { dmg: 11, kb: [4.5, -2.5], stun: 12, hs: 3 } },
@@ -1206,7 +1247,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
     // skills: skCd counts down to ready; hidden counts down Dark Sight; fade is how see-through the figure is drawn.
     skCd: 75, skName: null, sf: 0, skTried: -1, hidden: 0, fade: 0, ambush: false, surprise: 0, hook: null, ghosts: [],
     seen: { x: sc + 0.5, y: SPAWN_R + 1 }, ghostE: null, blind: 0,
-    st: { by: -1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0,
+    st: { by: -1, pwr: 1, mult: 1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0,
     in: { dir: 0, press: false, hold: false },
     ai: { path: [], macro: null, mf: 0, air: false, replan: 0, fail: 0, blocked: new Set(), goal: -1, sx: 0, sy: 0, stuck: 0 },
     known: new Set(), nav: null, navOk: null, pose, gait: 0, trail: [], scarf: null, rag: null, demo: null,
@@ -2486,6 +2527,8 @@ function triggerEffect(u, t, target) {
   else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
   if (e.shield) { u.shield += e.shield; ring(u.b.x, u.b.y - H / 2, 1, 'steel'); }
   if (e.critNext) { u.critNext = true; }
+  if (e.halveHp) { u.hpMax = Math.max(20, Math.round(u.hpMax / 2)); u.hp = Math.min(u.hp, u.hpMax); callout(u, 'LAST PAGE'); }
+  if (e.boom && target) { ring(target.b.x, target.b.y - H / 2, 1.6, 'ink'); sparks(target.b.x, target.b.y - H / 2, 0, 18, 'ink'); sfxShake(5); }
   if (e.hop && u.state !== 'dead') { u.b.vy = Math.min(u.b.vy - e.hop, -e.hop); u.b.gr = false; }
   if (e.skillCd && u.skCd > 0) u.skCd = Math.max(0, u.skCd - e.skillCd * 60);
   if (e.cleanse) { Object.assign(u.st, { burn: 0, poison: 0, bleed: 0, chill: 0, shock: 0 }); ring(u.b.x, u.b.y - H / 2, 1.2, 'steel'); }
@@ -2571,6 +2614,7 @@ function applyHit(att, def, d, dirX, crit) {
   const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
   if (!crit && critCh > 0 && d.dmg && rng() < critCh) crit = true;   // gear crit chance
   if (!crit && att.critNext && d.dmg) { crit = true; att.critNext = false; }
+  if (ag && ag.flags.firstCrit && d.dmg && !att.struck) { att.struck = true; crit = true; heal(att, 15); }   // Understudy's Hood
   // what the hit found the target doing, for the gear that cares: in the air, turned away, or stunned
   const wasAir = !def.b.gr, behind = def.face === dirX, wasDown = def.state === 'stun' || def.state === 'down' || def.st.frozen > 0;
   crit = crit || (d.box && att.ambush);   // an ambush crits every hit of the combo it opens
@@ -2614,9 +2658,22 @@ function applyHit(att, def, d, dirX, crit) {
     if (f.vsAir && wasAir) mods *= 1 + f.vsAir;
     if (f.backstab && behind) mods *= 1 + f.backstab;
     if (f.vsStun && wasDown) mods *= 1 + f.vsStun;
+    if (f.dmgUp) mods *= 1 + f.dmgUp;
+    if (f.launchUp && (d.tumble || d.slam || (d.kb && d.kb[1] < -8))) mods *= 1 + f.launchUp;
+    if (f.rampUp) mods *= 1 + Math.min(0.8, f.rampUp * world.t / 60);   // Patience Stone
+    if (f.gamble) mods *= rng() < 0.5 ? 0.5 : 2;                        // Gambler's Die
+    if (f.nthBig && (att.hits + 1) % f.nthBig.n === 0) { mods *= f.nthBig.mult; callout(att, 'RUIN'); }
+    if (f.dmgPerChill && def.st.chill) mods *= 1 + f.dmgPerChill * def.st.chill;
+    if (f.dmgPerShock && def.st.shock) mods *= 1 + f.dmgPerShock * def.st.shock;
+    if (f.dmgPerPoison && def.st.poison) mods *= 1 + f.dmgPerPoison * def.st.poison;
   }
-  const armour = dg ? 26 / (26 + Math.max(0, dg.def - (ag ? ag.pen : 0))) : 1;
-  const zap = s.shock * STATUS.shock.per, dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter * (1 + ((ag && ag.flags.shatter) || 0)) : 0)) * armour;
+  const defNow = dg ? dg.def + (dg.flags.shieldToDef ? def.shield : 0) : 0;   // Tidal Ledger: a shield is armour too
+  const armour = dg ? 26 / (26 + Math.max(0, defNow - (ag ? ag.pen : 0))) : 1;
+  const zap = s.shock * STATUS.shock.per * dotPwr(def);
+  let dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter * (1 + ((ag && ag.flags.shatter) || 0)) * powerOf(att) : 0)) * armour;
+  if (ag && ag.flags.flatHit && d.dmg) dmg = ag.flags.flatHit * powerOf(att) * armour;   // Thousand Cuts
+  if (ag && ag.flags.noHit && d.dmg) dmg = 0;                                            // Pacifist's Vow
+  if (ag && ag.flags.critHeals && crit && d.dmg) { heal(def, dmg * 0.5); dmg = 0; }       // Contrarian's Coin
   const kind = crit ? 'crits' : 'hits';
   if (att.padStrike && d.plunge && !world.stats[att.side].padHits++) {
     log(att.side ? `${rivalName()} sprang off its pad and came down on you.` : 'Your fighter sprang off its pad and came down on the rival.', att.side);
@@ -2648,6 +2705,20 @@ function applyHit(att, def, d, dirX, crit) {
 
 // ---------------------------------------------------------------- statuses
 const resistOf = (u) => Math.min(0.7, (u.gs && u.gs.resist) || 0);
+// Statuses keep pace with the fight. A burn from a day-one sword and a burn from a day-seven maul are not
+// the same burn: every tick scales with how hard the fighter that applied it hits, so late-game Burn,
+// Poison and Shock stay worth building around. An ungeared fighter is exactly 1, so PvP is unchanged.
+const DOT_K = 0.85;
+function powerOf(u) {
+  if (!u) return 1;
+  // A creature's own damage already climbs steeply with the day, so its statuses climb far more gently.
+  if (u.mob) return 1 + ((u.dmgMul || 1) - 1) * 0.16;
+  const g = u.gs;
+  if (!g) return 1;
+  const w = g.wpn, raw = w ? ((w.min + w.max) / 2 + g.atk) / w.base : 1 + g.atk / 8;
+  return 1 + (Math.max(1, raw) - 1) * DOT_K;
+}
+const dotPwr = (u) => ((u && u.st && u.st.pwr) || 1) * ((u && u.st && u.st.mult) || 1);
 function proc(att, def, base) {
   const all = att.onHit && att.onHit.length ? att.onHit : att.sting ? [att.sting] : null;
   if (all) for (const t of all) procOne(att, def, base, t);
@@ -2668,6 +2739,8 @@ function applyStatus(att, def, k, stacks = 1, t = null, echoed = false) {
     return;
   }
   const s = def.st, K = STATUS[k], x = def.b.x, y = def.b.y - H * 0.6, af = (att.gs && att.gs.flags) || {};
+  s.pwr = Math.max(s.pwr || 1, powerOf(att));   // how hard the fighter that applied it hits
+  s.mult = Math.max(s.mult || 1, (att.gs && att.gs.flags.dotMult) || 1);   // Pacifist's Vow
   if (k === 'chill' && (s.frozen > 0 || s.thaw > 0)) return;
   s.by = att.side;
   const st = world.stats[att.side];
@@ -2691,7 +2764,7 @@ function applyStatus(att, def, k, stacks = 1, t = null, echoed = false) {
   if (echoed) return;
   if (af.echo && rng() < af.echo) applyStatus(att, def, k, stacks, t, true);   // Echo Conch: lands twice
   const df = (def.gs && def.gs.flags) || {};
-  if (df.reflect && att !== def && rng() < df.reflect) applyStatus(def, att, k, stacks, t, true);   // Cursed Mirror
+  if ((df.reflectAll || (df.reflect && rng() < df.reflect)) && att !== def) applyStatus(def, att, k, stacks, t, true);   // Cursed Mirror, Mirror Mask
 }
 function freeze(u) {
   const s = u.st, K = STATUS.chill;
@@ -2715,7 +2788,7 @@ function shatter(u) {
 function discharge(u, overload) {
   const s = u.st, K = STATUS.shock, n = s.shock;
   s.shock = 0; s.shockT = 0;
-  hurt(u, overload ? overload * n : K.burst, 'status', s.by, 'shock');   // Tesla Coil: the burst grows with every stack
+  hurt(u, (overload ? overload * n : K.burst) * dotPwr(u), 'status', s.by, 'shock');   // Tesla Coil: the burst grows with every stack
   if (u.state === 'free' || u.state === 'atk') { u.state = 'stun'; u.stunT = 20; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0; }
   u.zap = 14; ring(u.b.x, u.b.y - H / 2, 1.4, 'shock'); world.hs = Math.max(world.hs, 5); sfxShake(5);
   callout(u, 'DISCHARGE', s.by >= 0 ? s.by : 1 - u.side);
@@ -2739,11 +2812,11 @@ function statusStep(u) {
   const half = world.t % (bf.dotRate ? 18 : 30) === 0, dotMul = by && by.stasis > 0 ? 2 : 1;
   if (s.burn > 0) {
     s.burn--;
-    if (half) hurt(u, STATUS.burn.tick * dotMul, 'status', s.by, 'burn');
+    if (half) hurt(u, STATUS.burn.tick * dotMul * dotPwr(u), 'status', s.by, 'burn');
     if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - (u.bh || H) * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
   }
   if (s.poison > 0) {
-    if (half) hurt(u, STATUS.poison.tick * s.poison * dotMul, 'status', s.by, 'poison');
+    if (half) hurt(u, STATUS.poison.tick * s.poison * dotMul * dotPwr(u), 'status', s.by, 'poison');
     if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
     if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - (u.bh || H) * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
   }
@@ -3856,7 +3929,7 @@ function makeMob(kind, x, size = 1, slot = 0, tier = 'easy') {
     b: { x, y, vx: 0, vy: 0, gr: !K.spawnY, speed: 0 },
     face: -1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0, hitDone: false, hitLanded: false,
     stunT: 0, juggle: 0, guardT: 0, react: 30 + Math.floor(rng() * 30), cd: 40 + Math.floor(rng() * 50), iT: 0, flash: 0, tumble: false, spin: 0, rot: 0,
-    st: { by: -1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0, zap: 0,
+    st: { by: -1, pwr: 1, mult: 1, burn: 0, poison: 0, pT: 0, bleed: 0, chill: 0, chillT: 0, frozen: 0, thaw: 0, shock: 0, shockT: 0 }, slowAcc: 0, zap: 0,
     hidden: 0, fade: 0, hook: null, ghosts: [], trail: [], skName: null, in: { dir: 0, press: false, hold: false },
     ai: { path: [], macro: null, blocked: new Set() }, known: new Set(), t: Math.floor(rng() * 200), squash: 0, sqV: 0, hopT: 20, heavy: !!K.heavy,
   };
@@ -4558,7 +4631,7 @@ function setRival(ix) {
 // it drops; win and pick one of three drops. Win five duels for the Crown; lose three and the run ends.
 // Hunts only cost you the drop. Creatures and gear both grow stronger day by day.
 // Everything in this section is rules and data, no DOM, so it can be run headless.
-const RUNCFG = { days: 7, perDay: 4, winTarget: 5, lives: 3, bag: 6, rerolls: 1 };
+const RUNCFG = { days: 7, perDay: 4, winTarget: 5, lives: 3, bag: 6, rerolls: 2 };
 const RUN_KEY = 'homeTurf.run.v2', GHOST_KEY = 'homeTurf.ghosts.v2';
 const dayOf = (round) => Math.ceil(round / RUNCFG.perDay);
 const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
@@ -4582,7 +4655,8 @@ const slotKind = (s) => (s.startsWith('trinket') ? 'trinket' : s);
 const RARITY = {
   common: { name: 'Common', affixes: 0, mult: 1, next: 'rare' },
   rare: { name: 'Rare', affixes: 1, mult: 1.1, next: 'epic' },
-  epic: { name: 'Epic', affixes: 2, mult: 1.2, next: 'epic' },
+  epic: { name: 'Epic', affixes: 2, mult: 1.2, next: 'legend' },
+  legend: { name: 'Legendary', affixes: 3, mult: 1.35, next: 'legend' },
 };
 // [common, rare, epic] by the card's tier. From day 2, Normal and Elite cards lose a fifth of their
 // commons a day, mostly to rares; Easy stays the safe pick, not the rich one.
@@ -4943,7 +5017,7 @@ const FLAVOR = {
 for (const [id, f] of Object.entries(FLAVOR)) if (ITEM[id]) ITEM[id].flavor = f;
 for (const [id, it] of Object.entries(ITEM)) { it.id = id; it.stats = it.stats || {}; }
 const FAMILY_ITEMS = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic)]));
-const KEYSTONE_OF = Object.fromEntries(Object.keys(ITEM).filter((id) => ITEM[id].keystone).map((id) => [ITEM[id].family, id]));
+const KEYSTONE_OF = {};   // family -> its keystones, filled once every keystone is registered
 const RELIC_OF = Object.fromEntries(Object.keys(ITEM).filter((id) => ITEM[id].relic).map((id) => [ITEM[id].family, id]));
 // Six more families, for the hounds, crows and crab and their variants.
 Object.assign(FAMILY, {
@@ -5149,9 +5223,62 @@ Object.assign(ITEM, {
   wraith_lantern: iT('Wraith Lantern', 'spectre', { relic: true, stats: { evasion: 0.08 }, trig: [{ type: 'onDodge', effect: { heal: 6, critNext: true } }], desc: 'When you dodge: heal 6 and your next hit crits.', flavor: 'The flame inside is someone else\'s.' }),
   toad_crown: iT('Toad King\'s Pearl', 'bog', { relic: true, flags: { kb: 0.5, steady: 0.3 }, trig: [{ type: 'onLaunch', effect: { heal: 5, shield: 5 } }], desc: 'Knockback +50%, taken −30%. Launching a foe: heal 5 and 5 Shield.', flavor: 'Found in the king\'s throat. Don\'t ask.' }),
 });
+// ---------------------------------------------------------------- legendaries
+// One a run if you're lucky, from the hardest hunts. Each one breaks a rule of the fight rather than
+// adding to it, and most of them cost you something. They are meant to be built around, not slotted in.
+const iL = (name, slot, extra) => ({ name, slot, family: null, legend: true, ...extra });
+Object.assign(ITEM, {
+  glass_quill: iL('Glass Quill', 'trinket', { flags: { dmgUp: 0.8, hpMul: 0.6 }, desc: 'Your hits deal +80%. Your max HP is 40% lower.', flavor: 'Snaps if you look at it wrong.' }),
+  ruin_metronome: iL('Metronome of Ruin', 'trinket', { flags: { nthBig: { n: 5, mult: 3 } }, desc: 'Every 5th hit deals triple damage.', flavor: 'Tick. Tick. Tick. Tick. RUIN.' }),
+  gamblers_die: iL('Gambler\'s Die', 'trinket', { flags: { gamble: true }, desc: 'Every hit is a coin flip: half damage, or double.', flavor: 'It has come up double eleven times running. So far.' }),
+  tortoise_shell: iL('Tortoise Shell', 'core', { stats: { hp: 30, def: 4, haste: -0.15 }, flags: { steady: 1, dmgUp: 0.5 }, desc: 'You cannot be knocked back, and your hits deal +50%. You swing 15% slower.', flavor: 'Slow is smooth. Smooth is heavy.' }),
+  thousand_cuts: iL('Thousand Cuts', 'weapon', { weapon: 'daggers', min: 4, max: 5, stats: { haste: 0.6 }, flags: { flatHit: 6 }, desc: 'Every hit deals exactly 6, whatever you do to it. You attack 60% faster.', flavor: 'Nobody has ever counted to a thousand in time.' }),
+  pacifist_vow: iL('Pacifist\'s Vow', 'trinket', { flags: { noHit: true, dotMult: 3 }, desc: 'Your hits deal no damage. Your statuses deal triple.', flavor: 'Violence is a last resort. Poison is a first one.' }),
+  mirror_mask: iL('Mirror Mask', 'head', { stats: { hp: 10, resist: 0.15 }, flags: { reflectAll: true }, desc: 'Statuses put on you land on the foe as well.', flavor: 'Whatever you were going to say, you said it to yourself.' }),
+  hoarders_ledger: iL('Hoarder\'s Ledger', 'trinket', { flags: { goldAtk: 0.5 }, desc: '+1 Atk for every 2 gold you carry, up to +30.', flavor: 'Every page is a number, and every number is a grudge.' }),
+  paper_crane: iL('Paper Crane', 'feet', { acro: 4, stats: { evasion: 0.06, def: -2 }, flags: { airDmg: 0.6 }, desc: 'Your attacks from the air deal +60%. You have 2 less Def.', flavor: 'A thousand folds, one of them load-bearing.' }),
+  elastic_band: iL('Elastic Band', 'trinket', { flags: { kb: 0.8, launchUp: 0.6 }, desc: 'Knockback +80%. Hits that send a foe flying deal +60%.', flavor: 'Do not let go. Do not let go. Do not—' }),
+  last_page: iL('The Last Page', 'trinket', { trig: [{ type: 'hpBelow', pct: 0.5, effect: { heal: 999, halveHp: true } }], desc: 'Below half HP, once: heal to full, then your max HP halves.', flavor: 'It ends how you want. It just ends sooner.' }),
+  ink_bomb: iL('Ink Bomb', 'trinket', { trig: [{ type: 'nth', n: 8, effect: { damage: 26, boom: true } }], desc: 'Every 8th hit bursts for 26 in a splash of ink.', flavor: 'Shake well. Then run.' }),
+  contrarian_coin: iL('Contrarian\'s Coin', 'trinket', { stats: { crit: -0.05 }, flags: { dmgUp: 0.45, critHeals: true }, desc: 'Your ordinary hits deal +45%. Your crits heal the foe instead.', flavor: 'Heads you win. Tails, so do they.' }),
+  understudy_hood: iL('Understudy\'s Hood', 'head', { stats: { hp: 14, crit: 0.05, haste: 0.08 }, flags: { firstCrit: true }, desc: 'The first hit you land in a fight always crits, and heals you 15.', flavor: 'One good entrance is worth a whole rehearsal.' }),
+  patience_stone: iL('Patience Stone', 'trinket', { flags: { rampUp: 0.04 }, desc: '+4% damage for every second the fight has lasted, up to +80%.', flavor: 'It gets there. Everything does.' }),
+  broken_compass: iL('Broken Compass', 'trinket', { flags: { backstab: 0.7 }, stats: { speed: 0.08 }, desc: '+70% damage from behind the foe.', flavor: 'Points at whatever is about to regret it.' }),
+});
+const LEGENDS = Object.keys(ITEM).filter((id) => ITEM[id].legend);
+for (const id of LEGENDS) { ITEM[id].stats = ITEM[id].stats || {}; ITEM[id].id = id; }
+// Engine pieces: the ones that read the rest of your build and pay you for committing to it. One per
+// archetype, so whatever you lean into has something that multiplies it.
+Object.assign(ITEM, {
+  ironblood_sigil: iT('Ironblood Sigil', 'iron', { stats: { hp: 20 }, flags: { hpToAtk: 1 }, desc: '+1 Atk for every 25 max HP you have.', flavor: 'The bigger the body, the heavier the fist.' }),
+  duelists_tally: iT('Duelist\'s Tally', 'scythe', { stats: { def: 2 }, flags: { defToCrit: 0.012 }, desc: '+1.2% Crit for every point of Def.', flavor: 'Count the openings. Take the last one.' }),
+  whetted_edge: iT('Whetted Edge', 'quill', { stats: { haste: 0.06 }, flags: { hasteToDmg: 0.8 }, desc: '+0.8% damage for every 1% Haste.', flavor: 'Faster is harder, if you sharpen it right.' }),
+  plague_ledger: iT('Plague Ledger', 'rot', { stats: { crit: 0.05 }, flags: { critToDot: 1.2 }, desc: 'Your statuses deal +1.2% damage for every 1% Crit.', flavor: 'Every entry is somebody\'s last week.' }),
+  fungal_crown: iA('Fungal Crown', 'toxic', 'head', { hp: 14 }, { flags: { sourcesToAtk: 3 }, desc: '+3 Atk for every different status your gear can apply.', flavor: 'It counts what is growing on you.' }),
+  collectors_pin: iT('Collector\'s Pin', 'gel', { flags: { setsToStats: 0.07 }, desc: 'Every family set you complete gives +7% HP and +7% Atk.', flavor: 'A place for everything, and everything in its place.' }),
+  bulwark_studs: iA('Bulwark Studs', 'shell', 'core', { hp: 22, def: 3, thorns: 4 }, { flags: { thornsToAtk: 1.5 }, desc: '+1.5 Atk for every point of Thorns.', flavor: 'Sharp on the outside. Sharp on the inside.' }),
+  pack_whistle: iT('Pack Whistle', 'pack', { stats: { speed: 0.08 }, flags: { speedToHaste: 0.9 }, desc: '+0.9% Haste for every 1% run speed.', flavor: 'Run faster, swing faster, same thing.' }),
+  shadow_tally: iT('Shadow Tally', 'spectre', { stats: { evasion: 0.05 }, flags: { evasionToCrit: 1.1 }, desc: '+1.1% Crit for every 1% Evasion.', flavor: 'What they miss, you do not.' }),
+  ember_lens: iT('Ember Lens', 'ember', { flags: { statusCount: 0.12 }, desc: '+12% damage for every different status on the foe.', flavor: 'Hold it up. Count the colours.' }),
+  storm_tally: iT('Storm Tally', 'thunder', { flags: { dmgPerShock: 0.07 }, desc: '+7% damage for every Shock stack on the foe.', flavor: 'The air tells you how close it is.' }),
+  frost_lens: iT('Frost Lens', 'glacier', { flags: { dmgPerChill: 0.1 }, desc: '+10% damage for every Chill stack on the foe.', flavor: 'Cold things break along the lines.' }),
+  venom_tally: iT('Venom Tally', 'venom', { flags: { dmgPerPoison: 0.05 }, desc: '+5% damage for every Poison stack on the foe.', flavor: 'Six is the interesting number.' }),
+  tidal_ledger: iT('Tidal Ledger', 'tide', { stats: { hp: 12 }, flags: { shieldToDef: true }, trig: [{ type: 'battleStart', effect: { shield: 14 } }], desc: 'Battle start: 14 Shield. Your Shield counts as Def while it holds.', flavor: 'Water is soft until it is deep.' }),
+});
+// Two keystones that multiply rather than add, and a legendary that does both.
+Object.assign(ITEM, {
+  alchemists_coil: iT('Alchemist\'s Coil', 'toxic', { keystone: true, flags: { dotRate: true, dotMult: 1.3 }, desc: 'Your Burn and Poison tick faster and deal +30%.', flavor: 'Round and round, and hotter each time.' }),
+  compounding_engine: iA('Compounding Engine', 'storm', 'core', { hp: 18, haste: 0.05 }, { keystone: true, flags: { statusCount: 0.1, critToDot: 0.6 }, desc: '+10% damage per different status on the foe, and your statuses deal +0.6% per 1% Crit.', flavor: 'Every part turns another part.' }),
+  ouroboros_nib: iL('Ouroboros Nib', 'trinket', { flags: { dotMult: 1.6, dotRate: true, noHit: false, selfCost: 0.012 }, desc: 'Your statuses tick faster and deal +60%. Every swing costs 1.2% of your max HP.', flavor: 'It writes the ending first, then works backwards.' }),
+});
+for (const id of ['ironblood_sigil', 'duelists_tally', 'whetted_edge', 'plague_ledger', 'fungal_crown', 'collectors_pin', 'bulwark_studs',
+  'pack_whistle', 'shadow_tally', 'ember_lens', 'storm_tally', 'frost_lens', 'venom_tally', 'tidal_ledger',
+  'alchemists_coil', 'compounding_engine', 'ouroboros_nib']) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
 for (const id of Object.keys(ITEM)) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
-for (const f of NEW_FAMS) {
-  FAMILY_ITEMS[f] = Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic);
+// Every family's drop list, keystone and relic, rebuilt once all the items above are registered.
+for (const id of Object.keys(ITEM)) if (ITEM[id].keystone && ITEM[id].family) (KEYSTONE_OF[ITEM[id].family] ||= []).push(id);
+for (const f of Object.keys(FAMILY)) {
+  FAMILY_ITEMS[f] = Object.keys(ITEM).filter((id) => ITEM[id].family === f && !ITEM[id].keystone && !ITEM[id].relic && !ITEM[id].legend);
   const rl = Object.keys(ITEM).find((id) => ITEM[id].family === f && ITEM[id].relic);
   if (rl) RELIC_OF[f] = rl;
 }
@@ -5195,7 +5322,7 @@ Object.assign(PERKS, {
   kill_frenzy: perk('Each kill: Frenzy 2s', [], { trig: [{ type: 'onKill', effect: { apply: 'frenzy', duration: 2 } }] }),
   skill_crit: perk('After your skill, your next hit crits', [], { trig: [{ type: 'onSkill', effect: { critNext: true } }] }),
 });
-const PERK_ODDS = { common: [], rare: [0.4], epic: [1, 0.25] };
+const PERK_ODDS = { common: [], rare: [0.4], epic: [1, 0.25], legend: [1, 0.5] };
 // the statuses an item is about: its family's and whatever it applies
 function itemTags(it) {
   const tags = new Set();
@@ -5219,7 +5346,9 @@ function rollPerks(it, rarity, r) {
 let runUid = 1;
 function rollInstance(id, rarity, day, r) {
   const it = ITEM[id];
-  if ((it.keystone || it.relic) && rarity === 'common') rarity = 'rare';
+  if (it.legend) rarity = 'legend';
+  else if (rarity === 'legend') rarity = 'epic';
+  else if ((it.keystone || it.relic) && rarity === 'common') rarity = 'rare';
   const pool = r.shuffle(Object.keys(AFFIX).filter((a) => a !== 'status' || (it.family && FAMILY[it.family].status)));
   return { uid: `i${Date.now().toString(36)}${(runUid++).toString(36)}`, item: id, rarity, day, affixes: pool.slice(0, RARITY[rarity].affixes), perks: rollPerks(it, rarity, r) };
 }
@@ -5258,7 +5387,7 @@ function mergeFlags(into, flags) {
   }
 }
 // Equipment -> the build a fighter is made from
-function runBuild(equip, pieces = [], boons = null) {
+function runBuild(equip, pieces = [], boons = null, gold = 0) {
   const stats = { ...NO_STATS, crit: BASE_CRIT, onHit: [], trig: [], flags: {} }, fams = {};
   const addStats = (o) => { for (const [k, v] of Object.entries(o || {})) stats[k] += v; };
   for (const inst of Object.values(equip)) {
@@ -5290,9 +5419,51 @@ function runBuild(equip, pieces = [], boons = null) {
   const get = (s, k) => (equip[s] ? ITEM[equip[s].item][k] : null);
   stats.look = gearLook(equip);
   if (boons) { stats.hp += boons.hpFlat; stats.hpMult = boons.hpMult; stats.skillHaste += boons.skillHaste; }
+  if (stats.flags.hpMul) stats.hpMult *= stats.flags.hpMul;                                 // Glass Quill
+  if (stats.flags.goldAtk) stats.atk += Math.min(30, gold * stats.flags.goldAtk);           // Hoarder's Ledger
+  applySynergies(stats, fams);
   return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: fams };
 }
 
+// Synergies: pieces that turn one stat into another, read after everything else is counted. They are what
+// makes committing to an axis pay twice: more HP is more damage, more Def is more crits, and so on.
+const SYNERGY = {
+  hpToAtk: { label: 'HP into Atk', line: (v, st) => `+${Math.round((st.hp / 25) * v)} Atk from ${Math.round(100 + st.hp)} HP` },
+  defToCrit: { label: 'Def into Crit', line: (v, st) => `+${pctS(st.def * v)} Crit from ${Math.round(st.def)} Def` },
+  thornsToAtk: { label: 'Thorns into Atk', line: (v, st) => `+${Math.round(st.thorns * v)} Atk from ${Math.round(st.thorns)} Thorns` },
+  speedToHaste: { label: 'Speed into Haste', line: (v, st) => `+${pctS(st.speed * v)} Haste from ${pctS(st.speed)} run speed` },
+  evasionToCrit: { label: 'Evasion into Crit', line: (v, st) => `+${pctS(st.evasion * v)} Crit from ${pctS(st.evasion)} Evasion` },
+  critToDot: { label: 'Crit into status damage', line: (v, st) => `statuses ×${(1 + st.crit * v).toFixed(2)} from ${pctS(st.crit)} Crit` },
+  hasteToDmg: { label: 'Haste into damage', line: (v, st) => `+${pctS(st.haste * v)} damage from ${pctS(st.haste)} Haste` },
+  sourcesToAtk: { label: 'Atk per status you carry', line: (v, st) => `+${Math.round(v * statusSources(st))} Atk from ${statusSources(st)} status${statusSources(st) === 1 ? '' : 'es'}` },
+  setsToStats: { label: 'Every set pays', line: (v, st, n) => `+${pctS(n * v)} HP and Atk from ${n} set${n === 1 ? '' : 's'}` },
+  dmgPerChill: { label: 'Damage per Chill', line: (v) => `+${pctS(v)} a stack, on a chilled foe` },
+  dmgPerShock: { label: 'Damage per Shock', line: (v) => `+${pctS(v)} a stack, on a shocked foe` },
+  dmgPerPoison: { label: 'Damage per Poison', line: (v) => `+${pctS(v)} a stack, on a poisoned foe` },
+  statusCount: { label: 'Damage per status', line: (v) => `+${pctS(v)} for each different status on the foe` },
+  shieldToDef: { label: 'Shield into Def', line: () => 'your Shield counts as Def while it holds' },
+  juggernaut: { label: 'Def into Atk', line: (v, st) => `+${Math.round(st.def * v)} Atk from ${Math.round(st.def)} Def` },
+  chillCrit: { label: 'Crit per Chill', line: (v) => `+${pctS(v)} Crit a stack, on a chilled foe` },
+};
+const statusSources = (st) => new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => k && k !== 'frenzy')).size;
+function applySynergies(stats, fams) {
+  const F = stats.flags, sets = Object.values(fams).filter((n) => n >= 2).length;
+  if (F.hpToAtk) stats.atk += (stats.hp / 25) * F.hpToAtk;
+  if (F.defToCrit) stats.crit += stats.def * F.defToCrit;
+  if (F.thornsToAtk) stats.atk += stats.thorns * F.thornsToAtk;
+  if (F.speedToHaste) stats.haste += stats.speed * F.speedToHaste;
+  if (F.evasionToCrit) stats.crit += stats.evasion * F.evasionToCrit;
+  if (F.critToDot) F.dotMult = (F.dotMult || 1) * (1 + stats.crit * F.critToDot);
+  if (F.hasteToDmg) F.dmgUp = (F.dmgUp || 0) + stats.haste * F.hasteToDmg;
+  if (F.sourcesToAtk) stats.atk += F.sourcesToAtk * statusSources(stats);
+  if (F.setsToStats && sets) { stats.hp *= 1 + sets * F.setsToStats; stats.atk *= 1 + sets * F.setsToStats; }
+  stats.sets2 = sets;
+}
+// what each synergy on this build is worth right now, in words
+function synergyLines(b) {
+  const st = b.stats, F = st.flags;
+  return Object.keys(SYNERGY).filter((k) => F[k]).map((k) => `<span><b>${SYNERGY[k].label}</b> ${SYNERGY[k].line(F[k], st, st.sets2 || 0)}</span>`);
+}
 // Which creatures turn up each day, one list per card. Entries are hunt:tier. Plain bodies first, their
 // variants from day 3, and the harder of each later on.
 const DAY_POOLS = [
@@ -5305,7 +5476,7 @@ const DAY_POOLS = [
   { easy: ['blood:normal', 'emberjellies:normal', 'storm:normal', 'plaguecrows:easy', 'thunderjellies:normal', 'frostwraiths:easy'], normal: ['molten:normal', 'frostbats:elite', 'toxic:normal', 'plaguecrows:normal', 'frostcrab:normal', 'fireserpent:normal', 'bloodmantis:normal', 'poisontoad:normal'], elite: ['molten:elite', 'storm:elite', 'emberjellies:elite', 'blood:elite', 'frostcrab:elite', 'hounds:elite', 'bloodmantis:elite', 'frostwraiths:elite', 'poisontoad:elite', 'vampirebats:elite', 'thunderjellies:elite', 'fireserpent:elite'] },
 ];
 const CARD_GOLD = { easy: 2, normal: 3, elite: 5, duel: 6, duelLoss: 3 };
-const SELL = { common: 1, rare: 2, epic: 4 };
+const SELL = { common: 1, rare: 2, epic: 4, legend: 9 };
 
 // Duel rivals: generated builds geared for their day, with a name, a record and a half; plus your
 // own builds saved from earlier runs, which turn up half the time when one exists for that round.
@@ -5314,9 +5485,10 @@ function makeGhost(seed, round) {
   const r = runRng(seed, round, 'ghost'), day = dayOf(round), fams = r.shuffle(Object.keys(FAMILY)).slice(0, 2), equip = {};
   const card = day >= 6 ? 'elite' : day >= 3 ? 'normal' : 'easy';
   // a little less geared than a player can be by that day: two pieces more a day, filled in this order
-  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + 2 * day));
+  // Their gear keeps pace with a real build: one drop a hunt, so a slot or so a day.
+  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + day));
   // from day 4 their families' keystones can turn up, from day 6 their relics
-  const extra = fams.flatMap((f) => [day >= 4 && KEYSTONE_OF[f], day >= 6 && RELIC_OF[f]]).filter(Boolean);
+  const extra = fams.flatMap((f) => [...(day >= 4 ? KEYSTONE_OF[f] || [] : []), day >= 6 && RELIC_OF[f]]).filter(Boolean);
   for (const s of slots) {
     const pool = [...fams.flatMap((f) => FAMILY_ITEMS[f]), ...extra].filter((id) => ITEM[id].slot === slotKind(s) && !Object.values(equip).some((x) => x.item === id));
     if (!pool.length) continue;
@@ -5341,7 +5513,7 @@ class Run {
   }
   get day() { return dayOf(this.round); }
   get isDuel() { return isDuelRound(this.round); }
-  build(pieces) { return runBuild(this.equip, pieces, this.boons); }
+  build(pieces) { return runBuild(this.equip, pieces, this.boons, this.gold); }
   // three hunts to choose from, one per tier, or tonight's duel rival
   rollRound() {
     const r = runRng(this.seed, this.round, 'offers');
@@ -5363,7 +5535,7 @@ class Run {
   // Elite cards, its relic only from Elite ones
   drops(offer) {
     const f = offer.family, ids = FAMILY_ITEMS[f].filter((id) => ITEM[id].slot !== 'skill' || offer.card !== 'easy');
-    if (offer.card !== 'easy' && KEYSTONE_OF[f]) ids.push(KEYSTONE_OF[f]);
+    if (offer.card !== 'easy') ids.push(...(KEYSTONE_OF[f] || []));
     if (offer.card === 'elite' && RELIC_OF[f]) ids.push(RELIC_OF[f]);
     return ids;
   }
@@ -5383,9 +5555,15 @@ class Run {
     if (this.crown || this.lives <= 0 || (this.round >= RUNCFG.days * RUNCFG.perDay && !this.loot)) this.over = true;
     return out;
   }
+  // A creature drops one thing. Elites can turn up a legendary instead: the only place they come from.
   lootFor(offer, n) {
-    const r = runRng(this.seed, this.round, 'loot', n), ids = r.shuffle(this.drops(offer)).slice(0, 3);
-    this.loot = { offer, items: ids.map((id) => rollInstance(id, rollRarity(offer.card, this.day, r), this.day, r)) };
+    const r = runRng(this.seed, this.round, 'loot', n);
+    const odds = { easy: 0, normal: 0.04, elite: 0.14 }[offer.card] * (this.day >= 2 ? 1 : 0);
+    const have = new Set(this.owned().map((i) => i.item)), pool = LEGENDS.filter((id) => !have.has(id));
+    const inst = pool.length && r.chance(odds)
+      ? rollInstance(r.pick(pool), 'legend', this.day, r)
+      : rollInstance(r.pick(r.shuffle(this.drops(offer))), rollRarity(offer.card, this.day, r), this.day, r);
+    this.loot = { offer, items: [inst] };
   }
   rerollLoot() {
     if (!this.loot || this.rerolls <= 0) return false;
@@ -5680,7 +5858,7 @@ function chooseEvent(run, key, uid) {
 // ---------------------------------------------------------------- the shop
 // As in ZereshkStory: each new day opens on a shop. Five wares, each with a reason to want it: pieces for
 // sets you've started, a twin of something you own (to merge), a keystone, and a taste of tomorrow.
-const SHOP_PRICE = { common: 5, rare: 10, epic: 16 }, KEYSTONE_MARKUP = 6, SHOP_REROLL = 2;
+const SHOP_PRICE = { common: 5, rare: 10, epic: 16, legend: 30 }, KEYSTONE_MARKUP = 6, SHOP_REROLL = 2;
 Object.assign(Run.prototype, {
   rollShop() {
     const r = runRng(this.seed, this.round, 'shop', this.shopRolls || 0), owned = this.owned(), have = new Set(owned.map((i) => i.item));
@@ -6752,7 +6930,8 @@ function itemArt(id) {
     body = lib[k](a, x);
   }
   if (it.family && !it.skill && !it.relic) body += FAM_MARK[it.family](a);
-  if (it.keystone) body += pth('M2 2 H9 L7.5 7 H3.5 Z', '#b5651d', 'none');   // a little keystone in the corner
+  if (it.legend) body += pth('M5.5 0.8 L6.9 4 L10.2 4.4 L7.7 6.7 L8.4 10 L5.5 8.3 L2.6 10 L3.3 6.7 L0.8 4.4 L4.1 4 Z', '#d98324', 'none');   // a legendary's star
+  else if (it.keystone) body += pth('M2 2 H9 L7.5 7 H3.5 Z', '#b5651d', 'none');   // a little keystone in the corner
   if (it.relic) body += pth('M5.5 1.5 L8.5 5 L5.5 9 L2.5 5 Z', '#c9961a', 'currentColor', 1);
   return (ART_CACHE[id] = `<svg viewBox="0 0 32 32" aria-hidden="true">${body}</svg>`);
 }
@@ -7106,8 +7285,9 @@ function demoStep() {
 // ---- screens
 function showPanel(which) {
   $('#doll').hidden = which !== 'build' || buildTab !== 'gear';
-  for (const [k, el] of [['build', ui.buildPanel], ['fight', ui.fightPanel], ['rival', ui.rivalPanel], ['run', ui.runPanel]]) el.hidden = k !== which;
-  const el = { build: ui.buildPanel, fight: ui.fightPanel, rival: ui.rivalPanel, run: ui.runPanel }[which];
+  const panels = { build: ui.buildPanel, fight: ui.fightPanel, rival: ui.rivalPanel, run: ui.runPanel, home: $('#homePanel') };
+  for (const [k, el] of Object.entries(panels)) el.hidden = k !== which;
+  const el = panels[which];
   el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
 }
 function enterRival() {
@@ -7295,6 +7475,9 @@ $('#sheet').addEventListener('click', (ev) => {
   if (b.dataset.tier) { huntTier = b.dataset.tier; huntSheet(); return; }
   if (b.dataset.hunt) { closeSheet(); huntKind = b.dataset.hunt; startFight(newSeed()); }
 });
+$('#devMode').addEventListener('click', enterRival);
+$('#devHome').addEventListener('click', enterHome);
+$('#runAbandon').addEventListener('click', () => { Run.clear(); toast('Run abandoned.'); enterHome(); });
 $('#rvPrev').addEventListener('click', () => { setRival(rivalIx - 1); enterRival(); });
 $('#rvNext').addEventListener('click', () => { setRival(rivalIx + 1); enterRival(); });
 $('#editBtn').addEventListener('click', enterBuild);
@@ -7337,7 +7520,8 @@ function frame(now) {
 // Between fights the stage shows your fighter close up (the gear camera), and the panel below shows the
 // run: today's hunts, the loot after a win, your gear and bag, tonight's duel, or the end of the run.
 let run = null, runScreen = null, runSel = null, freeBuild = null, runOffer = null, runBack = 'pick';
-const RAR_COL = { common: '#8b93a0', rare: '#1a9bb0', epic: '#6a4fd1' };
+const RAR_COL = { common: '#8b93a0', rare: '#1a9bb0', epic: '#6a4fd1', legend: '#d98324' };
+const LEGEND_COL = '#d98324';
 const KEY_COL = '#b5651d', RELIC_COL = '#c9961a';
 const CARD_LBL = { easy: 'Easy', normal: 'Normal', elite: 'Elite' };
 const slotName = (s) => ({ head: 'Head', core: 'Core', feet: 'Feet', weapon: 'Weapon', skill: 'Skill', trinket: 'Trinket', trinket1: 'Trinket', trinket2: 'Trinket' }[s]);
@@ -7352,23 +7536,27 @@ function itemStatus(it) {
 const itemIcon = (inst) => itemArt(inst.item);
 // An item's text, as in ZereshkStory: perks first, then the headline (damage and pace for a weapon), the
 // keystone's or relic's rule, statuses on hit, stats, and what a trigger does.
+// An item's text, in the order you read it: what makes it special first, then what it carries.
 function itemLines(inst) {
   const it = ITEM[inst.item], p = instPower(inst), st = instStats(inst, false), out = [];
   const eff = it.trig && it.trig[0] && it.trig[0].effect, desc = it.desc && scaleText(it.desc, eff, p);
+  // 1. the rule it bends, or what its trigger does
+  if (desc) out.push([it.keystone || it.relic || it.legend ? 'rule' : 'trig', desc]);
+  if (it.skill) out.push(['rule', `${SKILL[it.skill].name}: ${SKILL[it.skill].desc}`]);
+  // 2. the perks rolled onto this copy
   for (const pk of inst.perks || []) { const P = PERKS[pk]; out.push(['perk', `✦ ${scaleText(P.label, P.trig && P.trig[0].effect, p)}`]); }
-  if (it.weapon) {
-    const [a, b] = instRange(inst);
-    out.push(['head', `Damage ${Math.round(a)}–${Math.round(b)} · ${WTYPE[it.weapon].pace}`]);
-    out.push(['sig', `${WEAP[it.weapon].name}: ${WTYPE[it.weapon].sig}`]);
-  }
-  if (it.skill) out.push(['head', `${SKILL[it.skill].name}: ${SKILL[it.skill].desc}`]);
-  if (it.acro) { const a = acroOf(inst); out.push(['head', `Acrobatics ${a}: ${acroMoves(a)}${inst.acroUp ? ' (trained)' : ''}`]); }
-  if (desc && (it.keystone || it.relic)) out.push(['rule', desc]);
+  // 3. what its hits carry
   for (const o of it.onHit || []) out.push(['st', `${pctS(o.chance)} ${stName(o.apply)}${o.stacks > 1 ? ` ×${o.stacks}` : ''} on hit`]);
   for (const k of inst.affixes) if (k === 'status' && it.family && FAMILY[it.family].status) out.push(['st', `+${pctS(AFFIX.status)} ${stName(FAMILY[it.family].status)} on hit`]);
-  const stats = STAT_ORDER.filter((k) => Math.abs(st[k] || 0) > 1e-3).map((k) => statLine(k, st[k]));
-  if (stats.length) out.push(['stat', stats.join(' · ')]);
-  if (desc && !it.keystone && !it.relic) out.push(['trig', desc]);
+  // 4. the numbers
+  const nums = [];
+  if (it.weapon) nums.push(`${Math.round(instRange(inst)[0])}–${Math.round(instRange(inst)[1])} damage`);
+  if (it.acro) { const a = acroOf(inst); nums.push(`Acrobatics ${a}${inst.acroUp ? ' (trained)' : ''}`); }
+  nums.push(...STAT_ORDER.filter((k) => Math.abs(st[k] || 0) > 1e-3).map((k) => statLine(k, st[k])));
+  if (nums.length) out.push(['stat', nums.join(' · ')]);
+  // 5. the small print
+  if (it.weapon) out.push(['sig', `${WEAP[it.weapon].name} · ${WTYPE[it.weapon].pace} · ${WTYPE[it.weapon].sig}`]);
+  if (it.acro) out.push(['sig', acroMoves(acroOf(inst))]);
   return out;
 }
 // A rough worth for comparing two pieces: damage per hit, toughness, and a little for everything else.
@@ -7386,9 +7574,10 @@ function setProgress(inst, to) {
   if (!f || !FAMILY[f].set4) return [];
   const cur = run.equip[to], before = famCount(run.equip, f), after = before + 1 - (cur && ITEM[cur.item].family === f ? 1 : 0);
   if (after <= before) return [];
+  if (after > 4) return [];
   if (after === 2) return [`<span class="set-up">Completes ${FAMILY[f].name} 2-piece: ${Object.entries(FAMILY[f].set2.stats).map(([k, v]) => statLine(k, v)).join(', ')}</span>`];
   if (after === 4) return [`<span class="set-up">Completes ${FAMILY[f].name} 4-piece: ${FAMILY[f].set4.desc}</span>`];
-  return [`<span class="set-up">${FAMILY[f].name} ${after}/4</span>`];
+  return [`<span class="set-up">${FAMILY[f].name} ${Math.min(after, 4)}/4</span>`];
 }
 // the slot a piece would go into: a trinket fills an empty trinket slot first
 function targetSlot(inst) {
@@ -7414,10 +7603,10 @@ function compareLine(inst, to = targetSlot(inst)) {
 }
 // A compact row: icon, name, and either a compare line, a price or a tag. Tapping it opens the sheet.
 function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs = '', cls = '' } = {}) {
-  const it = ITEM[inst.item], kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
-  const rim = it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
+  const it = ITEM[inst.item], kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${FAMILY[it.family].name}` : ''}`;
-  return `<button class="irow ${it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
+  return `<button class="irow ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
     <span class="iic">${itemIcon(inst)}</span>
     <span class="wn"><b>${it.name}</b>${compare ? `<small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small><span class="dt">${sub}</span>` : `<small>${sub}</small>`}</span>
     ${tag ? `<span class="why">${tag}</span>` : ''}${price}${act}</button>`;
@@ -7436,9 +7625,9 @@ function itemSheet(inst, actions, title = '', note = '') {
 }
 function itemCard(inst, actions = '', compare = false) {
   const it = ITEM[inst.item], fam = it.family ? FAMILY[it.family] : null;
-  const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
-  const rim = it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
-  return `<div class="icard ${it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
+  const kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
+  return `<div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
     <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}${fam ? ` · ${fam.name}` : ''}</small></div></div>
     <div class="ilines">${itemLines(inst).map(([k, t]) => `<p class="il-${k}">${t}</p>`).join('')}</div>
     ${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}
@@ -7467,27 +7656,28 @@ function renderRun() {
       const odds = rarityOdds(o.card, run.day).map(Math.round);
       const drops = run.drops(o).map((id) => { const it = ITEM[id]; return `<i class="${it.keystone ? 'key' : it.relic ? 'relic' : ''}" title="${it.name}${it.keystone ? ' (keystone)' : it.relic ? ' (relic)' : ''}">${itemIcon({ item: id })}</i>`; }).join('');
       return `<button class="hcard t-${o.card}" data-offer="${i}" title="${FAMILY[o.family].name} set · ${setText(o.family)}">
-        <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam">${FAMILY[o.family].name}${famCount(run.equip, o.family) ? ` <em>${famCount(run.equip, o.family)}/4</em>` : ''}</span></span>
+        <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam" data-set="${o.family}">${FAMILY[o.family].name}${famCount(run.equip, o.family) ? ` <em>${Math.min(famCount(run.equip, o.family), 4)}/4</em>` : ''}</span></span>
         <span class="odds">${['common', 'rare', 'epic'].map((r, j) => (odds[j] ? `<span style="color:${RAR_COL[r]}">${RARITY[r].name} ${odds[j]}%</span>` : '')).join('')}</span>
         <span class="drops">${drops}</span>
       </button>`;
     }).join('');
-    actions = `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Rivals</button>`;
+    actions = `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Home</button>`;
   } else if (runScreen === 'loot') {
-    body = `<div class="row-h"><span class="lbl">Pick one</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>` +
-      run.loot.items.map((inst, i) => itemRow(inst, { compare: true, attrs: `data-lootrow="${i}"` })).join('') +
-      `<p class="hint">Tap a drop to see it in full.</p>`;
-    actions = `<button class="ghost" data-go="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>Reroll (${run.rerolls})</button><button class="ghost" data-go="skip">Skip</button>`;
+    const drop = run.loot.items[0];
+    body = `<div class="row-h"><span class="lbl">${ITEM[drop.item].legend ? 'A legendary dropped' : 'It dropped'}</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>`
+      + itemCard(drop, `${wearBtns(drop, 'data-loot="0" data-act')}<button class="ghost" data-loot="0" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, true);
+    actions = `<button class="ghost" data-go="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>Reroll (${run.rerolls})</button><button class="ghost" data-go="skip">Leave it</button>`;
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
     const cells = [['HP', Math.round((100 + st.hp) * st.hpMult)], ['Damage', w ? `${Math.round(w.min + st.atk)}–${Math.round(w.max + st.atk)}` : '—'], ['Crit', pctS(st.crit)],
       ['Def', Math.round(st.def)], ['Haste', fmtStat('haste', st.haste)], ['Evasion', pctS(st.evasion)],
-      ['Skill', b.skill ? SKILL[b.skill].name : '—'], ['Moves', `${b.acro} / 4`], ['Statuses', applies.map((k) => stSvg(k)).join('') || '—']];
+      ['Skill', b.skill ? SKILL[b.skill].name : '—'], ['Moves', `${b.acro} / 4`], ['Statuses', applies.map((k) => `<button class="stbtn" data-status="${k}" aria-label="${stName(k)}">${stSvg(k)}</button>`).join('') || '—']];
     const extra = ['critDmg', 'resist', 'ls', 'regen', 'thorns', 'pen', 'speed', 'skillHaste'].filter((k) => Math.abs(st[k]) > 1e-3).map((k) => `<span>${statLine(k, st[k])}</span>`).join('');
     const rules = Object.values(run.equip).filter(Boolean).map((i) => ITEM[i.item]).filter((it) => it.keystone || it.relic)
-      .map((it) => `<span class="${it.keystone ? 'key' : 'relic'}" title="${it.desc}">${it.name}</span>`).join('');
-    const sets = Object.entries(b.sets || {}).map(([f, n]) => `<span class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" title="${setText(f)}">${FAMILY[f].name} ${n}/4</span>`).join('');
+      .map((it) => `<button class="${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" data-rule="${it.id}">${it.name}</button>`).join('');
+    const syn = synergyLines(b);
+    const sets = Object.entries(b.sets || {}).map(([f, n]) => `<button class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" data-set="${f}">${FAMILY[f].name} ${Math.min(n, 4)}/4</button>`).join('');
     const bag = Array.from({ length: RUNCFG.bag }, (_, i) => {
       const inst = run.bag[i];
       return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}">${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
@@ -7497,7 +7687,8 @@ function renderRun() {
       ${sets || rules ? `<div class="sets">${rules}${sets}</div>` : ''}
       <div class="row-h"><span class="lbl">Bag</span><span class="lbl">${run.bag.length} / ${RUNCFG.bag}</span></div>
       <div class="bag">${bag}</div>
-      <p class="hint">Tap a slot beside your fighter, or a piece in the bag.</p>`;
+      ${syn.length ? `<div class="row-h"><span class="lbl">Synergies</span><span class="lbl">${syn.length} working</span></div><div class="syn">${syn.join('')}</div>`
+        : '<p class="hint">Tap a slot beside your fighter, or a piece in the bag.</p>'}`;
     actions = `<button class="go wide" data-go="back">Back</button>`;
   } else if (runScreen === 'shop') {
     body = `<div class="row-h"><span class="lbl">The shop · day ${run.day}</span><span class="lbl">Gold ${run.gold}</span></div>` + run.shop.map((w, i) => {
@@ -7533,7 +7724,7 @@ function renderRun() {
     const hist = run.history.map((h) => `<i class="${h.result === 'W' ? 'w' : 'l'} ${h.duel ? 'duel' : ''}" title="${h.label}"></i>`).join('');
     const hunts = run.history.filter((h) => !h.duel), won = hunts.filter((h) => h.result === 'W'), elites = won.filter((h) => h.card === 'elite').length;
     const worn = SLOTS_RUN.map((k) => run.equip[k]).filter(Boolean);
-    const sets = Object.entries(runBuild(run.equip).sets).filter(([, n]) => n >= 2).map(([f, n]) => `<span class="set ${n >= 4 ? 'full' : 'on'}">${FAMILY[f].name} ${n}/4</span>`).join('');
+    const sets = Object.entries(runBuild(run.equip).sets).filter(([, n]) => n >= 2).map(([f, n]) => `<span class="set ${n >= 4 ? 'full' : 'on'}">${FAMILY[f].name} ${Math.min(n, 4)}/4</span>`).join('');
     body = `<div class="over ${run.crown ? 'crown' : ''}"><b>${run.crown ? 'The Crown' : 'Run over'}</b>
       <p>${run.crown ? `Five duels won by day ${run.day}.` : `${run.wins} duel${run.wins === 1 ? '' : 's'} won, out on day ${run.day}.`}</p>
       <div class="hist">${hist}</div>
@@ -7541,7 +7732,7 @@ function renderRun() {
       <div class="owear">${worn.map((i) => `<i style="--rc:${ITEM[i.item].keystone ? KEY_COL : ITEM[i.item].relic ? RELIC_COL : RAR_COL[i.rarity]}" title="${instName(i)}">${itemIcon(i)}</i>`).join('')}</div>
       ${sets ? `<div class="sets" style="justify-content:center">${sets}</div>` : ''}
       <p class="small">This build was saved as a ghost. Other runs will meet it in their duels.</p></div>`;
-    actions = `<button class="ghost" data-go="leave">Rivals</button><button class="go" data-go="new">New run</button>`;
+    actions = `<button class="ghost" data-go="leave">Home</button><button class="go" data-go="new">New run</button>`;
   }
   el.innerHTML = runHeader() + body + `<div class="actions">${actions}</div>`;
 }
@@ -7584,7 +7775,7 @@ function leaveRun() {
   if (run && !run.over) run.save();
   if (freeBuild) builds[0] = freeBuild;
   freeBuild = null; run = null; runScreen = null; huntKind = null; huntPower = 1;
-  enterRival();
+  enterHome();
 }
 function runFight(offer) {
   applyRunBuild(); runOffer = offer;
@@ -7610,6 +7801,9 @@ function runContinue() {
 function runClick(ev) {
   const t = ev.target.closest('button'); if (!t || t.disabled) return;
   if (t.dataset.sheet === 'close') { closeSheet(); return; }
+  if (t.dataset.set) { setSheet(t.dataset.set); return; }
+  if (t.dataset.rule) { ruleSheet(t.dataset.rule); return; }
+  if (t.dataset.status) { statusSheet(t.dataset.status); return; }
   if (t.dataset.offer !== undefined) { runFight(run.offers[+t.dataset.offer]); return; }
   // a drop, a ware or a piece of your own gear: the full card and its choices, over the top
   if (t.dataset.lootrow !== undefined) {
@@ -7666,6 +7860,39 @@ function runClick(ev) {
   else if (go === 'shopleave') { run.leaveShop(); showRun(runHome()); }
   else if (go === 'skip') { run.loot = null; if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
 }
+// Traits explain themselves: tap a set, a keystone or a status and it says what it does for you.
+function setSheet(f) {
+  const F = FAMILY[f], n = famCount(run.equip, f), worn = Object.values(run.equip).filter((i) => i && ITEM[i.item].family === f);
+  const line = (on, label, text) => `<p class="il-${on ? 'rule' : 'sig'}">${on ? '✓' : '·'} <b>${label}</b> ${text}</p>`;
+  openSheet(`<div class="sh-head"><b>${F.name} set</b><span class="lbl">${n} piece${n === 1 ? '' : 's'} worn</span></div>
+    <div class="icard" style="--rc:${n >= 2 ? '#1b8a3a' : 'var(--line)'};--nc:var(--ink)">
+      <div class="ilines">
+        ${line(n >= 2, 'Two pieces:', Object.entries(F.set2.stats).map(([k, v]) => statLine(k, v)).join(', '))}
+        ${line(n >= 4, 'Four pieces:', F.set4.desc)}
+        ${F.status ? `<p class="il-st">Its creatures attack with ${stName(F.status)}.</p>` : ''}
+        <p class="il-stat">${worn.length ? `You wear: ${worn.map((i) => ITEM[i.item].name).join(', ')}` : 'You wear none of it yet.'}</p>
+        <p class="il-sig">Dropped by the ${HUNTS[F.hunt].name.toLowerCase()}.</p>
+      </div>
+    </div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
+function ruleSheet(id) {
+  const it = ITEM[id], kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : 'Relic';
+  openSheet(`<div class="sh-head"><b>${it.name}</b><span class="lbl">${kind}</span></div>
+    <div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" style="--rc:${it.legend ? LEGEND_COL : it.keystone ? KEY_COL : RELIC_COL};--nc:var(--ink)">
+      <div class="ilines"><p class="il-rule">${it.desc}</p>${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}</div></div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
+function statusSheet(k) {
+  const K = STATUS[k], b = builds[0], src = [...b.stats.onHit.filter((o) => o.apply === k).map((o) => `${o.name} (${pctS(o.chance)} a hit)`),
+    ...b.stats.trig.filter((t) => t.effect.apply === k).map((t) => t.src)];
+  openSheet(`<div class="sh-head"><b>${stName(k)}</b><span class="lbl">Status</span></div>
+    <div class="icard" style="--rc:${ST_COL[k] || 'var(--line)'};--nc:var(--ink)">
+      <div class="ilines"><p class="il-head">${STATUS_HELP[k]}</p>
+      <p class="il-st">It hits harder the harder you hit: every tick scales with your weapon and Atk.</p>
+      <p class="il-stat">${src.length ? `From: ${[...new Set(src)].join(', ')}` : 'Nothing you wear applies it.'}</p></div></div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
 // What you have on, or a piece in the bag: shown over the top so the gear screen stays put.
 function gearSheet() {
   const inst = runSel.uid ? run.bag.find((x) => x.uid === runSel.uid) : run.equip[runSel.slot];
@@ -7687,10 +7914,33 @@ $('#runStart').addEventListener('click', () => { const saved = Run.load(); start
 function refreshRunBar() {
   const saved = Run.load(), live = saved && !saved.over;
   $('#runStart').textContent = live ? `Continue · day ${dayOf(saved.round)}` : 'Start a run';
-  $('#runBarSub').textContent = live ? `${saved.wins} of ${RUNCFG.winTarget} duels won · ${saved.lives} lives left` : 'Seven days: hunt for gear, win five duels.';
+  $('#homeExtra').hidden = !live;
+  $('#homeTitle').textContent = live ? `Day ${dayOf(saved.round)} of ${RUNCFG.days}` : 'Seven days in the ink';
+  $('#homeSub').textContent = live
+    ? 'Your run is waiting. Pick up where you left off.'
+    : 'Hunt creatures for gear, and duel another player\'s build every night. Win five duels for the Crown.';
+  const ghosts = loadGhosts().length;
+  $('#homeStats').innerHTML = (live
+    ? [['Duels won', `${saved.wins}/${RUNCFG.winTarget}`], ['Lives', saved.lives], ['Gold', saved.gold]]
+    : [['Creatures', HUNT_KEYS.length], ['Items', Object.keys(ITEM).length], ['Ghosts met', ghosts]]
+  ).map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('');
+}
+// The front door: a run, and a way into everything else.
+function enterHome() {
+  mode = 'rival';
+  music.stop();
+  const bd = builds[1];
+  A = makeArena([null, bd]);
+  demoWorld();
+  U = [demoUnit(1, bd)];
+  playDemo(U[0], null, true);
+  ui.hud.hidden = true; ui.result.hidden = true;
+  showPanel('home');
+  ui.phase.textContent = 'Inkfall';
+  refreshRunBar();
 }
 
-window.__homeTurf = {
+window.__inkfall = window.__homeTurf = {
   fight(seed, blue, red, maxFrames = TIME_CAP * 60 + 200, sample = 0) {
     const saved = [builds[0], builds[1]], savedHunt = huntKind;
     builds[0] = blue;
@@ -7704,7 +7954,7 @@ window.__homeTurf = {
       simStep();
       if (sample && world.t % sample === 0) world.trace.push(`${clockStr(world.t)} zone=${world.zone.toFixed(1)} ` + U.map((u) => `${u.side ? 'R' : 'B'} ${u.b.x.toFixed(1)},${u.b.y.toFixed(1)} ${u.state} hp${Math.round(u.hp)} goal=${u.ai.goal >= 0 && u.nav ? u.nav.nodes[u.ai.goal].c + ',' + u.nav.nodes[u.ai.goal].r : '-'} path=${u.ai.path.map((e) => e.type[0]).join('')} m=${u.ai.macro ? JSON.stringify(u.ai.macro) : ''}`).join(' | '));
     }
-    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, fired: world.fired || null, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
+    const res = { seed, winner: world.winner, ko: world.ko, t: world.t, hp: U.map((u) => Math.round(u.hp)), stats: world.stats, dmg: world.dmg, fired: world.fired || null, log: world.log.map((e) => `${clockStr(e.t)} ${e.txt}`), trace: world.trace };
     builds[0] = saved[0]; builds[1] = saved[1]; huntKind = savedHunt; huntTier = savedTier; huntPower = savedPower; headless = false;
     return res;
   },
@@ -7714,11 +7964,11 @@ window.__homeTurf = {
   templates: TEMPLATES, rivals: RIVALS, weapons: WEAPONS, skills: SKILLS, trinkets: TRINKETS, hunts: HUNT_KEYS,
   cam(o) { camOverride = o; cam.init = false; },
   get runState() { return run; }, showRun,
-  run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
+  run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES }, validate, get world() { return world; }, get units() { return U; },
 };
 
 setRival(0);
-enterRival();
+enterHome();
 requestAnimationFrame(frame);
 })();
 </script>
