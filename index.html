@@ -828,7 +828,7 @@ const SHOT = {
   glob: { v: 15, g: 24, len: 0.3, hit: { dmg: 11, kb: [6, -6], stun: 24, hs: 6, tumble: 1 } },   // the Brute's lobbed glob
   lance: { v: 30, g: 1, len: 0.8, hit: { dmg: 14, kb: [2.5, -1], stun: 12, hs: 4, apply: 'chill', stacks: 1 } },   // a frost lance: flat, fast, cold
   fireball: { v: 19, g: 9, len: 0.4, hit: { dmg: 12, kb: [4, -3], stun: 14, hs: 4 }, burst: { r: 2.3, dmg: 18, kb: [7, -6], stun: 20, hs: 6, apply: 'burn', stacks: 2, big: 1 } },   // lobbed, and it goes off where it lands
-  goo: { v: 17, g: 11, len: 0.3, hit: { dmg: 12, kb: [2, -1.5], stun: 10, hs: 3, snare: 0.8 } },   // a gob of gel: it hardly hurts, and it sticks
+  goo: { v: 17, g: 11, len: 0.3, hit: { dmg: 11, kb: [2, -1.5], stun: 10, hs: 3, snare: 0.45 } },   // a gob of gel: it hardly hurts, and it sticks
   arc: { v: 38, g: 0.6, len: 1.1, hit: { dmg: 12, kb: [2, -1], stun: 16, hs: 4, apply: 'shock', stacks: 2 } },   // a storm arc: there almost before it is thrown
 };
 const HOOK = { v: 30, back: 36, range: 8.5, dmg: 6 };
@@ -1195,21 +1195,21 @@ const ATK = {
   // a cloud gathers over them, and then it is not a cloud any more
   cast_thunder: { w: 28, a: 2, r: 16, cd: 8, cast: 1, sigil: { delay: 40, kind: 'cloud', r: 1.4, col: 5.5, dmg: 28, kb: [5, -6], stun: 28, hs: 9, apply: 'shock', stacks: 3, tumble: 1, big: 1 } },
   // a rod driven into the floor: it pulls every shot near it into itself, and spits some of it back
-  cast_rod: { w: 24, a: 2, r: 14, cd: 8, cast: 1, rod: { secs: 5, at: 1.8, r: 2.3, every: 44, dmg: 5, stacks: 1 } },
+  cast_rod: { w: 24, a: 2, r: 14, cd: 8, cast: 1, rod: { secs: 5, at: 1.8, r: 1.7, every: 44, dmg: 5, stacks: 1, hits: 4 } },
   // a tether: a line of lightning from your hand to them, and they do not leave the end of it
-  cast_tether: { w: 24, a: 2, r: 16, cd: 8, cast: 1, tether: { hold: 58, reach: 7.5, every: 14, dmg: 3, stacks: 2 } },
+  cast_tether: { w: 24, a: 2, r: 16, cd: 8, cast: 1, tether: { hold: 46, reach: 7.5, every: 14, dmg: 3, stacks: 2 } },
   // a discharge: everything you have been holding, out through the skin at once
-  cast_discharge: { w: 28, a: 2, r: 17, cd: 8, cast: 1, discharge: { r: 3.1, dmg: 22, per: 5, kb: [9, -7], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
+  cast_discharge: { w: 28, a: 2, r: 17, cd: 8, cast: 1, discharge: { r: 3.0, dmg: 20, per: 4, kb: [9, -7], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
   cast_static: { w: 24, a: 2, r: 16, cd: 10, cast: 1, armor: { shield: 20, secs: 5, apply: 'shock', stacks: 2, col: 'shock' } },
   // a gel grimoire: it hardly hurts at all. It sticks.
   cast_goo: { w: 18, a: 1, r: 10, shot: 'goo', cd: 3, cast: 1 },
   acast_goo: { w: 17, a: 1, r: 11, shot: 'goo', air: 1, cd: 10, cast: 1 },
-  cast_membrane: { w: 22, a: 2, r: 14, cd: 8, cast: 1, membrane: { hits: 3, secs: 6 } },
-  cast_snare: { w: 22, a: 2, r: 15, cd: 8, cast: 1, snare: { secs: 1.9, reach: 7.5, dmg: 8 } },
-  cast_splash: { w: 26, a: 2, r: 16, cd: 8, cast: 1, splash: { r: 3.1, dmg: 18, kb: [10, -5], stun: 20, hs: 6, snare: 1.1, big: 1 } },
-  cast_slick: { w: 26, a: 2, r: 15, cd: 8, cast: 1, slick: { secs: 6, span: 1.7, every: 30, dmg: 3 } },
+  cast_membrane: { w: 22, a: 2, r: 14, cd: 8, cast: 1, membrane: { hits: 2, secs: 6 } },
+  cast_snare: { w: 22, a: 2, r: 15, cd: 8, cast: 1, snare: { secs: 1.4, reach: 7.5, dmg: 6 } },
+  cast_splash: { w: 26, a: 2, r: 16, cd: 8, cast: 1, splash: { r: 3.0, dmg: 16, kb: [10, -5], stun: 20, hs: 6, snare: 0.8, big: 1 } },
+  cast_slick: { w: 26, a: 2, r: 15, cd: 8, cast: 1, slick: { secs: 5, span: 1.4, every: 30, dmg: 2 } },
   // regrowth: nothing now, and a little every third of a second for the next six
-  cast_regrow: { w: 24, a: 2, r: 14, cd: 10, cast: 1, regrow: { per: 2.4, every: 20, secs: 6 } },
+  cast_regrow: { w: 24, a: 2, r: 14, cd: 10, cast: 1, regrow: { per: 2, every: 20, secs: 6 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -3191,7 +3191,10 @@ function statusStep(u) {
     if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
     if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - (u.bh || H) * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
   }
-  if (s.bleed > 0) s.bleed--;
+  if (s.bleed > 0) {
+    s.bleed--;
+    if (half && bf.hemo) { const d = STATUS.burn.tick * dotMul * dotPwr(u); hurt(u, d, 'status', s.by, 'bleed'); dotFeed(by, d); if (world.t % 60 === 0) drips(u, 2); }
+  }
   if (s.chill > 0 && --s.chillT <= 0) s.chill = 0;
   if (s.frozen > 0 && --s.frozen === 0) { shatter(u); world.hs = 0; }
   if (s.thaw > 0) s.thaw--;
@@ -5138,7 +5141,7 @@ function castCauterize(u, ca) {
 // A lightning rod: shots that come near it go into it instead, and it hands some back to whoever is close.
 function castRod(u, rd) {
   const b = u.b, x = Math.max(1.2, Math.min(COLS - 1.2, b.x + u.face * rd.at));
-  world.fires.push({ kind: 'rod', x, y: b.y, span: rd.r, t: Math.round(rd.secs * 60), max: Math.round(rd.secs * 60), side: u.side, by: u, rd });
+  world.fires.push({ kind: 'rod', x, y: b.y, span: rd.r, t: Math.round(rd.secs * 60), max: Math.round(rd.secs * 60), side: u.side, by: u, rd, hits: rd.hits || 4 });
   zapLine(x, b.y - 1.9, x, b.y - 5, 'shock');
   ring(x, b.y - 1.7, 0.7, 'shock');
   u.hitDone = true;
@@ -5193,7 +5196,7 @@ function castSnare(u, sn) {
   if (sn.dmg) hurt(e, sn.dmg * powerOf(u), 'hit', u.side, null, [['hits', 1]]);
   snareOn(e, sn.secs);
   const st = bookStatus(u, null);
-  if (st) applyStatus(u, e, st, 2);
+  if (st) applyStatus(u, e, st, 1);
   gooSplat(e.b.x, e.b.y, 12);
   world.hs = Math.max(world.hs, 3);
 }
@@ -5212,7 +5215,7 @@ function castSplash(u, sp) {
     if (e.side === u.side || e.state === 'dead') continue;
     if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh ? e.bh / 2 : H / 2)) - cy) > sp.r + (e.bw || W) * 0.5) continue;
     applyHit(u, e, sp, Math.sign(e.b.x - b.x) || u.face);
-    if (e.state !== 'dead') { snareOn(e, sp.snare); if (st) applyStatus(u, e, st, 2); }
+    if (e.state !== 'dead') { snareOn(e, sp.snare); if (st) applyStatus(u, e, st, 1); }
   }
   u.hitDone = true;
 }
@@ -5396,6 +5399,7 @@ function blockedByGuard(a) {
     if (f.kind === 'rod') {
       if (Math.hypot(a.x - f.x, a.y - (f.y - 1.8)) > f.rd.r) continue;
       a.dead = true; zapLine(f.x, f.y - 1.8, a.x, a.y, 'shock');
+      if (--f.hits <= 0) { f.t = 1; ring(f.x, f.y - 1.8, 0.8, 'shock'); }   // it has taken all it can
       return true;
     }
     // a line of fire does not stop anybody walking, but nothing thrown gets through it intact
@@ -6074,8 +6078,8 @@ const ITEM = {
   storm_codex: iW('Storm Codex', 'storm', 'spellbook', { ...oh('shock', 0.2), flags: { spellSt: 'shock', school: 'storm' },
     desc: 'The storm school: arcs that are there almost before they are thrown, a lightning rod that pulls every shot near it into itself, a tether that holds them at the end of a line and keeps biting, a discharge that hits harder the more Shock they already carry, a cloud that gathers over them and then strikes, and a static shell that shocks whatever hits it.', flavor: 'It reads itself when nobody is looking.' }),
   blood_codex: iW('Tome of Blood', 'blood', 'spellbook', { ...oh('bleed', 0.2), stats: { ls: 0.03 },
-    flags: { tome: true, spellSt: 'bleed', dotMult: 1.6, agony: 0.06, dotHeal: 0.25, selfCost: 0.003 },
-    desc: 'Curse, drain, rupture and fear instead of casting, in blood. Your Bleed deals +60% and deepens as it runs, and every tick of it heals you a quarter.', flavor: 'Written once, in a hurry.' }),
+    flags: { tome: true, hemo: true, spellSt: 'bleed', dotMult: 1.6, agony: 0.06, dotHeal: 0.25, selfCost: 0.003 },
+    desc: 'Curse, drain, rupture and fear instead of casting, in blood. Your Bleed runs whether they swing or not, deals +60% and deepens as it runs, and every tick of it heals you a quarter.', flavor: 'Written once, in a hurry.' }),
   // Warlock tomes: no page of one does damage now. They curse, they drink it back, and they tear it out.
   rot_tome: iW('Tome of Rot', 'rot', 'spellbook', { stats: { hp: 12 },
     flags: { tome: true, spellSt: 'poison', dotMult: 1.7, agony: 0.05, dotHeal: 0.2, selfCost: 0.004 },

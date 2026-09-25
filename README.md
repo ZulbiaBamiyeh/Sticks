@@ -119,37 +119,46 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Every book answers the same six questions** — something to throw,
     something to hide behind, something to stop what is running at you,
     something for when it is already too close, something to leave on the
-    floor, and something to put on yourself. What it answers them *with* is
-    the **school** it was written in, and the four schools do all six
-    differently:
-    - **Ink** (the plain book, the Gel Grimoire, the Spore and Blood Codices):
-      a **wall of ink** that stops three shots dead, a **grasp** up a
-      charger's legs, a **sigil** under anyone who holds still, a **nova** at
-      arm's length, a **ward**, and a **bolt**.
-    - **Frost** (the Rime Codex): an ice **lance**, flat and fast; a **slab of
-      ice** instead of a pane of it, which bursts into chilling shards when it
-      goes; legs **encased** rather than held; **spikes** up through the
-      floor; and a **shatter** that hits harder for every Chill already on
-      them and takes the Chill with it.
+    floor, and something to put on yourself — and there are no shared spells:
+    each book answers all six in its own **school**. A plain book is frost.
+    - **Frost** (the Rime Codex): an ice **lance**; a **slab of ice** that
+      bursts into chilling shards when it goes; legs **encased**; **spikes**
+      up through the floor; a **shatter** that hits harder for every Chill
+      already on them; and **ice armour** that will not be knocked about and
+      chills whatever hits it.
     - **Flame** (the Ember Codex): a **fireball** that goes off where it
-      lands, a **pillar of flame** out of the floor tall enough to catch
-      somebody jumping it, a **line of fire** that stops nothing walking but
-      burns anything thrown through it, **embers** to leave behind, and an
-      **immolation** that costs you a little and leaves you burning for three
-      seconds. It is the school for people who keep away from you.
-    - **Storm** (the Storm Codex): **arcs** that are there almost before they
-      are thrown, and a **bolt straight down** out of the top of the page onto
-      whoever you are looking at.
+      lands; a **pillar of flame** tall enough to catch somebody jumping it; a
+      **line of fire** that burns anything thrown through it; **embers**; an
+      **immolation** that costs you a little; and **cauterise**, which burns
+      every status out of you and heals you for each one.
+    - **Storm** (the Storm Codex): **arcs**; a **lightning rod** that pulls
+      the next few shots into itself and zaps anyone near it; a **tether**
+      that holds them at the end of a line and keeps biting; a **discharge**
+      that hits harder the more Shock they carry; a **thunder cloud** that
+      gathers over them before it strikes; and a **static shell**.
+    - **Slime** (the Gel Grimoire, and the Spore Codex with Poison on top):
+      it hardly hurts anybody — it sticks them. Gobs that **snare**, gel
+      poured on a charger, a **slick** on the floor, a **splash** that throws
+      everything back and glues it where it lands, a **membrane** that
+      swallows two shots, and **regrowth**, which heals you every third of a
+      second for six. **Snared** is its own state: rooted to the floor, but
+      still able to swing at whatever is in reach.
+  - **The book looks like a book.** It is held open and level in front of the
+    chest with both hands, tipped back toward the reader, with lines of
+    writing on the pages and a ribbon out of the spine. In a cast the book
+    hand slides under the spine, the pages light up in the school's colour
+    and turn over by themselves, and the words lift off them and drift up.
   - **Warlock tomes** are spellbooks that have given up on doing damage now.
-    Their pages are a **curse** (no damage at all, just the book's weather
+    Their pages are **fear** (the target stops fighting and runs for a
+    second and a half), a **curse** (no damage at all, just the book's weather
     driven deep, paid for in your own HP), a **drain** that pulls the
     afflictions on them back up the line and into you, and a **rupture** that
     tears every status out at once for a burst that scales with how much you
     left in there. Their statuses deal +55% to +90%, **get worse the longer
     they burn**, and every tick of them heals you back a fifth. A tome build
     deals about **80% of its damage as statuses**, where a normal caster is
-    near 26% and a sword is 18%. The Tome of Rot, the Tome of Ash and the
-    Tome of the Mire; they are drawn shut and clasped, with an eye on the
+    near 26% and a sword is 18%. The Tome of Rot, the Tome of Blood (whose
+    Bleed runs whether they swing or not), the Ashen Staff and the Mire Staff; they are drawn shut and clasped, with an eye on the
     cover, and held shut in the hand. A warlock also moves differently again:
     slower still, hardly falling at all, hunched over the book — and a drain
     leaves it gliding for a second and a half on what it just took, dragging a
