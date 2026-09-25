@@ -94,7 +94,7 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 308 items: 94 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+  - 311 items: 97 weapons, 87 head, core and feet pieces, 78 trinkets, 13
     skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
@@ -121,6 +121,17 @@ fights run themselves. **Start a run** is the front door, and everything else
     Every book is made of one kind of weather that all six pages carry: the
     Spore Codex poisons, the Rime Codex chills, the Storm Codex shocks, the
     Ember Codex burns, the Blood Codex bleeds.
+  - **Warlock tomes** are spellbooks that have given up on doing damage now.
+    Their pages are a **curse** (no damage at all, just the book's weather
+    driven deep, paid for in your own HP), a **drain** that pulls the
+    afflictions on them back up the line and into you, and a **rupture** that
+    tears every status out at once for a burst that scales with how much you
+    left in there. Their statuses deal +55% to +90%, **get worse the longer
+    they burn**, and every tick of them heals you back a fifth. A tome build
+    deals about **80% of its damage as statuses**, where a normal caster is
+    near 26% and a sword is 18%. The Tome of Rot, the Tome of Ash and the
+    Tome of the Mire; they are drawn shut and clasped, with an eye on the
+    cover, and held shut in the hand.
   - **Puppet:** you never touch anybody. The marionette hangs on your strings
     and your swings land where it is, **six tiles out**, so you fight from
     beyond a spear with a blade's damage and a hammer's patience. Between

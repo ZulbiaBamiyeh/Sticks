@@ -1147,6 +1147,10 @@ const ATK = {
   cast_ward: { w: 20, a: 2, r: 16, cd: 10, cast: 1, ward: { shield: 16, r: 3, apply: 'chill', stacks: 1 } },
   cast_sigil: { w: 21, a: 2, r: 15, cd: 8, cast: 1, sigil: { delay: 52, r: 2.3, dmg: 14, kb: [7, -8], stun: 26, hs: 7, apply: 'shock', stacks: 2, tumble: 1, big: 1 } },
   cast_wall: { w: 18, a: 2, r: 14, cd: 8, cast: 1, wall: { secs: 4, h: 3.2, at: 2.4 } },
+  // a warlock's tome: nothing it does lands now, and all of it lands later
+  cast_curse: { w: 20, a: 2, r: 14, cd: 6, cast: 1, curse: { stacks: 3, reach: 8, cost: 0.022 } },
+  cast_drain: { w: 16, a: 2, r: 20, cd: 8, cast: 1, drain: { per: 6, reach: 7.5, back: 0.55 } },
+  cast_rupture: { w: 24, a: 3, r: 22, cd: 10, cast: 1, rupture: { per: 8.5, reach: 6.5, kb: [6, -7], stun: 22, hs: 7, cost: 0.03 } },
   cast_grasp: { w: 19, a: 2, r: 16, cd: 8, cast: 1, grasp: { hold: 42, reach: 7, apply: 'chill', dmg: 9 } },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
@@ -1224,6 +1228,12 @@ const ATK_POSE = {
   cast_nova: { w: { fx: 0.1, fy: 0.36, bx: -0.24, by: 0.1, lean: -0.22, hipH: 0.52, head: 0.14 }, a: { fx: 0.4, fy: -0.26, bx: -0.4, by: -0.26, lean: 0, hipH: 0.76 }, r: { fx: 0.3, fy: -0.02, bx: -0.24, by: 0.04, lean: 0.06, hipH: 0.66 } },
   cast_ward: { w: { fx: 0.14, fy: 0.24, bx: -0.14, by: 0.12, lean: -0.1, hipH: 0.6 }, a: { fx: 0.24, fy: -0.2, bx: 0.24, by: -0.2, lean: 0, hipH: 0.72, head: -0.12 }, r: { fx: 0.24, fy: 0.0, bx: 0.2, by: 0.0, lean: 0.04 } },
   cast_sigil: { w: { fx: 0.12, fy: 0.3, bx: -0.2, by: 0.16, lean: 0.16, hipH: 0.58, head: 0.12 }, a: { fx: 0.3, fy: 0.3, bx: 0.34, by: 0.28, lean: 0.34, hipH: 0.54 }, r: { fx: 0.26, fy: 0.2, bx: 0.22, by: 0.12, lean: 0.18 } },
+  cast_wall: { w: { fx: 0.16, fy: 0.24, bx: -0.16, by: 0.2, lean: -0.08, hipH: 0.62 }, a: { fx: 0.44, fy: -0.1, bx: 0.4, by: -0.06, lean: 0.22, hipH: 0.6 }, r: { fx: 0.32, fy: 0.04, bx: 0.28, by: 0.04, lean: 0.1 } },
+  cast_grasp: { w: { fx: 0.1, fy: 0.22, bx: -0.22, by: 0.1, lean: -0.14, hipH: 0.6, head: 0.06 }, a: { fx: 0.5, fy: 0.12, bx: 0.42, by: 0.16, lean: 0.36, hipH: 0.56 }, r: { fx: 0.34, fy: 0.16, bx: 0.26, by: 0.14, lean: 0.2 } },
+  // a warlock's hands: low and open on the curse, hauling back on the drain, thrown wide on the rupture
+  cast_curse: { w: { fx: 0.06, fy: 0.3, bx: -0.24, by: 0.24, lean: 0.2, hipH: 0.54, head: 0.16 }, a: { fx: 0.46, fy: 0.24, bx: 0.36, by: 0.26, lean: 0.4, hipH: 0.52 }, r: { fx: 0.3, fy: 0.22, bx: 0.24, by: 0.2, lean: 0.22 } },
+  cast_drain: { w: { fx: 0.44, fy: 0.06, bx: 0.3, by: 0.1, lean: 0.3, hipH: 0.6 }, a: { fx: 0.06, fy: -0.12, bx: -0.2, by: -0.1, lean: -0.24, hipH: 0.68, head: -0.1 }, r: { fx: 0.18, fy: 0.0, bx: -0.06, by: 0.0, lean: -0.08 } },
+  cast_rupture: { w: { fx: 0.04, fy: -0.2, bx: -0.06, by: -0.22, lean: -0.26, hipH: 0.7, head: -0.14 }, a: { fx: 0.52, fy: -0.26, bx: -0.46, by: -0.26, lean: 0.18, hipH: 0.58 }, r: { fx: 0.34, fy: -0.06, bx: -0.28, by: -0.06, lean: 0.08 } },
   // a tug on the strings: both hands snap up and forward
   acast_bolt: { w: { fx: 0.2, fy: 0.16, bx: -0.16, by: -0.14, lean: 0.06 }, a: { fx: 0.36, fy: 0.02, bx: 0.46, by: -0.18, lean: 0.24 }, r: { fx: 0.3, fy: 0.1, bx: 0.24, by: -0.04, lean: 0.12 } },
   command: { w: { fx: 0.18, fy: -0.16, bx: 0.1, by: -0.2, lean: -0.1, hipH: 0.68 }, a: { fx: 0.48, fy: -0.3, bx: 0.36, by: -0.34, lean: 0.24, hipH: 0.64 }, r: { fx: 0.3, fy: -0.1, bx: 0.24, by: -0.14, lean: 0.1 } },
@@ -1326,12 +1336,21 @@ const lying = (u) => u.state === 'down' || u.state === 'getup';
 
 // A spellbook casts what the moment needs: a nova when something is on top of you, a ward when it is
 // hurting, a bolt the rest of the time. Each page has its own cooldown, so you cannot lean on one.
-const SPELL_CD = { cast_nova: 150, cast_ward: 240, cast_sigil: 190, cast_wall: 260, cast_grasp: 220 };
+const SPELL_CD = { cast_nova: 150, cast_ward: 240, cast_sigil: 190, cast_wall: 260, cast_grasp: 220, cast_drain: 130, cast_rupture: 330 };
 function pickSpell(u, fallback) {
   if (u.state === 'dead' || !u.b.gr || world.demo) return fallback;
   const e = foe(u), cd = (u.sCd ||= {});
   const near = e && e.state !== 'dead' && Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) < 3.1;
   const dist = e ? Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) : 99;
+  if (u.gs && u.gs.flags.tome) {
+    const load = e ? afflicted(e) : 0;
+    if (e && !(cd.cast_grasp > 0) && meleeThreat(u, e) >= 0) return 'cast_grasp';
+    if (e && load < 1.4 && dist < 8.5) return 'cast_curse';                       // get it on them first
+    if (e && load >= 2.6 && !(cd.cast_rupture > 0) && dist < 6.5) return 'cast_rupture';   // then tear it out
+    if (e && load > 0.6 && !(cd.cast_drain > 0) && dist < 7.5) return 'cast_drain';
+    if (!(cd.cast_wall > 0) && shotThreat(u, 40) >= 0) return 'cast_wall';
+    return e && dist < 8.5 ? 'cast_curse' : fallback;
+  }
   if (near && !(cd.cast_nova > 0)) return 'cast_nova';
   // something running at you: catch it in the ink and it stops where it stands
   if (e && !(cd.cast_grasp > 0) && dist < 7 && (meleeThreat(u, e) >= 0 || (!isRanged(e) && dist < 4.5))) return 'cast_grasp';
@@ -2972,16 +2991,23 @@ function bleedOnAttack(u, name) {
 function drips(u, n) {
   for (let i = 0; i < n; i++) parts.push({ k: 'p', x: u.b.x + (Math.random() - 0.5) * 0.4, y: u.b.y - 0.9 - Math.random() * 0.4, vx: (Math.random() - 0.5) * 2, vy: -1 - Math.random() * 2, life: 0, max: 40, c: 'bleed' });
 }
+// Whoever laid a status can drink from it: every tick of it puts a share back into them.
+function dotFeed(by, amt) {
+  const f = by && by.gs && by.gs.flags.dotHeal;
+  if (f && by.state !== 'dead') heal(by, amt * f);
+}
 function statusStep(u) {
   const s = u.st, b = u.b, by = s.by >= 0 && U.find((x) => x.side === s.by && !x.mob), bf = (by && by.gs && by.gs.flags) || {};
   const half = world.t % (bf.dotRate ? 18 : 30) === 0, dotMul = by && by.stasis > 0 ? 2 : 1;
+  // An affliction gets worse the longer it is left on: a tome's statuses climb while they burn.
+  if (half && bf.agony && (s.burn > 0 || s.poison > 0 || s.bleed > 0)) s.mult = Math.min((s.mult || 1) * (1 + bf.agony), (bf.dotMult || 1) * 2.2);
   if (s.burn > 0) {
     s.burn--;
-    if (half) hurt(u, STATUS.burn.tick * dotMul * dotPwr(u), 'status', s.by, 'burn');
+    if (half) { const d = STATUS.burn.tick * dotMul * dotPwr(u); hurt(u, d, 'status', s.by, 'burn'); dotFeed(by, d); }
     if (world.t % 5 === 0) parts.push({ k: 'e', x: b.x + (Math.random() - 0.5) * 0.4, y: b.y - (u.bh || H) * (0.4 + Math.random() * 0.5), vx: (Math.random() - 0.5) * 0.8, vy: -1.6 - Math.random(), ph: Math.random() * 6, life: 0, max: 26, c: 'burn' });
   }
   if (s.poison > 0) {
-    if (half) hurt(u, STATUS.poison.tick * s.poison * dotMul * dotPwr(u), 'status', s.by, 'poison');
+    if (half) { const d = STATUS.poison.tick * s.poison * dotMul * dotPwr(u); hurt(u, d, 'status', s.by, 'poison'); dotFeed(by, d); }
     if (--s.pT <= 0) { s.poison--; s.pT = STATUS.poison.decay; }
     if (world.t % 14 === 0) parts.push({ k: 'b', x: b.x + (Math.random() - 0.5) * 0.5, y: b.y - (u.bh || H) * (0.5 + Math.random() * 0.4), vx: 0, vy: -0.9, r: 0.05 + Math.random() * 0.04, life: 0, max: 30, c: 'poison' });
   }
@@ -4321,6 +4347,9 @@ function atkStep(u) {
     if (d.sigil) castSigil(u, d.sigil);
     if (d.wall) castWall(u, d.wall);
     if (d.grasp) castGrasp(u, d.grasp);
+    if (d.curse) castCurse(u, d.curse);
+    if (d.drain) castDrain(u, d.drain);
+    if (d.rupture) castRupture(u, d.rupture);
     if (d.plunge) { b.vy = 22; b.vx *= 0.3; b.jumping = false; streak(b.x, b.y - 0.8, Math.PI / 2, 1.2, TEAM[u.side]); }
     if (u.atkName === 'dash') for (let i = 0; i < 3; i++) streak(b.x - u.face * (0.4 + i * 0.35), b.y - 0.5 - i * 0.35, u.face > 0 ? 0 : Math.PI, 0.9, 'spark');
   }
@@ -4540,6 +4569,49 @@ function castGrasp(u, gr) {
   ring(e.b.x, e.b.y - 0.3, 0.9, TEAM[u.side]); callout(e, 'HELD', u.side);
   world.hs = Math.max(world.hs, 4);
   u.hitDone = true;
+}
+// How much affliction is already on somebody, counted in the same units the tome's pages pay out in.
+// Poison comes in stacks and the others in seconds, so they are weighed against each other here.
+const afflicted = (e) => e.st.burn / 70 + e.st.poison * 0.6 + e.st.bleed / 70;
+// A curse: no damage at all, just the book's weather driven deep, at the cost of a little of your own.
+function castCurse(u, cu) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > cu.reach) return;
+  // Poison already comes in stacks of its own, so a curse of it lands lighter than one that does not stack.
+  const st = bookStatus(u, 'poison');
+  applyStatus(u, e, st, st === 'poison' ? 2 : cu.stacks);
+  if (cu.cost) hurt(u, u.hpMax * cu.cost, 'status', -1, 'burn');
+  for (let i = 0; i < 6; i++) brushUp(e.b.x + (Math.random() - 0.5) * 0.6, e.b.y, ST_COL[st] || TEAM[u.side]);
+  ring(e.b.x, e.b.y - 0.8, 1.1, ST_COL[st] || TEAM[u.side]); callout(e, 'CURSED', u.side);
+}
+// A drain: the afflictions on them run back up the line and into you.
+function castDrain(u, dr) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > dr.reach) return;
+  const dmg = dr.per * afflicted(e) * powerOf(u);
+  if (dmg < 1) return;
+  hurt(e, dmg, 'status', u.side, 'poison');
+  heal(u, dmg * dr.back);
+  const c = TEAM[u.side];
+  for (let i = 0; i < 9; i++) { const k = i / 9; streak(e.b.x + (u.b.x - e.b.x) * k, e.b.y - 0.9 + (u.b.y - e.b.y) * k * 0.9, Math.atan2(u.b.y - e.b.y, u.b.x - e.b.x), 0.5, c); }
+  popText(u.b.x, u.b.y - H - 0.4, `+${Math.round(dmg * dr.back)}`, 'poison', 0.5);
+  world.hs = Math.max(world.hs, 3);
+}
+// A rupture: everything you put in them comes out at once, and it takes the afflictions with it.
+function castRupture(u, rp) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead' || Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) > rp.reach) return;
+  const load = afflicted(e), dmg = rp.per * load * powerOf(u);
+  if (rp.cost) hurt(u, u.hpMax * rp.cost, 'status', -1, 'burn');
+  if (load < 0.5) return;
+  e.st.burn = 0; e.st.poison = 0; e.st.bleed = 0;
+  applyHit(u, e, { dmg, kb: rp.kb, stun: rp.stun, hs: rp.hs, big: 1, tumble: 1 }, Math.sign(e.b.x - u.b.x) || u.face);
+  ring(e.b.x, e.b.y - 0.9, 1.9, 'poison'); ring(e.b.x, e.b.y - 0.9, 1.2, TEAM[u.side]);
+  for (let i = 0; i < 12; i++) streak(e.b.x, e.b.y - 0.9, (i / 12) * 6.283, 0.8 + Math.random() * 0.7, 'poison');
+  callout(e, 'RUPTURE', u.side); sfxShake(8);
 }
 const brushUp = (x, y, c) => streak(x, y - 0.3 - Math.random() * 0.8, -Math.PI / 2 + (Math.random() - 0.5) * 0.5, 0.5 + Math.random() * 0.5, c);
 // A ward: a shell of cold around you, and anything already inside it gets some.
@@ -5213,6 +5285,16 @@ const ITEM = {
   arc_daggers: iW('Arc Daggers', 'storm', 'daggers', { stats: { haste: 0.05 }, ...oh('shock', 0.15) }),
   storm_codex: iW('Storm Codex', 'storm', 'spellbook', { ...oh('shock', 0.2), flags: { spellSt: 'shock' }, desc: 'Every spell in it carries Shock.', flavor: 'It reads itself when nobody is looking.' }),
   blood_codex: iW('Blood Codex', 'blood', 'spellbook', { ...oh('bleed', 0.2), stats: { ls: 0.03 }, flags: { spellSt: 'bleed' }, desc: 'Every spell in it carries Bleed.', flavor: 'Written once, in a hurry.' }),
+  // Warlock tomes: no page of one does damage now. They curse, they drink it back, and they tear it out.
+  rot_tome: iW('Tome of Rot', 'rot', 'spellbook', { stats: { hp: 12 },
+    flags: { tome: true, spellSt: 'poison', dotMult: 1.7, agony: 0.05, dotHeal: 0.2, selfCost: 0.004 },
+    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +70% and get worse the longer they burn, every tick of them heals you a fifth, and every page costs you a little.', flavor: 'The margins are wet.' }),
+  ash_tome: iW('Tome of Ash', 'blaze', 'spellbook', { stats: { resist: 0.08 },
+    flags: { tome: true, spellSt: 'burn', dotMult: 1.9, agony: 0.055, dotHeal: 0.2, selfCost: 0.004 },
+    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +70% and deepen as they burn, every tick heals you a fifth, and the book takes its price in your own skin.', flavor: 'It reads best by its own light.' }),
+  mire_tome: iW('Tome of the Mire', 'mire', 'spellbook', { stats: { regen: 1 },
+    flags: { tome: true, spellSt: 'poison', dotMult: 1.55, agony: 0.07, dotHeal: 0.28, selfCost: 0.003 },
+    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +55%, deepen fast, and every tick of them heals you more than a quarter.', flavor: 'Bound in something that was recently a frog.' }),
   storm_crest: iA('Storm Crest', 'storm', 'head', { hp: 12, haste: 0.05 }),
   coil_plate: iA('Coil Plate', 'storm', 'core', { hp: 24, def: 3 }),
   surge_boots: iA('Surge Boots', 'storm', 'feet', { speed: 0.06, haste: 0.04 }, { acro: 3 }),
@@ -6682,6 +6764,13 @@ function drawWeapon(S, side, pal, ink) {
     stroke([w.c1, w.c4], team, 0.05);
   } else if (S.w === 'stars') {
     if (S.held & 1) drawStar(w.s1.x, w.s1.y, 0.14, 0, ink, team);
+  } else if (S.w === 'spellbook' && S.tome) {
+    // a tome stays shut in the hand: a slab of a cover with a clasp and a line of the team's ink
+    ctx.fillStyle = ink; ctx.beginPath();
+    ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a1.x, w.a1.y); ctx.lineTo(w.b1.x, w.b1.y);
+    ctx.lineTo(w.b2.x, w.b2.y); ctx.lineTo(w.a2.x, w.a2.y); ctx.closePath(); ctx.fill();
+    stroke([w.a1, w.b1], pal.steel, 0.028);
+    stroke([w.spine, { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 }], team, 0.04);
   } else if (S.w === 'spellbook') {
     // two covers opened from the spine, pale pages between them, and the team's ribbon down the middle
     ctx.fillStyle = pal.steel; ctx.beginPath();
@@ -6882,7 +6971,7 @@ function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
   if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
   if (u.shift) { drawShifted(u, pal); return; }
-  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face;
+  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome);
   for (const g of u.ghosts) {
     if (g.age < 0) continue;
     ctx.globalAlpha = 0.5 * (1 - g.age / g.max);
@@ -7355,6 +7444,15 @@ const ART_WEAPON = {
     if (!s) return circ(16, 16, 11, PAPER_C, 'currentColor', 1.8) + circ(16, 16, 5.5, 'none', 'currentColor', 1.8) + ln('M16 5 V9 M16 23 V27 M5 16 H9 M23 16 H27', 'currentColor', 1.6) + circ(16, 16, 2.4, a);
     return paperP(s) + circ(16, 16, 2.8, a);
   },
+  tome(v, a) {
+    // a heavy book, clasped shut, with an eye worked into the cover
+    return paperP('M7 4 H24 A2.5 2.5 0 0 1 26.5 6.5 V26 A2.5 2.5 0 0 1 24 28.5 H7 Z')
+      + ln('M10.5 4 V28.5', 'currentColor', 2.6) + ln('M7.6 7 V26', a, 1.4)
+      + pth('M13 16.5 C 15.5 12.5 21 12.5 23.5 16.5 C 21 20.5 15.5 20.5 13 16.5 Z', PAPER_C, 'currentColor', 1.7)
+      + circ(18.2, 16.5, 2.1, 'currentColor') + circ(18.2, 16.5, 0.9, PAPER_C)
+      + ln('M26.5 14 H29 V19 H26.5', 'currentColor', 1.8)
+      + (v % 2 ? ln('M14 23.5 H22', a, 1.5) : ln('M15 9.5 H21', a, 1.5));
+  },
   spellbook(v, a) {
     const shut = v % 3 === 2;
     if (shut) return paperP('M7 5 H23 A2 2 0 0 1 25 7 V26 A2 2 0 0 1 23 28 H7 Z') + ln('M10 5 V28', 'currentColor', 2) + ln('M14 12 H21 M14 16 H21 M14 20 H19', a, 1.6) + circ(16, 9, 1.8, a);
@@ -7492,7 +7590,7 @@ function itemArt(id) {
     // named variants first (0 for the plainest), then a stable pick for the rest
     const plain = names[it.weapon].some((w) => it.name.startsWith(w));
     const v = plain ? 0 : 1 + (artHash(id) % 2);
-    body = ART_WEAPON[it.weapon](v, a);
+    body = ART_WEAPON[it.flags && it.flags.tome ? 'tome' : it.weapon](v, a);
   } else if (it.skill) {
     body = circ(16, 16, 14, 'none', a, 2) + `<g transform="translate(5 5)">${SKILL_ICON[it.skill].replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   } else {
