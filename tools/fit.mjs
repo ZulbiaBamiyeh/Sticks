@@ -43,16 +43,13 @@ for (const [W, H] of SIZES) {
     localStorage.setItem('homeTurf.run.v2', JSON.stringify(run));
   });
   await p.reload(); await p.evaluate(() => document.fonts.ready);
-  await p.click('#runStart'); await over('run-shop');
-  await p.click('.irow[data-ware]'); await over('run-shop-item');
-  await p.click('[data-sheet="close"]');
+  await p.click('#runStart'); await over('run-pick');
   await p.click('[data-go="gear"]'); await over('run-gear');
   await p.click('.bag .bslot[data-bag]'); await over('run-gear-bag');
   await p.click('[data-sheet="close"]');
   await p.click('#doll .slot[data-slot="core"]'); await over('run-gear-worn');
   await p.click('[data-sheet="close"]');
   await p.click('[data-go="back"]');
-  await p.click('[data-go="shopleave"]'); await over('run-pick');
   // an event and a duel
   for (const [name, setup] of [
     ['run-event', () => { const R = window.__homeTurf.run; const r = R.Run.load(); r.event = { id: 'gremlin', result: null }; r.save(); }],

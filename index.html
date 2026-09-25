@@ -4677,6 +4677,8 @@ function setRival(ix) {
 // Hunts only cost you the drop. Creatures and gear both grow stronger day by day.
 // Everything in this section is rules and data, no DOM, so it can be run headless.
 const RUNCFG = { days: 7, perDay: 4, winTarget: 5, lives: 3, bag: 6, rerolls: 2 };
+// The shop is switched off for now: a day opens straight on the hunts. The code stays, as with spikes.
+const SHOP_ON = false;
 const RUN_KEY = 'homeTurf.run.v2', GHOST_KEY = 'homeTurf.ghosts.v2';
 const dayOf = (round) => Math.ceil(round / RUNCFG.perDay);
 const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
@@ -5615,6 +5617,7 @@ class Run {
   }
   // A creature drops one thing. Elites can turn up a legendary instead: the only place they come from.
   lootFor(offer, n) {
+    if (!n) this.lootRolls = 0;
     const r = runRng(this.seed, this.round, 'loot', n);
     const odds = { easy: 0, normal: 0.04, elite: 0.14 }[offer.card] * (this.day >= 2 ? 1 : 0);
     const have = new Set(this.owned().map((i) => i.item)), pool = LEGENDS.filter((id) => !have.has(id));
@@ -5623,9 +5626,23 @@ class Run {
       : rollInstance(r.pick(r.shuffle(this.drops(offer))), rollRarity(offer.card, this.day, r), this.day, r);
     this.loot = { offer, items: [inst] };
   }
+  // A drop for a slot you have already filled is the least interesting one you can get, so the first
+  // reroll of one is free and costs you nothing from the day's two.
+  freeReroll() {
+    const l = this.loot;
+    if (!l || l.freeUsed) return false;
+    const k = ITEM[l.items[0].item].slot;
+    return k === 'trinket' ? !!(this.equip.trinket1 && this.equip.trinket2) : !!this.equip[k];
+  }
   rerollLoot() {
-    if (!this.loot || this.rerolls <= 0) return false;
-    this.rerolls--; this.lootFor(this.loot.offer, 1 + RUNCFG.rerolls - this.rerolls); return true;
+    if (!this.loot) return false;
+    const free = this.freeReroll(), spent = this.loot.freeUsed || free;
+    if (!free && this.rerolls <= 0) return false;
+    if (!free) this.rerolls--;
+    this.lootRolls = (this.lootRolls || 0) + 1;
+    this.lootFor(this.loot.offer, this.lootRolls);
+    this.loot.freeUsed = spent;
+    return true;
   }
   bagFull() { return this.bag.length >= RUNCFG.bag; }
   // put a piece on: whatever it replaces goes to the bag, or is sold if the bag is full
@@ -5662,7 +5679,7 @@ class Run {
   next() {
     if (this.over) return;
     this.round++;
-    if (slotOf(this.round) === 1) { this.shopRolls = 0; this.rollShop(); }   // a new day opens on the shop
+    if (SHOP_ON && slotOf(this.round) === 1) { this.shopRolls = 0; this.rollShop(); }   // a new day opens on the shop
     if (slotOf(this.round) === 1) this.rerolls = RUNCFG.rerolls;
     this.loot = null; this.rollRound();
   }
@@ -5671,7 +5688,9 @@ class Run {
     try {
       const d = JSON.parse(localStorage.getItem(RUN_KEY));
       if (!d || !d.seed) return null;
-      return Object.assign(Object.create(Run.prototype), { events: [], event: null, boons: { hpFlat: 0, hpMult: 1, skillHaste: 0 } }, d);
+      const r = Object.assign(Object.create(Run.prototype), { events: [], event: null, boons: { hpFlat: 0, hpMult: 1, skillHaste: 0 } }, d);
+      if (!SHOP_ON) r.shop = null;   // a run saved while the shop was on carries on without it
+      return r;
     } catch { return null; }
   }
   static clear() { try { localStorage.removeItem(RUN_KEY); } catch { /* ignore */ } }
@@ -5914,7 +5933,7 @@ function chooseEvent(run, key, uid) {
 }
 
 // ---------------------------------------------------------------- the shop
-// As in ZereshkStory: each new day opens on a shop. Five wares, each with a reason to want it: pieces for
+// Off for now (SHOP_ON). As in ZereshkStory: each new day opens on a shop. Five wares, each with a reason to want it: pieces for
 // sets you've started, a twin of something you own (to merge), a keystone, and a taste of tomorrow.
 const SHOP_PRICE = { common: 5, rare: 10, epic: 16, legend: 30 }, KEYSTONE_MARKUP = 6, SHOP_REROLL = 2;
 Object.assign(Run.prototype, {
@@ -7734,10 +7753,11 @@ function renderRun() {
     }).join('');
     actions = `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Home</button>`;
   } else if (runScreen === 'loot') {
-    const drop = run.loot.items[0];
-    body = `<div class="row-h"><span class="lbl">${ITEM[drop.item].legend ? 'A legendary dropped' : 'It dropped'}</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>`
+    const drop = run.loot.items[0], free = run.freeReroll(), slot = ITEM[drop.item].slot;
+    const note = free ? `${slot === 'trinket' ? 'Both trinkets' : slotName(slot)} already worn` : `From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}`;
+    body = `<div class="row-h"><span class="lbl">${ITEM[drop.item].legend ? 'A legendary dropped' : 'It dropped'}</span><span class="lbl">${note}</span></div>`
       + itemCard(drop, `${wearBtns(drop, 'data-loot="0" data-act')}<button class="ghost" data-loot="0" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, true);
-    actions = `<button class="ghost" data-go="reroll" ${run.rerolls > 0 ? '' : 'disabled'}>Reroll (${run.rerolls})</button><button class="ghost" data-go="skip">Leave it</button>`;
+    actions = `<button class="ghost" data-go="reroll" ${free || run.rerolls > 0 ? '' : 'disabled'}>Reroll ${free ? '· free' : `(${run.rerolls})`}</button><button class="ghost" data-go="skip">Leave it</button>`;
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
@@ -7969,7 +7989,7 @@ function gearSheet() {
   const inst = runSel.uid ? run.bag.find((x) => x.uid === runSel.uid) : run.equip[runSel.slot];
   if (!inst) {
     openSheet(`<div class="sh-head"><b>${slotName(runSel.slot)}</b><span class="lbl">Empty</span></div>
-      <p class="hint">Nothing here yet. Every creature drops its family's gear, and the shop stocks it.</p>
+      <p class="hint">Nothing here yet. Every creature drops a piece of its own family's gear.</p>
       <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
     return;
   }
