@@ -80,6 +80,7 @@
     overflow: hidden;
     background: var(--stage);
   }
+  #app.tall #stage { height: 100%; }
   #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   #hud {
     position: absolute;
@@ -341,9 +342,6 @@
   .bring { display: flex; align-items: baseline; gap: 10px; font-size: 15px; }
   .bring b { color: var(--blue); font-weight: 700; }
   /* the run */
-  .hero { display: grid; gap: 4px; }
-  .hero b { font: 900 30px/1 var(--display); letter-spacing: 0.02em; }
-  .hero p { margin: 0; font-size: 14px; color: var(--ink-2); }
   .hstats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .hstats div { border: 2px solid var(--line); border-radius: 6px; padding: 7px 9px; display: grid; gap: 1px; }
   .hstats b { font: 900 20px/1 var(--display); font-variant-numeric: tabular-nums; }
@@ -441,8 +439,17 @@
   .sh-card { position: relative; background: var(--paper); border: 2px solid var(--ink); border-radius: 12px 12px 0 0; padding: 12px 14px 14px; display: grid; gap: 9px; max-height: 92%; overflow: hidden; }
   .sh-card .icard { border-width: 2px; }
   .sh-card .actions { margin-top: 2px; }
-  .sh-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .sh-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .sh-head b { font: 900 20px/1 var(--display); letter-spacing: 0.02em; }
+  .sh-head .sh-t { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .sh-ic { display: inline-grid; place-items: center; flex: none; width: 30px; height: 30px; border: 2px solid var(--rc, var(--line)); border-radius: 7px; background: var(--panel); }
+  .sh-ic svg { width: 22px; height: 22px; display: block; }
+  /* how far a set has got: four pips, filled as pieces go on */
+  .pips4 { display: inline-flex; gap: 4px; vertical-align: -1px; margin-left: 6px; }
+  .pips4 i { width: 9px; height: 9px; border-radius: 2px; border: 1.5px solid var(--line); }
+  .pips4 i.on { background: #1b8a3a; border-color: #1b8a3a; }
+  .il-st .gm, .il-head .gm { display: inline-grid; place-items: center; vertical-align: -4px; }
+  .il-st .gm svg, .il-head .gm svg { width: 17px; height: 17px; display: block; }
   .evhead { display: grid; gap: 4px; }
   .evhead b { font: 900 24px/1.05 var(--display); letter-spacing: 0.02em; }
   .evhead p { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-2); }
@@ -636,10 +643,6 @@
   </div>
 
   <section class="panel" id="homePanel" hidden>
-    <div class="hero">
-      <b id="homeTitle">Seven days in the ink</b>
-      <p id="homeSub">Hunt creatures for gear, and duel another player's build every night. Win five duels for the Crown.</p>
-    </div>
     <div class="hstats" id="homeStats"></div>
     <div class="actions">
       <button class="ghost" id="devMode">Dev mode</button>
@@ -7717,6 +7720,8 @@ function showPanel(which) {
   const panels = { build: ui.buildPanel, fight: ui.fightPanel, rival: ui.rivalPanel, run: ui.runPanel, home: $('#homePanel') };
   for (const [k, el] of Object.entries(panels)) el.hidden = k !== which;
   const el = panels[which];
+  // The front door has almost nothing on it, so the arena takes the room the panel does not want.
+  $('#app').classList.toggle('tall', which === 'home');
   el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter');
 }
 function enterRival() {
@@ -8131,12 +8136,12 @@ function renderRun() {
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
     const cells = [['HP', Math.round((100 + st.hp) * st.hpMult)], ['Damage', w ? `${Math.round(w.min + st.atk)}–${Math.round(w.max + st.atk)}` : '—'], ['Crit', pctS(st.crit)],
       ['Def', Math.round(st.def)], ['Haste', fmtStat('haste', st.haste)], ['Evasion', pctS(st.evasion)],
-      ['Skill', b.skill ? SKILL[b.skill].name : '—'], ['Moves', `${b.acro} / 4`], ['Statuses', applies.map((k) => `<button class="stbtn" data-status="${k}" aria-label="${stName(k)}">${stSvg(k)}</button>`).join('') || '—']];
+      ['Skill', b.skill ? SKILL[b.skill].name : '—'], ['Moves', `${b.acro} / 4`], ['Statuses', applies.map((k) => `<button class="stbtn" data-status="${k}" aria-label="${stName(k)}" title="${stName(k)} — ${STATUS_HELP[k]}">${stSvg(k)}</button>`).join('') || '—']];
     const extra = ['critDmg', 'resist', 'ls', 'regen', 'thorns', 'pen', 'speed', 'skillHaste'].filter((k) => Math.abs(st[k]) > 1e-3).map((k) => `<span>${statLine(k, st[k])}</span>`).join('');
     const rules = Object.values(run.equip).filter(Boolean).map((i) => ITEM[i.item]).filter((it) => it.keystone || it.relic)
-      .map((it) => `<button class="${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" data-rule="${it.id}">${it.name}</button>`).join('');
+      .map((it) => `<button class="${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" data-rule="${it.id}" title="${it.name} — ${it.desc}">${it.name}</button>`).join('');
     const syn = synergyLines(b);
-    const sets = Object.entries(b.sets || {}).map(([f, n]) => `<button class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" data-set="${f}">${FAMILY[f].name} ${Math.min(n, 4)}/4</button>`).join('');
+    const sets = Object.entries(b.sets || {}).map(([f, n]) => `<button class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" data-set="${f}" title="${FAMILY[f].name} ${Math.min(n, 4)}/4 — ${setText(f)}">${FAMILY[f].name} ${Math.min(n, 4)}/4</button>`).join('');
     const bag = Array.from({ length: RUNCFG.bag }, (_, i) => {
       const inst = run.bag[i];
       return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}">${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
@@ -8321,15 +8326,19 @@ function runClick(ev) {
   else if (go === 'skip') { run.skipLoot(); if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
 }
 // Traits explain themselves: tap a set, a keystone or a status and it says what it does for you.
+const stMark = (k) => (ST_ICON[k] ? `<i class="gm" title="${stName(k)}">${stSvg(k)}</i>` : '');
+const pips4 = (n) => `<span class="pips4">${[1, 2, 3, 4].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
 function setSheet(f) {
   const F = FAMILY[f], n = famCount(run.equip, f), worn = Object.values(run.equip).filter((i) => i && ITEM[i.item].family === f);
   const line = (on, label, text) => `<p class="il-${on ? 'rule' : 'sig'}">${on ? '✓' : '·'} <b>${label}</b> ${text}</p>`;
-  openSheet(`<div class="sh-head"><b>${F.name} set</b><span class="lbl">${n} piece${n === 1 ? '' : 's'} worn</span></div>
+  openSheet(`<div class="sh-head" style="--rc:${n >= 2 ? '#1b8a3a' : 'var(--line)'}">
+      <span class="sh-t">${F.status ? `<span class="sh-ic">${stSvg(F.status)}</span>` : ''}<b>${F.name} set</b></span>
+      <span class="lbl">${Math.min(n, 4)}/4${pips4(n)}</span></div>
     <div class="icard" style="--rc:${n >= 2 ? '#1b8a3a' : 'var(--line)'};--nc:var(--ink)">
       <div class="ilines">
         ${line(n >= 2, 'Two pieces:', Object.entries(F.set2.stats).map(([k, v]) => statLine(k, v)).join(', '))}
         ${line(n >= 4, 'Four pieces:', F.set4.desc)}
-        ${F.status ? `<p class="il-st">Its creatures attack with ${stName(F.status)}.</p>` : ''}
+        ${F.status ? `<p class="il-st">${stMark(F.status)} Its creatures attack with ${stName(F.status)}.</p>` : ''}
         <p class="il-stat">${worn.length ? `You wear: ${worn.map((i) => ITEM[i.item].name).join(', ')}` : 'You wear none of it yet.'}</p>
         <p class="il-sig">Dropped by the ${HUNTS[F.hunt].name.toLowerCase()}.</p>
       </div>
@@ -8338,19 +8347,24 @@ function setSheet(f) {
 }
 function ruleSheet(id) {
   const it = ITEM[id], kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : 'Relic';
-  openSheet(`<div class="sh-head"><b>${it.name}</b><span class="lbl">${kind}</span></div>
-    <div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" style="--rc:${it.legend ? LEGEND_COL : it.keystone ? KEY_COL : RELIC_COL};--nc:var(--ink)">
+  const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : RELIC_COL;
+  openSheet(`<div class="sh-head" style="--rc:${rim}">
+      <span class="sh-t"><span class="sh-ic">${itemArt(id)}</span><b>${it.name}</b></span><span class="lbl">${kind}</span></div>
+    <div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" style="--rc:${rim};--nc:var(--ink)">
       <div class="ilines"><p class="il-rule">${it.desc}</p>${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}</div></div>
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
 function statusSheet(k) {
-  const K = STATUS[k], b = builds[0], src = [...b.stats.onHit.filter((o) => o.apply === k).map((o) => `${o.name} (${pctS(o.chance)} a hit)`),
-    ...b.stats.trig.filter((t) => t.effect.apply === k).map((t) => t.src)];
-  openSheet(`<div class="sh-head"><b>${stName(k)}</b><span class="lbl">Status</span></div>
+  const K = STATUS[k], b = builds[0], by = new Map();   // one line per piece, the chance if it has one
+  for (const o of b.stats.onHit) if (o.apply === k && o.name) by.set(o.name, `${o.name} (${pctS(o.chance)} a hit)`);
+  for (const t of b.stats.trig) if (t.effect.apply === k && t.src && !by.has(t.src)) by.set(t.src, t.src);
+  const src = [...by.values()];
+  openSheet(`<div class="sh-head" style="--rc:${ST_COL[k] || 'var(--line)'}">
+      <span class="sh-t">${ST_ICON[k] ? `<span class="sh-ic">${stSvg(k)}</span>` : ''}<b>${stName(k)}</b></span><span class="lbl">Status</span></div>
     <div class="icard" style="--rc:${ST_COL[k] || 'var(--line)'};--nc:var(--ink)">
       <div class="ilines"><p class="il-head">${STATUS_HELP[k]}</p>
       <p class="il-st">It hits harder the harder you hit: every tick scales with your weapon and Atk.</p>
-      <p class="il-stat">${src.length ? `From: ${[...new Set(src)].join(', ')}` : 'Nothing you wear applies it.'}</p></div></div>
+      <p class="il-stat">${src.length ? `From: ${src.join(', ')}` : 'Nothing you wear applies it.'}</p></div></div>
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
 // What you have on, or a piece in the bag: shown over the top so the gear screen stays put.
@@ -8373,12 +8387,8 @@ $('#runNext').addEventListener('click', runContinue);
 $('#runStart').addEventListener('click', () => { const saved = Run.load(); startRun(saved && !saved.over ? saved : new Run()); });
 function refreshRunBar() {
   const saved = Run.load(), live = saved && !saved.over;
-  $('#runStart').textContent = live ? `Continue · day ${dayOf(saved.round)}` : 'Start a run';
+  $('#runStart').textContent = live ? 'Continue' : 'Start a run';
   $('#homeExtra').hidden = !live;
-  $('#homeTitle').textContent = live ? `Day ${dayOf(saved.round)} of ${RUNCFG.days}` : 'Seven days in the ink';
-  $('#homeSub').textContent = live
-    ? 'Your run is waiting. Pick up where you left off.'
-    : 'Hunt creatures for gear, and duel another player\'s build every night. Win five duels for the Crown.';
   const ghosts = loadGhosts().length;
   $('#homeStats').innerHTML = (live
     ? [['Duels won', `${saved.wins}/${RUNCFG.winTarget}`], ['Lives', saved.lives], ['Gold', saved.gold]]
