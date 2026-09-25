@@ -4850,7 +4850,7 @@ function poseTarget(u) {
   T.hipH += Math.sin(t * 0.07) * 0.012;
   let atkPose = null;
   if (st === 'free' || st === 'atk') {
-    if (b.gr && spd > 0.9 && st === 'free') {
+    if (b.gr && spd > 0.9 && st === 'free' && w !== 'spellbook') {
       Object.assign(T, RUN[w]);
       if (fwd < 0) { T.lean = -0.08; T.hipH = 0.68; }
       if (w === 'sword') { T.bx = 0.18 + Math.sin(u.gait) * 0.2; T.by = 0.22 - Math.abs(Math.sin(u.gait)) * 0.05; }
@@ -4909,12 +4909,14 @@ function poseTarget(u) {
   if (st === 'down' || (st === 'stun' && u.tumble) || st === 'duel') return T;
   if (b.gr) {
     if (st === 'free' && spd > 0.9) {
-      u.gait += spd * DT * 2.3 * (fwd < 0 ? -1 : 1);
-      const s = Math.min(1, spd / 6) * 0.38, g = u.gait;
+      // a caster walks rather than runs: the same cycle, half the stride and a slower count
+      const wk = w === 'spellbook' ? 0.62 : 1;
+      u.gait += spd * DT * 2.3 * wk * (fwd < 0 ? -1 : 1);
+      const s = Math.min(1, spd / 6) * 0.38 * (w === 'spellbook' ? 0.62 : 1), g = u.gait;
       T.ffx = Math.sin(g) * s + 0.04; T.bfx = -Math.sin(g) * s + 0.04;
-      T.ffy = T.hipH - Math.max(0, Math.cos(g)) * 0.24; T.bfy = T.hipH - Math.max(0, -Math.cos(g)) * 0.24;
-      T.hipH -= Math.abs(Math.cos(g)) * 0.035;
-      T.kl = 0.55; T.d = 0.4;
+      T.ffy = T.hipH - Math.max(0, Math.cos(g)) * 0.24 * wk; T.bfy = T.hipH - Math.max(0, -Math.cos(g)) * 0.24 * wk;
+      T.hipH -= Math.abs(Math.cos(g)) * 0.035 * wk;
+      T.kl = w === 'spellbook' ? 0.42 : 0.55; T.d = 0.4;
     } else { T.ffy = T.hipH; T.bfy = T.hipH; }
   } else if (b.vy < 0) { T.ffx = 0.22; T.ffy = T.hipH * 0.5; T.bfx = -0.08; T.bfy = T.hipH * 0.62; }
   else { T.ffx = 0.2; T.ffy = T.hipH * 0.92; T.bfx = -0.24; T.bfy = T.hipH * 0.8; }
@@ -4989,7 +4991,9 @@ function weaponGeom(w, hf, hb, wd, draw, wdb = wd) {
   if (w === 'spear') return { butt: at(hf, -0.95), neck: at(hf, 1.06), tip: at(hf, 1.36), h1: at(hf, 1.15, 0.08), h2: at(hf, 1.15, -0.08), base: at(hf, 0.6) };
   if (w === 'stars') return { s1: at(hf, 0.02), s2: hb };
   // an open book lying across the front hand, and a puppeteer's empty hands
-  if (w === 'spellbook') return { spine: at(hf, -0.04), a1: at(hf, 0.34, 0.26), a2: at(hf, 0.34, -0.26), b1: at(hf, 0.42, 0.17), b2: at(hf, 0.42, -0.17) };
+  if (w === 'spellbook') return { spine: at(hf, -0.04), a1: at(hf, 0.34, 0.26), a2: at(hf, 0.34, -0.26), b1: at(hf, 0.42, 0.17), b2: at(hf, 0.42, -0.17),
+    // a staff shares the hand: butt below, head above, held upright whatever the wrist is doing
+    sButt: { x: hf.x - 0.05, y: hf.y + 0.66 }, sTop: { x: hf.x + 0.03, y: hf.y - 0.86 }, sMid: { x: hf.x, y: hf.y - 0.1 } };
   if (w === 'puppet') return { hand: hf, back: hb };
   if (w === 'hammer') return { end: at(hf, -0.36), neck: at(hf, 0.6), c1: at(hf, 0.6, 0.21), c2: at(hf, 0.86, 0.21), c3: at(hf, 0.86, -0.21), c4: at(hf, 0.6, -0.21), base: at(hf, 0.35), tip: at(hf, 0.88) };
   const drawn = draw > 0.04;
@@ -5034,7 +5038,7 @@ function skel(u) {
   return {
     hip: tf(hip), neck: tf(neck), head: tf(head), knot: tf(knot), sh: tf(sh),
     ef: tf(a1.j), hf: tf(a1.e), eb: tf(a2.j), hb: tf(a2.e), kf: tf(l1.j), ff: tf(l1.e), kb: tf(l2.j), bf: tf(l2.e),
-    wp, w: u.w, held: heldStars(u),
+    wp, w: u.w, held: heldStars(u), face: f,
   };
 }
 // Which hands still hold a star (the thrown one reappears once the volley is over).
@@ -5413,12 +5417,12 @@ const ITEM = {
   rot_tome: iW('Tome of Rot', 'rot', 'spellbook', { stats: { hp: 12 },
     flags: { tome: true, spellSt: 'poison', dotMult: 1.7, agony: 0.05, dotHeal: 0.2, selfCost: 0.004 },
     desc: 'Curse, drain and rupture instead of casting. Your statuses deal +70% and get worse the longer they burn, every tick of them heals you a fifth, and every page costs you a little.', flavor: 'The margins are wet.' }),
-  ash_tome: iW('Tome of Ash', 'blaze', 'spellbook', { stats: { resist: 0.08 },
-    flags: { tome: true, spellSt: 'burn', dotMult: 1.9, agony: 0.055, dotHeal: 0.2, selfCost: 0.004 },
-    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +70% and deepen as they burn, every tick heals you a fifth, and the book takes its price in your own skin.', flavor: 'It reads best by its own light.' }),
-  mire_tome: iW('Tome of the Mire', 'mire', 'spellbook', { stats: { regen: 1 },
-    flags: { tome: true, spellSt: 'poison', dotMult: 1.55, agony: 0.07, dotHeal: 0.28, selfCost: 0.003 },
-    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +55%, deepen fast, and every tick of them heals you more than a quarter.', flavor: 'Bound in something that was recently a frog.' }),
+  ash_tome: iW('Ashen Staff', 'blaze', 'spellbook', { stats: { resist: 0.08 },
+    flags: { tome: true, staff: true, spellSt: 'burn', dotMult: 1.9, agony: 0.055, dotHeal: 0.2, selfCost: 0.004 },
+    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +90% and deepen as they burn, every tick heals you a fifth, and the staff takes its price in your own skin.', flavor: 'The head of it is still warm.' }),
+  mire_tome: iW('Mire Staff', 'mire', 'spellbook', { stats: { regen: 1 },
+    flags: { tome: true, staff: true, spellSt: 'poison', dotMult: 1.55, agony: 0.07, dotHeal: 0.28, selfCost: 0.003 },
+    desc: 'Curse, drain and rupture instead of casting. Your statuses deal +55%, deepen fast, and every tick of them heals you more than a quarter.', flavor: 'Cut green, and never dried.' }),
   storm_crest: iA('Storm Crest', 'storm', 'head', { hp: 12, haste: 0.05 }),
   coil_plate: iA('Coil Plate', 'storm', 'core', { hp: 24, def: 3 }),
   surge_boots: iA('Surge Boots', 'storm', 'feet', { speed: 0.06, haste: 0.04 }, { acro: 3 }),
@@ -6839,9 +6843,32 @@ function drawFig(S, side, pal, flash, mono) {
   drawGearHead(S, pal, ink, mono);
   const hx = S.head.x - S.neck.x, hy = S.head.y - S.neck.y, hd = Math.hypot(hx, hy) || 1;
   const px = -hy / hd, py = hx / hd, bx = S.head.x + hx / hd * 0.02, by = S.head.y + hy / hd * 0.02;
-  stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
+  if (S.w === 'spellbook') drawWizardHat(S, { x: hx / hd, y: hy / hd }, { x: px, y: py }, ink, team);
+  else stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
   drawWeapon(S, side, pal, ink);
   stroke([S.sh, S.ef, S.hf], ink, lw);
+}
+// A wizard's hat: a wide soft brim and a cone that leans back off the head, with a band of your ink.
+function drawWizardHat(S, up, side, ink, team) {
+  const h = S.head, f = S.face || 1;
+  const at = (u2, s2) => ({ x: h.x + up.x * u2 + side.x * s2, y: h.y + up.y * u2 + side.y * s2 });
+  const brimL = at(0.1, -0.3), brimR = at(0.1, 0.3), crown = at(0.12, 0);
+  // the brim: a shallow curve across the head, dipping at the ends
+  ctx.strokeStyle = ink; ctx.lineWidth = 0.07; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(brimL.x, brimL.y);
+  ctx.quadraticCurveTo(crown.x + up.x * 0.03, crown.y + up.y * 0.03, brimR.x, brimR.y);
+  ctx.stroke();
+  // the cone, flopping back over the shoulder
+  const tip = at(0.5, -f * 0.26), lean = at(0.3, -f * 0.07);
+  ctx.fillStyle = ink; ctx.beginPath();
+  ctx.moveTo(at(0.1, -0.19).x, at(0.1, -0.19).y);
+  ctx.quadraticCurveTo(lean.x - side.x * 0.1, lean.y - side.y * 0.1, tip.x, tip.y);
+  ctx.quadraticCurveTo(lean.x + side.x * 0.12, lean.y + side.y * 0.12, at(0.1, 0.19).x, at(0.1, 0.19).y);
+  ctx.closePath(); ctx.fill();
+  // the band
+  const b1 = at(0.13, -0.17), b2 = at(0.13, 0.17);
+  ctx.strokeStyle = team; ctx.lineWidth = 0.055;
+  ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
 }
 // The off-hand dagger or star sits behind the body, in the far-limb color.
 function drawBackWeapon(S, side, pal, far) {
@@ -6889,6 +6916,18 @@ function drawWeapon(S, side, pal, ink) {
     stroke([w.c1, w.c4], team, 0.05);
   } else if (S.w === 'stars') {
     if (S.held & 1) drawStar(w.s1.x, w.s1.y, 0.14, 0, ink, team);
+  } else if (S.w === 'spellbook' && S.staff) {
+    // a staff: a long shaft, a crook at the top and a stone caught in it
+    stroke([w.sButt, w.sTop], ink, 0.065);
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.06; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(w.sTop.x, w.sTop.y + 0.02);
+    ctx.quadraticCurveTo(w.sTop.x + 0.22, w.sTop.y - 0.12, w.sTop.x + 0.06, w.sTop.y - 0.26);
+    ctx.stroke();
+    ctx.fillStyle = team; ctx.beginPath(); ctx.arc(w.sTop.x + 0.07, w.sTop.y - 0.12, 0.085, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.028;
+    ctx.beginPath(); ctx.arc(w.sTop.x + 0.07, w.sTop.y - 0.12, 0.085, 0, 6.283); ctx.stroke();
+    stroke([{ x: w.sMid.x - 0.05, y: w.sMid.y }, { x: w.sMid.x + 0.05, y: w.sMid.y }], team, 0.05);
   } else if (S.w === 'spellbook' && S.tome) {
     // a tome stays shut in the hand: a slab of a cover with a clasp and a line of the team's ink
     ctx.fillStyle = ink; ctx.beginPath();
@@ -7136,7 +7175,7 @@ function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
   if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
   if (u.shift) { drawShifted(u, pal); return; }
-  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome);
+  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
   for (const g of u.ghosts) {
     if (g.age < 0) continue;
     ctx.globalAlpha = 0.5 * (1 - g.age / g.max);
@@ -7610,6 +7649,14 @@ const ART_WEAPON = {
     if (!s) return circ(16, 16, 11, PAPER_C, 'currentColor', 1.8) + circ(16, 16, 5.5, 'none', 'currentColor', 1.8) + ln('M16 5 V9 M16 23 V27 M5 16 H9 M23 16 H27', 'currentColor', 1.6) + circ(16, 16, 2.4, a);
     return paperP(s) + circ(16, 16, 2.8, a);
   },
+  staff(v, a) {
+    // a long shaft with a crook at the head and a stone caught in it
+    return ln('M10 30 L20 6', 'currentColor', 2.6)
+      + pth('M20 6 C 26 5 27.5 9 25 12 C 23 14.5 20.5 14 19.5 12', 'none', 'currentColor', 2.4)
+      + circ(22.5, 9.5, 3.1, a, 'currentColor', 1.6)
+      + ln('M13.5 21.5 L17.5 19', a, 2.2)
+      + (v % 2 ? ln('M11.5 26.5 L15 24.5', 'currentColor', 1.6) : '');
+  },
   tome(v, a) {
     // a heavy book, clasped shut, with an eye worked into the cover
     return paperP('M7 4 H24 A2.5 2.5 0 0 1 26.5 6.5 V26 A2.5 2.5 0 0 1 24 28.5 H7 Z')
@@ -7756,7 +7803,7 @@ function itemArt(id) {
     // named variants first (0 for the plainest), then a stable pick for the rest
     const plain = names[it.weapon].some((w) => it.name.startsWith(w));
     const v = plain ? 0 : 1 + (artHash(id) % 2);
-    body = ART_WEAPON[it.flags && it.flags.tome ? 'tome' : it.weapon](v, a);
+    body = ART_WEAPON[it.flags && it.flags.staff ? 'staff' : it.flags && it.flags.tome ? 'tome' : it.weapon](v, a);
   } else if (it.skill) {
     body = circ(16, 16, 14, 'none', a, 2) + `<g transform="translate(5 5)">${SKILL_ICON[it.skill].replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   } else {

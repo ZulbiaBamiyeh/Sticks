@@ -135,6 +135,14 @@ fights run themselves. **Start a run** is the front door, and everything else
     slower still, hardly falling at all, hunched over the book — and a drain
     leaves it gliding for a second and a half on what it just took, dragging a
     thread of ink behind it.
+  - **A caster wears a hat and walks.** No headband: a wide soft brim and a
+    cone that flops back off the head, with a band of your own ink. And it
+    never breaks into a run — the same leg cycle at two thirds the stride and
+    a slower count, so it walks everywhere it goes.
+  - **A tome can be a staff instead of a book**: a long shaft with a crook at
+    the head and a stone caught in it, held upright whatever the wrist is
+    doing. The Ashen Staff and the Mire Staff are staves; the Tome of Rot is a
+    book.
   - **Casters and puppeteers stand like what they are.** Neither uses the
     knife-fighter's crouch any more. A caster is upright with the book carried
     flat in front and the free hand working above it, and it keeps that shape
