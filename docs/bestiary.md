@@ -7,7 +7,7 @@ different. ZereshkStory gets there with this much content:
 | --- | --- | --- |
 | Monsters | 65 (22 Easy, 23 Normal, 20 Elite) in 29 families | 29 creatures (12 bodies, 17 variants) in 29 families, × 3 tiers = 87 |
 | Biomes | 10 | 1 hunting ground |
-| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 311: 97 weapons, 87 armour, 78 trinkets, 13 skill items, 12 keystones, 21 relics, 19 legendaries |
+| Items | 150: 34 weapons, 57 armour, 36 trinkets, 10 keystones, 13 relics | 312: 98 weapons, 87 armour, 78 trinkets, 13 skill items, 12 keystones, 21 relics, 19 legendaries |
 | Statuses | 14 | 5 |
 
 ## Creatures: bodies × variants × tiers

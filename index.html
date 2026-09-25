@@ -781,7 +781,7 @@ const WEAP = {
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
   spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '6 spells', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it. The book picks its page: a wall of ink against shooters, a grasp that stops whatever is running at you, a sigil under anyone who stands still, a nova at arm\'s length, a ward when it hurts, and a bolt when nothing else fits.' },
-  puppet: { name: 'Puppet', speed: 6.0, atk: 'pswing', stop: 4.4, stat: '17f · reach 6', desc: 'You never touch anybody. The marionette hangs on your strings four tiles out and your swings land where it is, so you fight from where a bow would stand — but only as far as the strings go.' },
+  puppet: { name: 'Puppet', speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, stat: '17f · reach 6', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. The puppet on your strings does the moving for you — your swings land where it is, and what it is decides how far that reaches and what it does when it gets there.' },
 };
 const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
@@ -1394,6 +1394,7 @@ function pickSpell(u, fallback) {
 }
 function startAtk(u, name) {
   if (u.w === 'spellbook' && (name === 'cast_bolt' || name === 'acast_bolt')) name = pickSpell(u, name);
+  if (u.w === 'puppet' && (name === 'pswing' || name === 'pspin')) { const F = pupForm(u); name = name === 'pspin' ? F.heavy : F.light; }
   if (SPELL_CD[name]) (u.sCd ||= {})[name] = SPELL_CD[name];
   bleedOnAttack(u, name);
   if (u.gs && u.gs.flags.selfCost && !world.demo) hurt(u, u.hpMax * u.gs.flags.selfCost, 'status', -1, 'burn');
@@ -3904,17 +3905,38 @@ Object.assign(HUNTS, {
 // hangs out on the strings between you and whatever you are looking at, and your swings land where it
 // is, not where you are. You stand still and hit things four tiles away.
 Object.assign(ATK, {
+  // marionette: a blade arm, six tiles out, with a second swing behind it
   pswing: { w: 17, a: 6, r: 17, dmg: 10, kb: [5, -4], stun: 18, hs: 4, box: [1.4, -2.0, 6.0, 0.0], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
   pswing2: { w: 13, a: 6, r: 19, dmg: 10, kb: [5.5, -5], stun: 18, hs: 4, box: [1.3, -2.1, 6.0, 0.05], melee: 1, trail: 1, pup: 1 },
   pspin: { w: 24, a: 11, r: 26, dmg: 15, kb: [8, -10], stun: 28, hs: 7, box: [0.6, -2.4, 6.2, 0.15], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
+  // scorpion: a tail that comes down over the top, eight tiles out, and leaves poison in the hole
+  psting: { w: 16, a: 6, r: 16, dmg: 9, kb: [3, -3], stun: 16, hs: 4, box: [2.2, -3.2, 8.0, 0.1], melee: 1, trail: 1, pup: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 2 }] },
+  pstingbig: { w: 23, a: 9, r: 22, dmg: 14, kb: [4, -5], stun: 24, hs: 6, box: [1.8, -3.6, 8.2, 0.2], melee: 1, trail: 1, pup: 1, big: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 3 }] },
+  // kite: a flat paper thing that drops on people from above, fast and light
+  pdive: { w: 14, a: 5, r: 14, dmg: 6, kb: [4, -6], stun: 14, hs: 3, box: [0.9, -3.4, 5.4, -0.2], melee: 1, trail: 1, pup: 1, chain: 'pdive2' },
+  pdive2: { w: 11, a: 5, r: 16, dmg: 6, kb: [4, -7], stun: 14, hs: 3, box: [0.8, -3.6, 5.4, -0.1], melee: 1, trail: 1, pup: 1 },
+  pdivebig: { w: 18, a: 9, r: 22, dmg: 12, kb: [6, -13], stun: 24, hs: 6, box: [0.6, -3.8, 5.6, 0.0], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
+  // idol: a slab that does not reach far and does not care, and throws whatever it lands on
+  pslam: { w: 20, a: 8, r: 18, dmg: 18, kb: [10, -9], stun: 26, hs: 8, box: [0.8, -2.3, 4.8, 0.3], melee: 1, trail: 1, pup: 1, big: 1 },
+  pslambig: { w: 28, a: 10, r: 24, dmg: 25, kb: [14, -15], stun: 34, hs: 10, box: [0.5, -2.5, 5.0, 0.4], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1, slam: 1 },
 });
+// Each form is a different thing on the end of the same strings: how far it goes, how it rests, how
+// often it can take a shot for you, and how it is drawn.
+const PUPFORM = {
+  marionette: { name: 'Marionette', light: 'pswing', heavy: 'pspin', rest: [1.3, 1.35], guard: 80, size: 1 },
+  scorpion: { name: 'Scorpion', light: 'psting', heavy: 'pstingbig', rest: [1.55, 0.95], guard: 120, size: 1.1 },
+  kite: { name: 'Kite', light: 'pdive', heavy: 'pdivebig', rest: [1.25, 2.35], guard: 75, size: 0.95, high: 1 },
+  idol: { name: 'Idol', light: 'pslam', heavy: 'pslambig', rest: [1.7, 1.15], guard: 24, size: 1.15 },
+};
+const pupForm = (u) => PUPFORM[(u.gs && u.gs.flags.pupForm) || 'marionette'];
 function pupStep(u) {
   const b = u.b, p = (u.pup ||= { x: b.x + u.face * 1.2, y: b.y - 1.4, sw: 0, bob: Math.random() * 6 });
   p.bob += 0.055;
   const d = u.atkDef, striking = u.state === 'atk' && d && d.pup;
   // out along the swing when it strikes, drifting at your shoulder the rest of the time
-  const reach = striking ? (u.phase === 'w' ? -0.5 - 0.9 * Math.min(1, u.af / d.w) : u.phase === 'a' ? (d.box[0] + d.box[2]) / 2 : 1.2) : 1.15;
-  const lift = striking ? (u.phase === 'a' ? 1.0 : 1.25) : 1.35 + Math.sin(p.bob) * 0.12;
+  const F = pupForm(u);
+  const reach = striking ? (u.phase === 'w' ? -0.5 - 0.9 * Math.min(1, u.af / d.w) : u.phase === 'a' ? (d.box[0] + d.box[2]) / 2 : 1.2) : F.rest[0];
+  const lift = striking ? (u.phase === 'a' ? (F.high ? 2.6 : 1.0) : F.high ? 2.4 : 1.25) : F.rest[1] + Math.sin(p.bob) * (F.high ? 0.22 : 0.12);
   const k = striking && u.phase === 'a' ? 0.55 : 0.2;
   p.x += (b.x + u.face * reach - p.x) * k;
   p.y += (b.y - lift - p.y) * k;
@@ -3937,29 +3959,86 @@ function drawPuppet(u, pal) {
   }
   ctx.globalAlpha = 1;
   ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.face || 1, 1);
-  const sw = p.sw, lean = sw * 0.5;
-  ctx.rotate(lean * 0.35);
-  ctx.fillStyle = ink;
-  // spine of three links
-  for (const [y, rx, ry] of [[-0.3, 0.115, 0.135], [-0.05, 0.12, 0.1], [0.18, 0.1, 0.085]]) { ctx.beginPath(); ctx.ellipse(0, y, rx, ry, 0, 0, 6.283); ctx.fill(); }
-  ctx.strokeStyle = team; ctx.lineWidth = 0.03;
-  ctx.beginPath(); ctx.moveTo(0, -0.18); ctx.lineTo(0, 0.24); ctx.stroke();
-  // head with a painted seam and two eyes
-  ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(0, -0.55, 0.15, 0.17, 0, 0, 6.283); ctx.fill();
-  ctx.strokeStyle = pal.far; ctx.lineWidth = 0.022; ctx.beginPath(); ctx.moveTo(-0.1, -0.55); ctx.lineTo(0.1, -0.55); ctx.stroke();
-  ctx.fillStyle = eyeC(u, pal);
-  for (const ex of [0.02, 0.1]) { ctx.beginPath(); ctx.ellipse(ex, -0.58, 0.021, 0.029, 0, 0, 6.283); ctx.fill(); }
-  // the blade arm: folded back on the wind-up, thrown out on the swing
-  ctx.lineCap = 'round'; ctx.strokeStyle = ink; ctx.lineWidth = 0.055;
-  const ex2 = 0.16 + sw * 0.42, ey2 = -0.28 - sw * 0.12;
-  ctx.beginPath(); ctx.moveTo(0.08, -0.3); ctx.lineTo(ex2, ey2); ctx.stroke();
-  ctx.strokeStyle = u.flash > 0 && u.flash % 2 === 0 ? pal.red : pal.steel; ctx.lineWidth = 0.055;
-  ctx.beginPath(); ctx.moveTo(ex2, ey2); ctx.lineTo(ex2 + 0.5 + sw * 0.25, ey2 - 0.16 + sw * 0.1); ctx.stroke();
-  // the off arm and two legs hanging
-  ctx.strokeStyle = ink; ctx.lineWidth = 0.05;
-  ctx.beginPath(); ctx.moveTo(-0.08, -0.28); ctx.lineTo(-0.3 - sw * 0.14, -0.06 + sw * 0.1); ctx.stroke();
-  const dangle = Math.sin(p.bob * 0.8) * 0.06 + sw * 0.1;
-  for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.05, 0.22); ctx.lineTo(s2 * 0.09 + dangle, 0.58); ctx.stroke(); }
+  const sw = p.sw, F = pupForm(u), steel = u.flash > 0 && u.flash % 2 === 0 ? pal.red : pal.steel;
+  ctx.scale(F.size, F.size);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (F === PUPFORM.scorpion) {
+    // a low flat body on six legs, with a tail that folds over its own back
+    ctx.rotate(sw * 0.12);
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.3, 0.16, 0, 0, 6.283); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0.26, -0.03, 0.14, 0.11, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.04;
+    for (let i = 0; i < 3; i++) {
+      const bx = -0.16 + i * 0.16, dro = 0.2 + Math.sin(p.bob * 1.3 + i) * 0.05;
+      for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(bx, 0.06); ctx.lineTo(bx + s2 * 0.1, 0.06 + dro); ctx.stroke(); }
+    }
+    // the pincers, and the tail arcing up and over
+    ctx.lineWidth = 0.045;
+    for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(0.3, -0.02); ctx.quadraticCurveTo(0.48, s2 * 0.12, 0.6 + sw * 0.1, s2 * 0.05); ctx.stroke(); }
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.075;
+    const tl = 0.5 + sw * 0.5;
+    ctx.beginPath(); ctx.moveTo(-0.26, -0.04);
+    ctx.bezierCurveTo(-0.5, -0.5 - sw * 0.2, 0.15 + sw * 0.5, -0.9 - sw * 0.25, 0.42 + tl * 0.5, -0.5 + sw * 0.45);
+    ctx.stroke();
+    ctx.strokeStyle = steel; ctx.lineWidth = 0.055;
+    ctx.beginPath(); ctx.moveTo(0.42 + tl * 0.5, -0.5 + sw * 0.45); ctx.lineTo(0.56 + tl * 0.6, -0.28 + sw * 0.7); ctx.stroke();
+    ctx.fillStyle = eyeC(u, pal);
+    for (const ex of [0.24, 0.32]) { ctx.beginPath(); ctx.arc(ex, -0.06, 0.022, 0, 6.283); ctx.fill(); }
+    ctx.strokeStyle = team; ctx.lineWidth = 0.028; ctx.beginPath(); ctx.moveTo(-0.22, 0); ctx.lineTo(0.18, 0); ctx.stroke();
+  } else if (F === PUPFORM.kite) {
+    // a flat diamond of folded paper with a long tail, tipping onto its nose to dive
+    ctx.rotate(-0.5 + sw * 1.5);
+    ctx.fillStyle = steel; ctx.strokeStyle = ink; ctx.lineWidth = 0.04;
+    ctx.beginPath(); ctx.moveTo(0.42, 0); ctx.lineTo(-0.02, -0.3); ctx.lineTo(-0.3, 0); ctx.lineTo(-0.02, 0.3); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.03;
+    ctx.beginPath(); ctx.moveTo(0.42, 0); ctx.lineTo(-0.3, 0); ctx.moveTo(-0.02, -0.3); ctx.lineTo(-0.02, 0.3); ctx.stroke();
+    ctx.strokeStyle = team; ctx.lineWidth = 0.032;
+    ctx.beginPath(); ctx.moveTo(-0.3, 0);
+    for (let i = 1; i <= 4; i++) ctx.lineTo(-0.3 - i * 0.16, Math.sin(p.bob * 1.6 + i * 0.9) * 0.12);
+    ctx.stroke();
+    ctx.strokeStyle = steel; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.moveTo(0.42, 0); ctx.lineTo(0.42 + 0.34 + sw * 0.22, 0); ctx.stroke();
+    ctx.fillStyle = eyeC(u, pal); ctx.beginPath(); ctx.arc(0.16, -0.04, 0.03, 0, 6.283); ctx.fill();
+  } else if (F === PUPFORM.idol) {
+    // a squat slab with a stone face and two short arms it drops on people
+    ctx.rotate(sw * 0.3);
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.rect(-0.26, -0.5, 0.52, 0.74); ctx.fill();
+    ctx.strokeStyle = team; ctx.lineWidth = 0.035;
+    ctx.beginPath(); ctx.moveTo(-0.18, -0.34); ctx.lineTo(0.18, -0.34); ctx.moveTo(-0.18, 0.06); ctx.lineTo(0.18, 0.06); ctx.stroke();
+    ctx.fillStyle = eyeC(u, pal);
+    for (const ex of [-0.08, 0.08]) { ctx.beginPath(); ctx.rect(ex - 0.03, -0.46, 0.06, 0.08); ctx.fill(); }
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.09; ctx.lineCap = 'butt';
+    for (const s2 of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s2 * 0.24, -0.3);
+      ctx.lineTo(s2 * (0.34 + sw * 0.3), -0.3 + (s2 > 0 ? 0.3 + sw * 0.25 : 0.24));
+      ctx.stroke();
+    }
+    ctx.lineCap = 'round'; ctx.strokeStyle = ink; ctx.lineWidth = 0.06;
+    for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.12, 0.24); ctx.lineTo(s2 * 0.14, 0.44); ctx.stroke(); }
+  } else {
+    // the marionette: a head, three links on a spine, a blade arm, and legs that dangle
+    ctx.rotate(sw * 0.5 * 0.35);
+    ctx.fillStyle = ink;
+    for (const [y, rx, ry] of [[-0.3, 0.115, 0.135], [-0.05, 0.12, 0.1], [0.18, 0.1, 0.085]]) { ctx.beginPath(); ctx.ellipse(0, y, rx, ry, 0, 0, 6.283); ctx.fill(); }
+    ctx.strokeStyle = team; ctx.lineWidth = 0.03;
+    ctx.beginPath(); ctx.moveTo(0, -0.18); ctx.lineTo(0, 0.24); ctx.stroke();
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(0, -0.55, 0.15, 0.17, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = pal.far; ctx.lineWidth = 0.022; ctx.beginPath(); ctx.moveTo(-0.1, -0.55); ctx.lineTo(0.1, -0.55); ctx.stroke();
+    ctx.fillStyle = eyeC(u, pal);
+    for (const ex of [0.02, 0.1]) { ctx.beginPath(); ctx.ellipse(ex, -0.58, 0.021, 0.029, 0, 0, 6.283); ctx.fill(); }
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.055;
+    const ex2 = 0.16 + sw * 0.42, ey2 = -0.28 - sw * 0.12;
+    ctx.beginPath(); ctx.moveTo(0.08, -0.3); ctx.lineTo(ex2, ey2); ctx.stroke();
+    ctx.strokeStyle = steel; ctx.lineWidth = 0.055;
+    ctx.beginPath(); ctx.moveTo(ex2, ey2); ctx.lineTo(ex2 + 0.5 + sw * 0.25, ey2 - 0.16 + sw * 0.1); ctx.stroke();
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.moveTo(-0.08, -0.28); ctx.lineTo(-0.3 - sw * 0.14, -0.06 + sw * 0.1); ctx.stroke();
+    const dangle = Math.sin(p.bob * 0.8) * 0.06 + sw * 0.1;
+    for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.05, 0.22); ctx.lineTo(s2 * 0.09 + dangle, 0.58); ctx.stroke(); }
+  }
   ctx.restore();
 }
 // ---- three more: a mantis that parries and ripostes, a wraith that fades out and reappears behind you,
@@ -4715,7 +4794,7 @@ function blockedByGuard(a) {
     if (u.side === a.owner || u.state === 'dead') continue;
     const p = u.pup;
     if (p && !(u.pupGuard > world.t) && Math.abs(a.x - p.x) < 0.5 && Math.abs(a.y - p.y) < 0.62) {
-      u.pupGuard = world.t + 80;
+      u.pupGuard = world.t + pupForm(u).guard;
       a.dead = true; sparks(a.x, a.y, -Math.sign(a.vx), 10); ring(a.x, a.y, 0.6, TEAM[u.side]);
       world.hs = Math.max(world.hs, 3); popText(p.x, p.y - 0.7, 'guard', 'steel', 0.4);
       return true;
@@ -5249,7 +5328,7 @@ const ITEM = {
   wobble_mirror: iS('Wobble Mirror', 'gel', 'parry', { hp: 8 }),
   // wing: the bats'. Dodging and Bleed.
   fang_knives: iW('Fang Knives', 'wing', 'daggers', oh('bleed')),
-  wing_marionette: iW('Wing Marionette', 'wing', 'puppet', { stats: { evasion: 0.04 } }),
+  wing_marionette: iW('Wing Marionette', 'wing', 'puppet', { stats: { evasion: 0.04 }, flags: { pupForm: 'marionette' }, desc: 'A jointed marionette with a blade arm, six tiles out.' }),
   talon_sword: iW('Talon Sword', 'wing', 'sword', { min: 6, max: 11, ...oh('bleed', 0.15) }),
   wing_bow: iW('Wing Bow', 'wing', 'bow', { min: 8, max: 12, stats: { evasion: 0.03, haste: 0.05 } }),
   bat_hood: iA('Bat Hood', 'wing', 'head', { hp: 10, crit: 0.06 }),
@@ -5272,7 +5351,7 @@ const ITEM = {
   silk_daggers: iW('Silk Daggers', 'silk', 'daggers', { min: 5, max: 8, stats: { crit: 0.03 } }),
   silk_spear: iW('Silk Spear', 'silk', 'spear', oh('chill')),
   silk_bow: iW('Silk Bow', 'silk', 'bow', { stats: { crit: 0.04 } }),
-  silk_marionette: iW('Silk Marionette', 'silk', 'puppet', { stats: { crit: 0.03 } }),
+  silk_marionette: iW('Silk Marionette', 'silk', 'puppet', { stats: { crit: 0.03 }, flags: { pupForm: 'kite' }, desc: 'A paper kite that drops on people from above: fast, light, and it takes a shot for you twice as often.' }),
   eye_circlet: iA('Eye Circlet', 'silk', 'head', { hp: 8, crit: 0.08 }),
   silk_vest: iA('Silk Vest', 'silk', 'core', { hp: 18, haste: 0.06 }),
   web_boots: iA('Web Boots', 'silk', 'feet', {}, { acro: 4 }),
@@ -5294,7 +5373,7 @@ const ITEM = {
   brute_maul: iW('Brute Maul', 'iron', 'hammer', { min: 20, max: 30 }),
   iron_sword: iW('Iron Sword', 'iron', 'sword', { min: 7, max: 10, stats: { def: 1 } }),
   iron_spear: iW('Iron Spear', 'iron', 'spear', { stats: { def: 1, hp: 8 } }),
-  iron_effigy: iW('Iron Effigy', 'iron', 'puppet', { stats: { def: 2, hp: 10 } }),
+  iron_effigy: iW('Iron Effigy', 'iron', 'puppet', { stats: { def: 2, hp: 10 }, flags: { pupForm: 'idol' }, desc: 'A slab that reaches only four tiles, throws whatever it lands on, and stands in front of nearly every shot.' }),
   brute_brow: iA('Brute Brow', 'iron', 'head', { hp: 18, def: 2 }),
   hide_plate: iA('Hide Plate', 'iron', 'core', { hp: 34, def: 4, haste: -0.05 }),
   heavy_boots: iA('Heavy Boots', 'iron', 'feet', { hp: 10, def: 2 }, { acro: 1 }),
@@ -5676,7 +5755,8 @@ Object.assign(ITEM, {
   mantis_blade: iW('Mantis Blade', 'scythe', 'sword', { min: 7, max: 11, stats: { crit: 0.04 }, trig: [{ type: 'onParry', effect: { critNext: true } }], desc: 'A parry: your next hit crits.', flavor: 'Folds away when it\'s not needed.' }),
   twin_scythes: iW('Twin Scythes', 'scythe', 'daggers', { flags: { backstab: 0.25 }, desc: '+25% damage from behind.', flavor: 'Two prayers, both answered.' }),
   praying_spear: iW('Praying Spear', 'scythe', 'spear', { trig: [{ type: 'onExchange', effect: { critNext: true } }], desc: 'Winning a blade exchange: your next hit crits.', flavor: 'Still. Still. Now.' }),
-  scythe_puppet: iW('Folded Acolyte', 'scythe', 'puppet', { stats: { crit: 0.04 }, flavor: 'It kneels when you do.' }),
+  scythe_puppet: iW('Folded Acolyte', 'scythe', 'puppet', { stats: { crit: 0.04 }, flags: { pupForm: 'marionette' }, desc: 'A jointed marionette with a blade arm, six tiles out.', flavor: 'It kneels when you do.' }),
+  venom_scorpion: iW('Paper Scorpion', 'venom', 'puppet', { stats: { pen: 2 }, flags: { pupForm: 'scorpion' }, desc: 'Eight tiles of tail, over the top and down, and every sting leaves two Poison in the hole.', flavor: 'Folded once, from the wrong paper.' }),
   mantis_helm: iA('Mantis Helm', 'scythe', 'head', { hp: 10, crit: 0.06 }, { flavor: 'The eyes see all the way round.' }),
   chitin_vest: iA('Chitin Vest', 'scythe', 'core', { hp: 18, def: 2, haste: 0.04 }, { flavor: 'Light, hard, and a little green.' }),
   stilt_boots: iA('Stilt Boots', 'scythe', 'feet', { speed: 0.05 }, { acro: 2, trig: [{ type: 'onAcro', effect: { critNext: true } }], desc: 'After a wall jump or air flip, your next hit crits.', flavor: 'Tall steps. Taller leaps.' }),
@@ -7704,14 +7784,21 @@ const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill]
 $('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
 // Which book: the plain one, or any of the ones a run can drop. Free build only — in a run the book is the
 // weapon you are wearing.
-const BOOKS = ['', ...Object.keys(ITEM).filter((id) => ITEM[id].weapon === 'spellbook')];
-const bookName = (id) => (id ? ITEM[id].name : 'A plain book');
-const bookKind = (id) => (!id ? 'the six pages, no weather of its own' : ITEM[id].flags && ITEM[id].flags.tome ? 'Warlock tome' : ITEM[id].flags && ITEM[id].flags.spellSt ? `Codex of ${ITEM[id].flags.spellSt}` : 'Codex');
-// The book picker opens over the top, because the weapon row is already three deep.
+const VARIANTS = (w) => ['', ...Object.keys(ITEM).filter((id) => ITEM[id].weapon === w)];
+const plainName = (w) => (w === 'puppet' ? 'A plain marionette' : 'A plain book');
+const bookName = (id) => (id ? ITEM[id].name : plainName(builds[0].weapon));
+const bookKind = (id) => {
+  if (!id) return builds[0].weapon === 'puppet' ? 'a blade arm, six tiles out' : 'the six pages, no weather of its own';
+  const f = ITEM[id].flags || {};
+  if (f.pupForm) return PUPFORM[f.pupForm].name;
+  return f.tome ? 'Warlock tome' : f.spellSt ? `Codex of ${f.spellSt}` : 'Codex';
+};
+// The picker opens over the top, because the weapon row is already three deep.
 function bookSheet() {
-  openSheet(`<div class="sh-head"><span class="sh-t"><b>Which book</b></span><span class="lbl">${BOOKS.length} of them</span></div>
-    <div class="evopts bookpick">${BOOKS.map((id) => `<button class="evopt ${(builds[0].book || null) === (id || null) ? '' : 'leave'}" data-book="${id}">
-      <b>${bookName(id)}</b><small>${bookKind(id)}</small></button>`).join('')}</div>
+  const list = VARIANTS(builds[0].weapon), pup = builds[0].weapon === 'puppet';
+  openSheet(`<div class="sh-head"><span class="sh-t"><b>${pup ? 'Which puppet' : 'Which book'}</b></span><span class="lbl">${list.length} of them</span></div>
+    <div class="evopts bookpick">${list.map((id) => `<button class="evopt ${(builds[0].book || null) === (id || null) ? '' : 'leave'}" data-book="${id}">
+      <b>${id ? ITEM[id].name : plainName(builds[0].weapon)}</b><small>${bookKind(id)}</small></button>`).join('')}</div>
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
 $('#bookBtn').addEventListener('click', bookSheet);
@@ -7815,8 +7902,9 @@ function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   // which book you are holding, only while you are holding one
   const bb = $('#bookBtn');
-  bb.hidden = !(builds[0].weapon === 'spellbook' && gearSlot === 'weapon');
-  bb.textContent = `Book · ${bookName(builds[0].book)}`;
+  const vary = builds[0].weapon === 'spellbook' || builds[0].weapon === 'puppet';
+  bb.hidden = !(vary && gearSlot === 'weapon');
+  bb.textContent = `${builds[0].weapon === 'puppet' ? 'Puppet' : 'Book'} · ${bookName(builds[0].book)}`;
   ui.hint.hidden = !bb.hidden;   // one line under the weapons, not two
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
   for (const b of document.querySelectorAll('#trinkets .opt')) b.setAttribute('aria-pressed', String((b.dataset.tr || null) === (builds[0].trinket || null)));
@@ -8210,6 +8298,7 @@ $('#weapons').addEventListener('click', (ev) => {
   const v = validate({ weapon: w, pieces: builds[0].pieces });
   if (!v.ok) { toast(`${WEAP[w].name} can't make those jumps. Change your half first.`); return; }
   builds[0].weapon = w;
+  if (builds[0].book && ITEM[builds[0].book].weapon !== w) builds[0].book = null;
   U = [demoUnit(0, builds[0])];
   playDemo(U[0], 'weapon');
   ui.hint.textContent = `${WEAP[w].name}: ${WEAP[w].desc}`;

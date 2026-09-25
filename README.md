@@ -94,7 +94,7 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 311 items: 97 weapons, 87 head, core and feet pieces, 78 trinkets, 13
+  - 312 items: 98 weapons, 87 head, core and feet pieces, 78 trinkets, 13
     skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
@@ -143,14 +143,21 @@ fights run themselves. **Start a run** is the front door, and everything else
     it, and a tome runs the ink down out of the fingers instead. A puppeteer
     stands tall and still with both hands up on the strings, and flicks a
     wrist rather than swinging.
-  - In dev mode the weapon page has a **Book** button under the weapon chips
-    that opens the ten books, so a free build can hold any codex or tome.
-  - **Puppet:** you never touch anybody. The marionette hangs on your strings
-    and your swings land where it is, **six tiles out**, so you fight from
-    beyond a spear with a blade's damage and a hammer's patience. Between
-    swings it hangs at your shoulder and **takes a shot meant for you** — once
-    every two seconds, which is not an answer to a volley. The heavy spin only
+  - In dev mode the weapon page has a **Book** (or **Puppet**) button under
+    the weapon chips that opens the ten books or the five puppets, so a free
+    build can hold any codex, tome or form.
+  - **Puppet:** you never touch anybody, and you barely move — no roll, no
+    wall run, no double jump, and the slowest feet of any blade. The puppet
+    does the moving. Your swings land where it is, and between them it hangs
+    at your shoulder and **takes a shot meant for you**. The heavy swing only
     comes out on an opening: something stunned, frozen or on the floor.
+  - **Four forms**, and which one you carry changes the weapon completely:
+    the **Marionette** (a blade arm six tiles out, the even one), the
+    **Scorpion** (a tail that comes over the top from eight tiles and leaves
+    two Poison in the hole), the **Kite** (a flat paper thing that drops on
+    people from above, fast and light, and guards you far more often), and the
+    **Idol** (a slab that only reaches four, throws whatever it lands on, and
+    stands in front of nearly every shot).
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):
