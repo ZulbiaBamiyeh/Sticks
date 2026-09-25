@@ -94,8 +94,8 @@ fights run themselves. **Start a run** is the front door, and everything else
   - Hunt cards show how many pieces of that family you wear. Item cards say
     when a piece completes a 2- or 4-piece bonus. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
-  - 312 items: 98 weapons, 87 head, core and feet pieces, 78 trinkets, 13
-    skill items, 12 keystones, 21 relics and 19 legendaries, in 29 families,
+  - 314 items: 98 weapons, 96 head, core and feet pieces, 103 trinkets and 17
+    skill items; 12 of them are keystones, 21 relics and 20 legendaries, in 29 families,
     one per creature. There are 29 creatures at three tiers, as many families as
     ZereshkStory has. `tools/runbot.mjs` plays whole runs headless. A bot that
     always takes the Normal hunt wins the Crown in about a third of its runs
@@ -152,20 +152,30 @@ fights run themselves. **Start a run** is the front door, and everything else
     stands tall and still with both hands up on the strings, and flicks a
     wrist rather than swinging.
   - In dev mode the weapon page has a **Book** (or **Puppet**) button under
-    the weapon chips that opens the ten books or the five puppets, so a free
+    the weapon chips that opens the ten books or the eight puppets, so a free
     build can hold any codex, tome or form.
   - **Puppet:** you never touch anybody, and you barely move — no roll, no
     wall run, no double jump, and the slowest feet of any blade. The puppet
     does the moving. Your swings land where it is, and between them it hangs
-    at your shoulder and **takes a shot meant for you**. The heavy swing only
-    comes out on an opening: something stunned, frozen or on the floor.
-  - **Four forms**, and which one you carry changes the weapon completely:
-    the **Marionette** (a blade arm six tiles out, the even one), the
-    **Scorpion** (a tail that comes over the top from eight tiles and leaves
-    two Poison in the hole), the **Kite** (a flat paper thing that drops on
-    people from above, fast and light, and guards you far more often), and the
-    **Idol** (a slab that only reaches four, throws whatever it lands on, and
-    stands in front of nearly every shot).
+    at your shoulder and **takes a shot meant for you**. A puppeteer never
+    crosses blades with anyone — there is nothing in its hands to cross — and
+    inside the strings all it has left is a **boot** that shoves you back out.
+    The heavy swing only comes out on an opening: something stunned, frozen or
+    on the floor.
+  - **Six forms**, and each one is a different verb, not a different number.
+    The **Marionette** swings a blade arm six tiles out and chains a second
+    swing behind it. The **Scorpion** plants its tail in someone and *holds
+    them there* while it is in, leaving Poison in the hole. The **Kite** is
+    thrown flat through them and reeled back along the same line, so it passes
+    twice. The **Idol** is hauled over their head and let go of, and the
+    landing cracks the floor either side of it. The **Spool** hangs three
+    tiles out with a wire running back to your hands that cuts whatever walks
+    into it, and its own strike winds them in. The **Lantern** hardly strikes
+    at all: it drifts over whoever you are looking at, drips on them, and
+    pours a little of it back into you.
+  - Each travelling puppet **aims during its wind-up and commits when it
+    goes**, so stepping aside is the answer to all of them, and each one
+    reaches a different distance: 4 tiles for the Lantern, 8 for the Spool.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):

@@ -781,7 +781,7 @@ const WEAP = {
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
   spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '6 spells', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it. The book picks its page: a wall of ink against shooters, a grasp that stops whatever is running at you, a sigil under anyone who stands still, a nova at arm\'s length, a ward when it hurts, and a bolt when nothing else fits.' },
-  puppet: { name: 'Puppet', speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, stat: '17f · reach 6', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. The puppet on your strings does the moving for you — your swings land where it is, and what it is decides how far that reaches and what it does when it gets there.' },
+  puppet: { name: 'Puppet', speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, noDuel: 1, stat: '6 forms · reach', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. Everything happens out on the strings, and which puppet hangs on them changes what your attack is — a blade arm that swings, a tail that pins them down, a kite thrown out and back, a slab dropped on their head, a bobbin trailing a wire across the floor, or a lantern that hangs over them and pours.' },
 };
 const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
@@ -1147,6 +1147,7 @@ const ATK = {
   hammer: { w: 17, a: 6, r: 22, dmg: 23, kb: [12, -9], stun: 44, hs: 10, box: [0.15, -1.8, 1.85, 0.05], lunge: 2.5, melee: 1, trail: 1, tumble: 1, big: 1, slam: 1,
     shock: { r: 2.1, dmg: 6, kb: [7, -7], stun: 22, hs: 6, tumble: 1 } },
   kick: { w: 5, a: 4, r: 12, dmg: 5, kb: [9, -4], stun: 18, hs: 4, box: [0.1, -1.15, 1.0, -0.35] },
+  shove: { w: 7, a: 5, r: 17, dmg: 4, kb: [12, -4], stun: 16, hs: 4, box: [0.05, -1.2, 1.1, -0.3] },
   shoot: { w: 16, a: 1, r: 10, shot: 'arrow', cd: 5 },
   throw: { w: 10, a: 1, r: 4, shot: 'star', next: 'throw2' },
   throw2: { w: 5, a: 1, r: 12, shot: 'star', back: 1, cd: 16 },
@@ -1241,6 +1242,7 @@ const ATK_POSE = {
   rise: { w: { fx: 0.04, fy: 0.42, wa: -0.6, lean: 0.26, hipH: 0.55 }, a: { fx: 0.16, fy: -0.5, wa: -1.45, lean: -0.16, hipH: 0.76 }, r: { fx: 0.14, fy: -0.36, wa: -1.4, lean: -0.05 } },
   hammer: { w: { fx: -0.12, fy: -0.36, wa: -3.0, lean: -0.28, hipH: 0.74 }, a: { fx: 0.36, fy: 0.3, wa: 0.95, lean: 0.5, hipH: 0.54 }, r: { fx: 0.34, fy: 0.34, wa: 1.15, lean: 0.45, hipH: 0.56 } },
   kick: { w: { lean: -0.1, ffx: -0.1, ffy: 0.4 }, a: { lean: -0.35, ffx: 0.72, ffy: 0.05, bx: -0.3, by: -0.1 }, r: { lean: -0.1 } },
+  shove: { w: { lean: -0.1, ffx: -0.1, ffy: 0.4 }, a: { lean: -0.35, ffx: 0.72, ffy: 0.05, bx: -0.3, by: -0.1 }, r: { lean: -0.1 } },
   shoot: { w: { lean: -0.06 }, a: {}, r: {} },
   // A cast: the book stays where it is, held flat and forward. The free hand gathers over the page and
   // then throws. Nothing about it is a knife-fighter's lunge.
@@ -1292,6 +1294,7 @@ const ATK_POSE_ALT = {
   thrust: { w: { fx: -0.1, fy: 0.05, wa: -0.25, lean: -0.1, hipH: 0.7 }, a: { fx: 0.58, fy: 0.02, wa: -0.2, lean: 0.35, hipH: 0.64, ffx: 0.5, bfx: -0.4 }, r: { fx: 0.42, fy: 0.12, wa: -0.2, lean: 0.25 } },
   hammer: { w: { fx: -0.3, fy: 0.1, wa: 3.0, lean: -0.1, hipH: 0.64 }, a: { fx: 0.4, fy: 0.15, wa: 0.2, lean: 0.45, hipH: 0.58 }, r: { fx: 0.35, fy: 0.2, wa: 0.5, lean: 0.4 } },
   kick: { w: { lean: -0.2, ffx: -0.05, ffy: 0.3 }, a: { lean: -0.5, ffx: 0.7, ffy: -0.15, bx: -0.3, by: -0.2 }, r: { lean: -0.15 } },
+  shove: { w: { lean: -0.2, ffx: -0.05, ffy: 0.3 }, a: { lean: -0.5, ffx: 0.7, ffy: -0.15, bx: -0.3, by: -0.2 }, r: { lean: -0.15 } },
   throw: { w: { fx: -0.1, fy: -0.5, lean: -0.15, hipH: 0.66 }, a: { fx: 0.5, fy: 0.15, lean: 0.4, hipH: 0.6 }, r: { fx: 0.4, fy: 0.25, lean: 0.3 } },
   dash: { w: { fx: -0.25, fy: -0.2, wa: -2.6, lean: 0.55, hipH: 0.5, ffx: 0.4, bfx: -0.46 }, a: { fx: 0.5, fy: 0.2, wa: 0.6, lean: 0.6, hipH: 0.5, ffx: 0.56, bfx: -0.56 }, r: { fx: 0.4, fy: 0.3, wa: 1.0, lean: 0.45 } },
 };
@@ -1660,12 +1663,15 @@ function tryAttack(u, e) {
     return false;
   }
   if (u.w === 'spear' && dy < -0.9 && dy > -3.2 && Math.abs(dx) < 1.1) { u.face = f; startAtk(u, 'rise'); return true; }
+  // inside the strings a puppeteer has nothing but a boot, so it shoves and buys the room back
+  if (u.w === 'puppet' && Math.abs(dx) < 1.35 && Math.abs(dy) < 1 && !lying(e)) { u.face = f; startAtk(u, 'shove'); return true; }
   // a puppeteer's heavy spin is for an opening: something stunned, down or committed to a slow swing
   if (u.w === 'puppet' && !(u.pupCd > world.t) && (e.state === 'stun' || lying(e) || e.st.frozen > 0) && inBox(b.x, b.y, f, ATK.pspin.box, eb.x, eb.y, 0.2)) {
     u.pupCd = world.t + 160; u.face = f; startAtk(u, 'pspin'); return true;
   }
   const name = wp.atk, def = ATK[name], lead = def.w / 60 * 0.6;
-  if (inBox(b.x, b.y, f, def.box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
+  const box = u.w === 'puppet' ? [def.box[0], def.box[1], pupForm(u).reach, def.box[3]] : def.box;
+  if (inBox(b.x, b.y, f, box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
   // sword: a long dash slash from just out of reach
   if (u.w === 'sword' && !(u.ai.dashT > world.t) && eb.gr && Math.abs(dy) < 0.5 && Math.abs(dx) > 1.9 && Math.abs(dx) < 3 &&
       walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u) && !(e.state === 'atk' && e.atkName === 'hammer')) {
@@ -1735,11 +1741,13 @@ function walkLine(x0, x1, r, u) {
 }
 function meleeEngage(u, e) {
   const b = u.b, eb = e.b, dx = eb.x - b.x, dy = eb.y - b.y;
-  if (e.state === 'dead' || e.ghost || Math.abs(dy) > 0.6 || Math.abs(dx) > 4.5 || !eb.gr) return false;
+  const far = u.w === 'puppet' ? pupForm(u).reach + 0.6 : 4.5;
+  if (e.state === 'dead' || e.ghost || Math.abs(dy) > 0.6 || Math.abs(dx) > far || !eb.gr) return false;
   if (!walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u)) return false;
-  let stop = WEAP[u.w].stop;
+  // a puppeteer plants its feet as far back as its own puppet can still reach
+  let stop = u.w === 'puppet' ? Math.max(2, pupForm(u).reach - 1.3) : WEAP[u.w].stop;
   // Against a hammer, wait just outside its reach and step in while it recovers from a swing.
-  if (e.w === 'hammer' && u.w !== 'hammer' && u.w !== 'spear' && e.state !== 'stun' && !(e.state === 'atk' && e.phase === 'r')) stop = 2.4;
+  if (e.w === 'hammer' && u.w !== 'hammer' && u.w !== 'spear' && u.w !== 'puppet' && e.state !== 'stun' && !(e.state === 'atk' && e.phase === 'r')) stop = 2.4;
   const want = eb.x - Math.sign(dx) * stop, d = want - b.x;
   u.face = Math.sign(dx) || u.face;
   u.in.dir = Math.abs(d) > 0.12 ? Math.sign(d) : 0;
@@ -1754,7 +1762,8 @@ function meleeEngage(u, e) {
 function rangedEngage(u, e) {
   const b = u.b, dx = e.b.x - b.x, dy = e.b.y - b.y, dist = Math.hypot(dx, dy), ai = u.ai;
   if (e.state === 'dead') return false;
-  const danger = isRanged(e) ? 2.2 : u.w === 'stars' ? 3.1 : 3.3;
+  let danger = isRanged(e) ? 2.2 : u.w === 'stars' ? 3.1 : 3.3;
+  if (e.w === 'puppet') danger = Math.max(danger, pupForm(e).reach + 0.5);   // the strings go a lot further than an arm does
   if (dist > danger + 1 || (u.react > 0 || ai.escT > world.t || dist > danger)) return backpedal(u, e, dist, danger);
   ai.escT = world.t + 8;
   if (cornerVault(u, e)) return true;
@@ -2405,6 +2414,7 @@ function fireShot(u) {
 // fight's seed: a fighter breaks it with a ready skill, one wins it (faster weapons and better acrobats win
 // more often, and good acrobats may vault over the top), or both are thrown apart.
 const DUEL_GAP = { sword: 1.4, daggers: 1.15, spear: 1.8, hammer: 1.55 };
+const duelGap = (u) => DUEL_GAP[u.w] || 1.4;
 const DUEL_STRIKE = {
   high: { w: { fx: -0.1, fy: -0.36, wa: -2.3, wb: -2, lean: -0.08 }, a: { fx: 0.44, fy: -0.06, wa: -0.45, wb: -0.3, lean: 0.3 } },
   low: { w: { fx: -0.06, fy: 0.36, wa: 2.2, wb: 2, lean: 0.28 }, a: { fx: 0.46, fy: 0.22, wa: 0.4, wb: 0.3, lean: 0.36 } },
@@ -2440,7 +2450,7 @@ const DUEL_EXTRA = {
   shove: { w: { lean: -0.1, ffx: -0.05, ffy: 0.4, fx: 0.2, fy: 0.1, wa: -1.2 }, a: { lean: -0.3, ffx: 0.75, ffy: 0.15, fx: 0.15, fy: 0.05, wa: -1.3 } },
 };
 const jitter = (o, k) => { const r = {}; for (const key in o) r[key] = o[key] + (key === 'wa' || key === 'wb' ? (vr() - 0.5) * 0.5 : (vr() - 0.5) * 0.1) * k; return r; };
-const isBlade = (u) => !!WEAP[u.w] && !isRanged(u);
+const isBlade = (u) => !!WEAP[u.w] && !isRanged(u) && !WEAP[u.w].noDuel;
 function canDuel(a, b) {
   return !world.duel && !world.demo && world.t > (world.duelCd || 0) && isBlade(a) && isBlade(b) &&
     Math.abs(a.b.y - b.b.y) < 0.9 && a.state !== 'dead' && b.state !== 'dead' && !a.hidden && !b.hidden;
@@ -2470,7 +2480,7 @@ function startDuel(a, b) {
       fin = { kind: w.acro >= 2 && rng() < 0.45 ? 'vault' : 'cut', u: w };
     }
   }
-  world.duel = { a, b, beats, i: 0, f: 0, fin, mid: (a.b.x + b.b.x) / 2, gap: Math.max(DUEL_GAP[a.w], DUEL_GAP[b.w]) };
+  world.duel = { a, b, beats, i: 0, f: 0, fin, mid: (a.b.x + b.b.x) / 2, gap: Math.max(duelGap(a), duelGap(b)) };
   for (const u of [a, b]) {
     const o = u === a ? b : a;
     u.state = 'duel'; u.face = Math.sign(o.b.x - u.b.x) || u.face; u.skName = null;
@@ -2907,6 +2917,10 @@ function applyHit(att, def, d, dirX, crit) {
     if (aSh.apply) applyStatus(att, def, aSh.apply);
   }
   proc(att, def, d.dmg);
+  if (d.onHit && def.state !== 'duel') for (const o of d.onHit) {
+    const st = bookStatus(att, o.apply);
+    if (st && rng() < o.chance * (1 - resistOf(def))) applyStatus(att, def, st, o.stacks || 1);
+  }
   if (ag) {
     att.hits++;
     fire(att, 'onHit', def); if (crit) fire(att, 'onCrit', def); fire(att, 'nth', def);
@@ -3910,42 +3924,157 @@ Object.assign(HUNTS, {
 // is, not where you are. You stand still and hit things four tiles away.
 Object.assign(ATK, {
   // marionette: a blade arm, six tiles out, with a second swing behind it
-  pswing: { w: 17, a: 6, r: 17, dmg: 10, kb: [5, -4], stun: 18, hs: 4, box: [1.4, -2.0, 6.0, 0.0], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
-  pswing2: { w: 13, a: 6, r: 19, dmg: 10, kb: [5.5, -5], stun: 18, hs: 4, box: [1.3, -2.1, 6.0, 0.05], melee: 1, trail: 1, pup: 1 },
-  pspin: { w: 24, a: 11, r: 26, dmg: 15, kb: [8, -10], stun: 28, hs: 7, box: [0.6, -2.4, 6.2, 0.15], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
-  // scorpion: a tail that comes down over the top, eight tiles out, and leaves poison in the hole
-  psting: { w: 16, a: 6, r: 16, dmg: 9, kb: [3, -3], stun: 16, hs: 4, box: [2.2, -3.2, 8.0, 0.1], melee: 1, trail: 1, pup: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 2 }] },
-  pstingbig: { w: 23, a: 9, r: 22, dmg: 14, kb: [4, -5], stun: 24, hs: 6, box: [1.8, -3.6, 8.2, 0.2], melee: 1, trail: 1, pup: 1, big: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 3 }] },
-  // kite: a flat paper thing that drops on people from above, fast and light
-  pdive: { w: 14, a: 5, r: 14, dmg: 6, kb: [4, -6], stun: 14, hs: 3, box: [0.9, -3.4, 5.4, -0.2], melee: 1, trail: 1, pup: 1, chain: 'pdive2' },
-  pdive2: { w: 11, a: 5, r: 16, dmg: 6, kb: [4, -7], stun: 14, hs: 3, box: [0.8, -3.6, 5.4, -0.1], melee: 1, trail: 1, pup: 1 },
-  pdivebig: { w: 18, a: 9, r: 22, dmg: 12, kb: [6, -13], stun: 24, hs: 6, box: [0.6, -3.8, 5.6, 0.0], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
-  // idol: a slab that does not reach far and does not care, and throws whatever it lands on
-  pslam: { w: 20, a: 8, r: 18, dmg: 18, kb: [10, -9], stun: 26, hs: 8, box: [0.8, -2.3, 4.8, 0.3], melee: 1, trail: 1, pup: 1, big: 1 },
-  pslambig: { w: 28, a: 10, r: 24, dmg: 25, kb: [14, -15], stun: 34, hs: 10, box: [0.5, -2.5, 5.0, 0.4], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1, slam: 1 },
+  pswing: { w: 19, a: 6, r: 19, dmg: 8, kb: [5, -4], stun: 16, hs: 4, box: [1.1, -2.0, 6.0, 0.0], melee: 1, trail: 1, pup: 1, chain: 'pswing2' },
+  pswing2: { w: 14, a: 6, r: 21, dmg: 8, kb: [5.5, -5], stun: 16, hs: 4, box: [1.0, -2.1, 6.0, 0.05], melee: 1, trail: 1, pup: 1 },
+  pspin: { w: 24, a: 11, r: 26, dmg: 13, kb: [8, -10], stun: 28, hs: 7, box: [0.6, -2.4, 6.2, 0.15], melee: 1, trail: 1, pup: 1, tumble: 1, big: 1 },
+  // scorpion: the tail goes in and stays in — whatever it is pinned to cannot leave while it holds
+  psting: { w: 18, a: 38, r: 16, cd: 14, dmg: 9, kb: [0, 0], stun: 10, hs: 4, box: [-0.5, -0.6, 0.6, 0.6], melee: 1, pup: 1, atPup: 1, pin: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 2 }] },
+  pstingbig: { w: 24, a: 54, r: 20, cd: 16, dmg: 14, kb: [0, 0], stun: 12, hs: 5, box: [-0.6, -0.7, 0.7, 0.7], melee: 1, pup: 1, atPup: 1, pin: 1, big: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 3 }] },
+  // kite: it is thrown, and it comes back — two passes through whatever is in the way
+  pdive: { w: 14, a: 34, r: 14, cd: 10, dmg: 9, kb: [3.5, -4], stun: 12, hs: 4, box: [-0.5, -0.5, 0.5, 0.5], melee: 1, pup: 1, atPup: 1, sweep: 1 },
+  pdivebig: { w: 20, a: 46, r: 20, cd: 14, dmg: 12, kb: [5, -8], stun: 20, hs: 6, box: [-0.6, -0.6, 0.6, 0.6], melee: 1, pup: 1, atPup: 1, sweep: 1, tumble: 1, big: 1 },
+  // idol: hauled up over their head on the strings, and dropped
+  pslam: { w: 20, a: 30, r: 20, cd: 16, dmg: 28, kb: [7, -6], stun: 26, hs: 8, box: [-0.9, -0.8, 0.9, 0.6], melee: 1, pup: 1, atPup: 1, drop: 1, big: 1, shock: { r: 2.4, dmg: 13, kb: [8, -7], stun: 22, hs: 6, tumble: 1 } },
+  pslambig: { w: 26, a: 34, r: 26, cd: 18, dmg: 38, kb: [11, -12], stun: 34, hs: 10, box: [-1.05, -0.9, 1.05, 0.65], melee: 1, pup: 1, atPup: 1, drop: 1, big: 1, tumble: 1, slam: 1, shock: { r: 3.1, dmg: 18, kb: [11, -9], stun: 26, hs: 8, tumble: 1 } },
+  // spool: it sits far out on a taut wire, and its own strike reels whatever it catches back to you
+  pwind: { w: 19, a: 20, r: 20, cd: 14, dmg: 7, kb: [14, -3], stun: 16, hs: 5, box: [-0.6, -0.65, 0.6, 0.6], melee: 1, pup: 1, atPup: 1, reel: 1, onHit: [{ chance: 1, apply: 'bleed', stacks: 1 }] },
+  pwindbig: { w: 25, a: 26, r: 26, cd: 16, dmg: 11, kb: [21, -5], stun: 22, hs: 7, box: [-0.7, -0.75, 0.7, 0.65], melee: 1, pup: 1, atPup: 1, reel: 1, big: 1, onHit: [{ chance: 1, apply: 'bleed', stacks: 2 }] },
+  // lantern: it barely hits at all. It leans over them and pours.
+  pdrip: { w: 16, a: 20, r: 18, cd: 10, dmg: 4, kb: [1, 0], stun: 8, hs: 2, box: [-0.5, -0.75, 0.5, 0.6], melee: 1, pup: 1, atPup: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 2 }] },
+  pdripbig: { w: 21, a: 26, r: 22, cd: 12, dmg: 6, kb: [2, -1], stun: 10, hs: 3, box: [-0.6, -0.85, 0.6, 0.7], melee: 1, pup: 1, atPup: 1, big: 1, onHit: [{ chance: 1, apply: 'poison', stacks: 4 }] },
 });
-// Each form is a different thing on the end of the same strings: how far it goes, how it rests, how
-// often it can take a shot for you, and how it is drawn.
+// Each form is a different verb, not a different number. The marionette swings; the scorpion pins and
+// holds; the kite is thrown out and comes back; the idol is hauled overhead and dropped; the lantern
+// never attacks at all and just hangs over them, dripping.
 const PUPFORM = {
-  marionette: { name: 'Marionette', light: 'pswing', heavy: 'pspin', rest: [1.3, 1.35], guard: 80, size: 1 },
-  scorpion: { name: 'Scorpion', light: 'psting', heavy: 'pstingbig', rest: [1.55, 0.95], guard: 120, size: 1.1 },
-  kite: { name: 'Kite', light: 'pdive', heavy: 'pdivebig', rest: [1.25, 2.35], guard: 75, size: 0.95, high: 1 },
-  idol: { name: 'Idol', light: 'pslam', heavy: 'pslambig', rest: [1.7, 1.15], guard: 24, size: 1.15 },
+  marionette: { name: 'Marionette', light: 'pswing', heavy: 'pspin', rest: [1.3, 1.35], guard: 105, size: 1, reach: 6.2, verb: 'swings a blade arm six tiles out', short: 'swings, six tiles out' },
+  scorpion: { name: 'Scorpion', light: 'psting', heavy: 'pstingbig', rest: [1.55, 0.95], guard: 150, size: 1.1, reach: 6.5, verb: 'plants its tail in them and holds them there', travel: 'pin', short: 'pins them where they stand' },
+  kite: { name: 'Kite', light: 'pdive', heavy: 'pdivebig', rest: [1.25, 2.35], guard: 100, size: 0.95, high: 1, reach: 7.5, verb: 'is thrown out past them and comes back through', travel: 'sweep', short: 'thrown out and back' },
+  idol: { name: 'Idol', light: 'pslam', heavy: 'pslambig', rest: [1.7, 1.15], guard: 70, size: 1.15, reach: 5.5, verb: 'is hauled overhead and dropped, cracking the floor', travel: 'drop', short: 'dropped from overhead' },
+  spool: { name: 'Spool', light: 'pwind', heavy: 'pwindbig', rest: [3.4, 1.5], guard: 125, size: 0.85, reach: 8, verb: 'holds a wire out that cuts whatever walks into it, and reels them in', travel: 'reel', wire: { every: 70, dmg: 3, apply: 'bleed' }, short: 'a wire across the floor' },
+  lantern: { name: 'Lantern', light: 'pdrip', heavy: 'pdripbig', rest: [1.1, 1.9], guard: 90, size: 1, reach: 4, verb: 'hangs over them and drips, and what drips off them comes back to you', travel: 'hover', aura: { r: 2.4, every: 42, heal: 1.5, apply: 'poison' }, short: 'hangs over them, drips' },
 };
 const pupForm = (u) => PUPFORM[(u.gs && u.gs.flags.pupForm) || 'marionette'];
 function pupStep(u) {
-  const b = u.b, p = (u.pup ||= { x: b.x + u.face * 1.2, y: b.y - 1.4, sw: 0, bob: Math.random() * 6 });
+  const b = u.b, F = pupForm(u);
+  const p = (u.pup ||= { x: b.x + u.face * 1.2, y: b.y - 1.4, sw: 0, bob: Math.random() * 6 });
   p.bob += 0.055;
   const d = u.atkDef, striking = u.state === 'atk' && d && d.pup;
-  // out along the swing when it strikes, drifting at your shoulder the rest of the time
-  const F = pupForm(u);
+  if (striking && F.travel) { pupTravel(u, p, d, F); if (F.wire) pupWire(u, p, F.wire); return; }
+  // the marionette: out along the swing, and drifting at your shoulder between them
   const reach = striking ? (u.phase === 'w' ? -0.5 - 0.9 * Math.min(1, u.af / d.w) : u.phase === 'a' ? (d.box[0] + d.box[2]) / 2 : 1.2) : F.rest[0];
-  const lift = striking ? (u.phase === 'a' ? (F.high ? 2.6 : 1.0) : F.high ? 2.4 : 1.25) : F.rest[1] + Math.sin(p.bob) * (F.high ? 0.22 : 0.12);
+  const lift = striking ? (u.phase === 'a' ? 1.0 : 1.25) : F.rest[1] + Math.sin(p.bob) * (F.high ? 0.22 : 0.12);
   const k = striking && u.phase === 'a' ? 0.55 : 0.2;
   p.x += (b.x + u.face * reach - p.x) * k;
   p.y += (b.y - lift - p.y) * k;
   p.sw = striking ? (u.phase === 'w' ? -Math.min(1, u.af / d.w) : u.phase === 'a' ? 1 : approach(p.sw, 0, 0.14)) : approach(p.sw, 0, 0.06);
   p.face = u.face;
+  if (F.aura) pupAura(u, p, F.aura);
+  if (F.wire) pupWire(u, p, F.wire);
+}
+// The forms that go somewhere: where the puppet is, frame by frame, for the whole attack. Each one has a
+// shape you can read from across the arena, because what it is about to do is the only warning you get.
+function pupTravel(u, p, d, F) {
+  const b = u.b, e = foe(u), home = { x: b.x + u.face * F.rest[0], y: b.y - F.rest[1] };
+  const w = d.w, a = d.a, wind = u.phase === 'w';
+  const k = (n, x0, y0, x1, y1) => { p.x += (x0 + (x1 - x0) * n - p.x) * 0.5; p.y += (y0 + (y1 - y0) * n - p.y) * 0.5; };
+  // it aims while it winds up and commits the moment it goes, so stepping aside works
+  if (wind) {
+    p.vy = 0; p.land = 0; p.back = 0;
+    p.tx = e && e.state !== 'dead' ? e.b.x : b.x + u.face * 4;
+    p.ty = e && e.state !== 'dead' ? e.b.y : b.y;
+  }
+  const tx = F.travel === 'hover' && e && e.state !== 'dead' ? e.b.x : (p.tx === undefined ? b.x + u.face * 4 : p.tx);
+  const ty = F.travel === 'hover' && e && e.state !== 'dead' ? e.b.y : (p.ty === undefined ? b.y : p.ty);
+  if (F.travel === 'pin') {
+    // folded over its own back, then the tail comes down and stays down
+    if (wind) { const n = u.af / w; k(n, home.x, home.y, home.x + u.face * 0.3, home.y - 0.7); p.sw = -n; }
+    else if (u.phase === 'a') { p.x += (tx - u.face * 0.3 - p.x) * 0.45; p.y += (ty - 0.55 - p.y) * 0.45; p.sw = 1; }
+    else { k(0.25, p.x, p.y, home.x, home.y); p.sw = approach(p.sw, 0, 0.1); }
+  } else if (F.travel === 'sweep') {
+    // thrown flat through them and reeled back along the same line, so it passes twice
+    if (wind) { const n = u.af / w; k(n, home.x, home.y, home.x - u.face * 0.6, home.y - 0.2); p.sw = -n; }
+    else if (u.phase === 'a') {
+      const n = (u.af - w) / a, out = n < 0.5 ? n * 2 : 2 - n * 2;
+      const far = Math.min(F.reach, Math.abs(tx - b.x) + 2.4);
+      p.x = b.x + u.face * (0.9 + out * far);
+      p.y = (ty - 0.95) + (b.y - ty) * (1 - out) * 0.3 - Math.sin(n * Math.PI) * 0.3;
+      // on the way back it is a fresh pass, so it can catch whatever it missed going out
+      if (n > 0.52 && !p.back) { p.back = 1; u.hitDone = false; }
+      p.sw = 1;
+    } else { k(0.3, p.x, p.y, home.x, home.y); p.sw = approach(p.sw, 0, 0.12); }
+  } else if (F.travel === 'reel') {
+    // the wire goes slack, the hub darts in, hooks, and winds the whole line back to your hands
+    if (wind) { const n = u.af / w; k(n, home.x, home.y, home.x + u.face * 0.9, home.y + 0.1); p.sw = -n; }
+    else if (u.phase === 'a') { const n = (u.af - w) / a; k(Math.min(1, n * 3), p.x, p.y, tx, ty - 0.8); p.spin = (p.spin || 0) + 0.9; p.sw = 1; }
+    else { const n = (u.af - w - a) / d.r; k(Math.min(1, n * 1.4), p.x, p.y, home.x, home.y); p.spin = (p.spin || 0) + 0.45; p.sw = approach(p.sw, 0, 0.08); }
+  } else if (F.travel === 'hover') {
+    // it never really goes anywhere. It leans down over them and tips out
+    const oy = ty - 2.1 + (u.phase === 'a' ? 1.25 : 0);
+    k(u.phase === 'a' ? 0.3 : 0.12, p.x, p.y, tx, oy);
+    p.sw = wind ? -u.af / w : u.phase === 'a' ? 1 : approach(p.sw, 0, 0.08);
+  } else {
+    // hauled straight up over their head on the strings, and then simply let go of
+    if (wind) { const n = u.af / w; k(n, home.x, home.y, tx, Math.min(ty, b.y) - 3.8); p.sw = -n; }
+    else if (u.phase === 'a') {
+      p.x += (tx - p.x) * 0.5;
+      p.vy = (p.vy || 0) + 0.055;
+      p.y = Math.min(ty - 0.35, p.y + p.vy);
+      if (p.y >= ty - 0.36 && !p.land) { p.land = 1; pupLand(u, p, d, ty); }
+      p.sw = 1;
+    } else { k(0.22, p.x, p.y, home.x, home.y); p.sw = approach(p.sw, 0, 0.1); }
+  }
+  p.face = F.travel === 'hover' ? u.face : Math.sign(tx - p.x) || u.face;
+}
+// The floor gives where an idol lands, and the crack runs out both ways from it.
+function pupLand(u, p, d, ty) {
+  dust(p.x, ty, 12, 2.4); sfxShake(8);
+  if (!d.shock) return;
+  const was = u.hitDone; u.hitDone = false;
+  shockwave(u, d.shock, p.x, ty);
+  u.hitDone = was || u.hitDone;
+}
+// A lantern does not attack. It hangs over whatever you are looking at and drips on it.
+function pupAura(u, p, au) {
+  const e = foe(u);
+  if (!e || e.state === 'dead' || world.over || world.intro > 0) return;
+  p.x += (e.b.x - p.x) * 0.055;
+  p.y += (e.b.y - 2.1 - p.y) * 0.055;
+  const st = bookStatus(u, au.apply);
+  if (world.t % 4 === 0) parts.push({ k: 'b', x: p.x + (Math.random() - 0.5) * 0.35, y: p.y + 0.25, vx: 0, vy: 1.4, r: 0.04 + Math.random() * 0.04, life: 0, max: 26, c: st || 'poison' });
+  if (world.t % au.every) return;
+  if (Math.hypot(e.b.x - p.x, e.b.y - 0.8 - p.y) > au.r) return;
+  if (st) applyStatus(u, e, st);
+  heal(u, au.heal * powerOf(u));
+  ring(p.x, p.y + 0.2, 0.5, TEAM[u.side]);
+}
+// The spool holds a taut wire between its hub and your hands. Anyone who walks into the line gets cut,
+// which means where you stand decides where the hazard is.
+function pupWire(u, p, wr) {
+  const e = foe(u);
+  if (!e || e.state === 'dead' || world.over || world.intro > 0) return;
+  const b = u.b, ax = b.x + u.face * 0.3, ay = b.y - 0.95;
+  const hb = hurtbox(e), cx = (hb[0] + hb[2]) / 2, cy = (hb[1] + hb[3]) / 2;
+  const dx = p.x - ax, dy = p.y - ay, l2 = dx * dx + dy * dy || 1;
+  const t = Math.max(0, Math.min(1, ((cx - ax) * dx + (cy - ay) * dy) / l2));
+  const qx = ax + dx * t, qy = ay + dy * t;
+  if (qx < hb[0] - 0.08 || qx > hb[2] + 0.08 || qy < hb[1] - 0.08 || qy > hb[3] + 0.08) return;
+  if (world.t % 3 === 0) sparks(qx, qy, Math.sign(dx) || u.face, 2, 'spark');
+  if (world.t % wr.every) return;
+  hurt(e, wr.dmg * powerOf(u), 'hit', u.side, null, [['hits', 1]]);
+  const st = bookStatus(u, wr.apply);
+  if (st) applyStatus(u, e, st);
+  sparks(qx, qy, Math.sign(dx) || u.face, 7, 'spark'); ring(qx, qy, 0.4, TEAM[u.side]);
+}
+// The scorpion's tail goes in and stays in: while it is planted, they do not go anywhere.
+function pinHold(u) {
+  const e = u.pinned;
+  if (!e || e.state === 'dead') { u.pinned = null; return; }
+  e.state = 'stun'; e.stunT = Math.max(e.stunT, 4); e.tumble = false;
+  e.b.vx = 0; e.b.vy = Math.min(0, e.b.vy);
+  e.skName = null; e.backflip = false; e.ai.macro = null; e.ai.path.length = 0;
+  if (e.hook && e.hook.phase !== 'back') e.hook.phase = 'back';
+  if (world.t % 7 === 0) brushUp(e.b.x + (Math.random() - 0.5) * 0.4, e.b.y, TEAM[u.side]);
 }
 // The marionette itself: a head, three body links on a spine, a blade arm, and strings home to the hands.
 function drawPuppet(u, pal) {
@@ -4022,6 +4151,59 @@ function drawPuppet(u, pal) {
     }
     ctx.lineCap = 'round'; ctx.strokeStyle = ink; ctx.lineWidth = 0.06;
     for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * 0.12, 0.24); ctx.lineTo(s2 * 0.14, 0.44); ctx.stroke(); }
+  } else if (F === PUPFORM.spool) {
+    // a bobbin of wire: a wound wheel on a hub, with two hooks off the rim and a tail of loose thread
+    ctx.rotate((p.spin || 0) * 0.12 + sw * 0.4);
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.arc(0, 0, 0.3, 0, 6.283); ctx.stroke();
+    ctx.strokeStyle = team; ctx.lineWidth = 0.055; ctx.globalAlpha = 0.8;
+    for (let i = 0; i < 5; i++) { const r = 0.12 + i * 0.038; ctx.beginPath(); ctx.arc(0, 0, r, i * 1.1, i * 1.1 + 4.4); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.035;
+    for (let i = 0; i < 3; i++) { const a = i * 2.094; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 0.3, Math.sin(a) * 0.3); ctx.lineTo(-Math.cos(a) * 0.3, -Math.sin(a) * 0.3); ctx.stroke(); }
+    ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(0, 0, 0.075, 0, 6.283); ctx.fill();
+    ctx.fillStyle = eyeC(u, pal); ctx.beginPath(); ctx.arc(0, 0, 0.032, 0, 6.283); ctx.fill();
+    // the hooks it catches people with, folded in while it rests and flared out when it winds
+    ctx.strokeStyle = steel; ctx.lineWidth = 0.05;
+    for (const s2 of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(s2 * 0.26, s2 * 0.15);
+      ctx.quadraticCurveTo(s2 * (0.46 + sw * 0.16), s2 * 0.2, s2 * (0.4 + sw * 0.24), s2 * (-0.06 - sw * 0.14));
+      ctx.stroke();
+    }
+    ctx.strokeStyle = team; ctx.lineWidth = 0.022; ctx.globalAlpha = 0.6;
+    ctx.beginPath(); ctx.moveTo(-0.28, 0.08);
+    for (let i = 1; i <= 3; i++) ctx.lineTo(-0.28 - i * 0.17, 0.08 + Math.sin(p.bob * 1.9 + i) * 0.13);
+    ctx.stroke(); ctx.globalAlpha = 1;
+  } else if (F === PUPFORM.lantern) {
+    // a paper lantern on a yoke: ribbed body, a lit core, a spout it tips out of, and a drip forming
+    ctx.rotate(sw * 0.55);
+    const glow = 0.55 + Math.sin(p.bob * 1.4) * 0.12;
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.035;
+    ctx.beginPath(); ctx.moveTo(-0.17, -0.46); ctx.quadraticCurveTo(0, -0.6, 0.17, -0.46); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, -0.55); ctx.lineTo(0, -0.42); ctx.stroke();
+    ctx.fillStyle = ink;
+    ctx.beginPath(); ctx.rect(-0.2, -0.46, 0.4, 0.07); ctx.fill();
+    ctx.beginPath(); ctx.rect(-0.16, 0.3, 0.32, 0.07); ctx.fill();
+    // the paper, lit from inside
+    const lit = col(pal, bookStatus(u, 'poison') || 'steel');
+    ctx.globalAlpha = glow; ctx.fillStyle = lit;
+    ctx.beginPath(); ctx.ellipse(0, -0.06, 0.24, 0.32, 0, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.035;
+    ctx.beginPath(); ctx.ellipse(0, -0.06, 0.24, 0.32, 0, 0, 6.283); ctx.stroke();
+    ctx.lineWidth = 0.022; ctx.globalAlpha = 0.7;
+    for (const ry of [-0.24, -0.06, 0.12]) { ctx.beginPath(); ctx.moveTo(-0.235, ry); ctx.lineTo(0.235, ry); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(0, -0.38); ctx.lineTo(0, 0.26); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = eyeC(u, pal);
+    ctx.beginPath(); ctx.ellipse(0, -0.06, 0.045, 0.09, 0, 0, 6.283); ctx.fill();
+    // the spout, and whatever is about to fall off it
+    ctx.strokeStyle = ink; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.moveTo(0.16, 0.16); ctx.lineTo(0.34 + sw * 0.1, 0.3 + sw * 0.12); ctx.stroke();
+    ctx.fillStyle = lit; ctx.globalAlpha = 0.85;
+    const dr = 0.04 + (Math.sin(p.bob * 2.2) * 0.5 + 0.5) * 0.03;
+    ctx.beginPath(); ctx.arc(0.36 + sw * 0.12, 0.38 + sw * 0.14, dr, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = 1;
   } else {
     // the marionette: a head, three links on a spine, a blade arm, and legs that dangle
     ctx.rotate(sw * 0.5 * 0.35);
@@ -4472,6 +4654,9 @@ function atkStep(u) {
   if (u.atkName === 'aslash') u.rot = 2 * Math.PI * Math.min(1, u.af / (d.w + d.a));
   if (u.atkName === 'stab3' && u.af >= d.w) u.rot = 2 * Math.PI * Math.min(1, (u.af - d.w) / (d.a + 5));
   if (u.atkName === 'hammer' && u.af === d.w + 2) { dust(b.x + u.face * 1.5, b.y, 6, 0.8); sfxShake(4); if (b.gr) shockwave(u, d.shock, b.x + u.face * 1.2); }
+  // a planted tail keeps them there for as long as it is in
+  // the tail holds while it is in, and for as long as it takes to pull back out
+  if (d.pin && u.phase === 'a') pinHold(u); else if (u.pinned) u.pinned = null;
   if (u.atkName === 'thrust' && u.af === d.w) streak(b.x + u.face * 1.6, b.y - 0.95, u.face > 0 ? 0 : Math.PI, 1.3, 'spark');
   if (d.shot && u.phase === 'w' && u.af % 4 === 0) { const s = aimAt(u, targetOf(u)); if (s) u.aimSol = s; }
   if (u.af >= d.w + d.a + d.r) {
@@ -4758,15 +4943,15 @@ function castWard(u, wd) {
   }
   u.hitDone = true;
 }
-function shockwave(u, sh, x) {
-  const b = u.b;
-  ring(x, b.y - 0.1, sh.r, TEAM[u.side]); ring(x, b.y - 0.1, sh.r * 0.6, 'spark');
-  for (const s2 of [-1, 1]) streak(x + s2 * 1.1, b.y - 0.1, s2 > 0 ? 0 : Math.PI, 1.2, 'spark');
+function shockwave(u, sh, x, y) {
+  const fy = y === undefined ? u.b.y : y;
+  ring(x, fy - 0.1, sh.r, TEAM[u.side]); ring(x, fy - 0.1, sh.r * 0.6, 'spark');
+  for (const s2 of [-1, 1]) streak(x + s2 * 1.1, fy - 0.1, s2 > 0 ? 0 : Math.PI, 1.2, 'spark');
   world.hs = Math.max(world.hs, 4); world.impact = Math.max(world.impact, 1);
   const e = foe(u);
-  if (e && e.state !== 'dead' && e.b.gr && !u.hitDone && Math.abs(e.b.x - x) < sh.r && Math.abs(e.b.y - b.y) < 0.7) {
+  if (e && e.state !== 'dead' && e.b.gr && !u.hitDone && Math.abs(e.b.x - x) < sh.r && Math.abs(e.b.y - fy) < 0.7) {
     if (e.state === 'roll') e.iT = 0;
-    u.hitDone = true; applyHit(u, e, sh, Math.sign(e.b.x - b.x) || u.face);
+    u.hitDone = true; applyHit(u, e, sh, Math.sign(e.b.x - x) || u.face);
   }
 }
 
@@ -4775,7 +4960,8 @@ function resolveHits() {
     if (u.state !== 'atk' || u.phase !== 'a' || u.hitDone) continue;
     const d = u.atkDef;
     if (!d.box) continue;
-    const hb = worldBox(u.b.x, u.b.y, u.face, d.box);
+    const at = d.atPup && u.pup ? u.pup : u.b;
+    const hb = worldBox(at.x, at.y, u.face, d.box);
     if (d.melee) {
       for (const a of shots) {
         if (a.owner === u.side || a.stuck || a.dead) continue;
@@ -4793,7 +4979,8 @@ function resolveHits() {
       // against something small on the floor, a swing is aimed low enough to reach it
       const box = e.mob && hb[3] < e.b.y && hb[3] > e.b.y - 1.2 ? [hb[0], hb[1], hb[2], e.b.y] : hb;
       if (e.side === u.side || e.state === 'dead' || !overlap(box, hurtbox(e))) continue;
-      u.hitDone = true; applyHit(u, e, d, u.face);
+      u.hitDone = true; applyHit(u, e, d, d.reel ? (Math.sign(u.b.x - e.b.x) || u.face) : u.face);
+      if (d.pin) u.pinned = e;
       if (u.state !== 'atk') break;
     }
   }
@@ -5199,7 +5386,7 @@ const RIVALS = [
   { name: 'Anvil', trinket: 'static', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
   { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
-  { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'ghostwalk', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'Fights you with a marionette four tiles out, so its own body is never where the blades are. Get inside the strings and it has nothing.' },
+  { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'ghostwalk', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'Fights you with a marionette six tiles out, so its own body is never where the blades are. Get inside the strings and all it has left is a boot.' },
   { name: 'Folio', trinket: 'frost', weapon: 'spellbook', skill: 'blink', acro: 1, t: 5, tag: 'Reads out loud.', tip: 'Rooted while it casts, so anything that closes fast beats it — but stand still at range and the nova will find you.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
@@ -5286,7 +5473,7 @@ const WTYPE = {
   bow: { min: 9, max: 13, base: 11, pace: 'Steady', sig: '+30% Crit damage', stats: { critDmg: 0.3 } },
   stars: { min: 3.5, max: 5.5, base: 4.5, pace: 'Very fast', sig: '+5% Evasion', stats: { evasion: 0.05 } },
   spellbook: { min: 8, max: 14, base: 11, pace: 'Slow', sig: 'Statuses deal +25%', flags: { dotMult: 1.25 } },
-  puppet: { min: 6, max: 10, base: 8, pace: 'Slow', sig: 'Reach 6 and a guard, for 15 HP', stats: { hp: -15 } },
+  puppet: { min: 6, max: 10, base: 8, pace: 'Slow', sig: 'Long reach and a guard, for 15 HP', stats: { hp: -15 } },
 };
 
 // Families: each creature drops its family's gear. Two pieces give the set's stats; four bend a rule,
@@ -5344,7 +5531,7 @@ const ITEM = {
   wobble_mirror: iS('Wobble Mirror', 'gel', 'parry', { hp: 8 }),
   // wing: the bats'. Dodging and Bleed.
   fang_knives: iW('Fang Knives', 'wing', 'daggers', oh('bleed')),
-  wing_marionette: iW('Wing Marionette', 'wing', 'puppet', { stats: { evasion: 0.04 }, flags: { pupForm: 'marionette' }, desc: 'A jointed marionette with a blade arm, six tiles out.' }),
+  wing_marionette: iW('Wing Marionette', 'wing', 'puppet', { stats: { evasion: 0.04 }, flags: { pupForm: 'marionette' }, desc: 'A jointed marionette. Its blade arm swings six tiles out, twice.' }),
   talon_sword: iW('Talon Sword', 'wing', 'sword', { min: 6, max: 11, ...oh('bleed', 0.15) }),
   wing_bow: iW('Wing Bow', 'wing', 'bow', { min: 8, max: 12, stats: { evasion: 0.03, haste: 0.05 } }),
   bat_hood: iA('Bat Hood', 'wing', 'head', { hp: 10, crit: 0.06 }),
@@ -5355,6 +5542,7 @@ const ITEM = {
   night_wing: iS('Night Wing', 'wing', 'blink', { skillHaste: 0.1 }),
   // scale: the serpent's. Armour and Poison.
   fang_spear: iW('Fang Spear', 'scale', 'spear', { min: 10, max: 14, ...oh('poison') }),
+  scale_scorpion: iW('Scale Scorpion', 'scale', 'puppet', { stats: { pen: 1 }, flags: { pupForm: 'scorpion' }, desc: 'A tail that goes in and stays in. Whatever it is planted in cannot leave while it holds, and it leaves two Poison in the hole.' }),
   scale_stars: iW('Scale Stars', 'scale', 'stars', oh('poison', 0.15)),
   viper_bow: iW('Viper Bow', 'scale', 'bow', oh('poison', 0.2, 2)),
   scale_helm: iA('Scale Helm', 'scale', 'head', { hp: 12, def: 2 }),
@@ -5367,7 +5555,8 @@ const ITEM = {
   silk_daggers: iW('Silk Daggers', 'silk', 'daggers', { min: 5, max: 8, stats: { crit: 0.03 } }),
   silk_spear: iW('Silk Spear', 'silk', 'spear', oh('chill')),
   silk_bow: iW('Silk Bow', 'silk', 'bow', { stats: { crit: 0.04 } }),
-  silk_marionette: iW('Silk Marionette', 'silk', 'puppet', { stats: { crit: 0.03 }, flags: { pupForm: 'kite' }, desc: 'A paper kite that drops on people from above: fast, light, and it takes a shot for you twice as often.' }),
+  silk_marionette: iW('Silk Kite', 'silk', 'puppet', { stats: { crit: 0.03 }, flags: { pupForm: 'kite', spellSt: 'chill' }, desc: 'A paper kite. Thrown out past them and reeled back, so it passes through twice.' }),
+  silk_spool: iW('Silk Spool', 'silk', 'puppet', { stats: { crit: 0.04 }, flags: { pupForm: 'spool', spellSt: 'chill' }, desc: 'A bobbin hanging three tiles off, eight tiles of reach. The wire back to your hands cuts whatever walks into it, and a wind reels them in.' }),
   eye_circlet: iA('Eye Circlet', 'silk', 'head', { hp: 8, crit: 0.08 }),
   silk_vest: iA('Silk Vest', 'silk', 'core', { hp: 18, haste: 0.06 }),
   web_boots: iA('Web Boots', 'silk', 'feet', {}, { acro: 4 }),
@@ -5389,7 +5578,7 @@ const ITEM = {
   brute_maul: iW('Brute Maul', 'iron', 'hammer', { min: 20, max: 30 }),
   iron_sword: iW('Iron Sword', 'iron', 'sword', { min: 7, max: 10, stats: { def: 1 } }),
   iron_spear: iW('Iron Spear', 'iron', 'spear', { stats: { def: 1, hp: 8 } }),
-  iron_effigy: iW('Iron Effigy', 'iron', 'puppet', { stats: { def: 2, hp: 10 }, flags: { pupForm: 'idol' }, desc: 'A slab that reaches only four tiles, throws whatever it lands on, and stands in front of nearly every shot.' }),
+  iron_effigy: iW('Iron Effigy', 'iron', 'puppet', { stats: { def: 2, hp: 10 }, flags: { pupForm: 'idol' }, desc: 'A slab hauled over their head and dropped. The landing cracks the floor either side of it, and it stands in front of nearly every shot.' }),
   brute_brow: iA('Brute Brow', 'iron', 'head', { hp: 18, def: 2 }),
   hide_plate: iA('Hide Plate', 'iron', 'core', { hp: 34, def: 4, haste: -0.05 }),
   heavy_boots: iA('Heavy Boots', 'iron', 'feet', { hp: 10, def: 2 }, { acro: 1 }),
@@ -5398,6 +5587,7 @@ const ITEM = {
   thorn_ring: iT('Thorn Ring', 'iron', { trig: [{ type: 'onHitTaken', effect: { damage: 3 } }], desc: 'When hit, deal 3 back.' }),
   // toxic: the toxic slime's. Poison and Regen.
   toxic_cleaver: iW('Toxic Cleaver', 'toxic', 'sword', { stats: { hp: 8 }, ...oh('poison') }),
+  toxic_censer: iW('Toxic Censer', 'toxic', 'puppet', { stats: { regen: 0.8 }, flags: { pupForm: 'lantern', spellSt: 'poison' }, desc: 'A lantern that barely strikes at all. It drifts over whoever you are looking at, Poisons them every second or so, and pours a little of that back into you.' }),
   ooze_stars: iW('Ooze Stars', 'toxic', 'stars', oh('poison')),
   sludge_maul: iW('Sludge Maul', 'toxic', 'hammer', oh('poison', 0.25, 2)),
   spore_codex: iW('Spore Codex', 'toxic', 'spellbook', { ...oh('poison', 0.2), flags: { spellSt: 'poison' }, desc: 'Every spell in it carries Poison.', flavor: 'Bound in something that is still growing.' }),
@@ -5772,7 +5962,7 @@ Object.assign(ITEM, {
   twin_scythes: iW('Twin Scythes', 'scythe', 'daggers', { flags: { backstab: 0.25 }, desc: '+25% damage from behind.', flavor: 'Two prayers, both answered.' }),
   praying_spear: iW('Praying Spear', 'scythe', 'spear', { trig: [{ type: 'onExchange', effect: { critNext: true } }], desc: 'Winning a blade exchange: your next hit crits.', flavor: 'Still. Still. Now.' }),
   scythe_puppet: iW('Folded Acolyte', 'scythe', 'puppet', { stats: { crit: 0.04 }, flags: { pupForm: 'marionette' }, desc: 'A jointed marionette with a blade arm, six tiles out.', flavor: 'It kneels when you do.' }),
-  venom_scorpion: iW('Paper Scorpion', 'venom', 'puppet', { stats: { pen: 2 }, flags: { pupForm: 'scorpion' }, desc: 'Eight tiles of tail, over the top and down, and every sting leaves two Poison in the hole.', flavor: 'Folded once, from the wrong paper.' }),
+  venom_scorpion: iW('Paper Scorpion', 'venom', 'puppet', { stats: { pen: 2 }, flags: { pupForm: 'scorpion' }, desc: 'A tail over the top and down, planted for as long as it takes. Two Poison in the hole, three when it gets an opening.', flavor: 'Folded once, from the wrong paper.' }),
   mantis_helm: iA('Mantis Helm', 'scythe', 'head', { hp: 10, crit: 0.06 }, { flavor: 'The eyes see all the way round.' }),
   chitin_vest: iA('Chitin Vest', 'scythe', 'core', { hp: 18, def: 2, haste: 0.04 }, { flavor: 'Light, hard, and a little green.' }),
   stilt_boots: iA('Stilt Boots', 'scythe', 'feet', { speed: 0.05 }, { acro: 2, trig: [{ type: 'onAcro', effect: { critNext: true } }], desc: 'After a wall jump or air flip, your next hit crits.', flavor: 'Tall steps. Taller leaps.' }),
@@ -7703,6 +7893,29 @@ const ART_WEAPON = {
       + circ(16, 18, 1.4, a) + (v % 3 === 2 ? ln('M24 11 L29 9', a, 2) : '');
   },
 };
+// Which puppet: a jointed figure, a tail, a folded diamond, a slab, a bobbin of wire, a hung lantern.
+const STRINGS = (a) => ln('M5 2 L11.5 8 M27 2 L20.5 8', a, 1.1);
+const ART_PUP = {
+  marionette: (a) => ART_WEAPON.puppet(0, a),
+  scorpion: (a) => STRINGS(a)
+    + pth('M8 21 C 8 17.5 22 17.5 22 21 C 22 24.5 8 24.5 8 21 Z')
+    + ln('M21 19 L27 16.5 M21 23 L27 25.5', 'currentColor', 2)
+    + ln('M10 24 L7.5 29.5 M14.5 24.5 L13.5 30 M19 24 L21.5 29.5', 'currentColor', 1.8)
+    + ln('M8.5 20 C 3 14.5 8 6.5 16.5 8.5 C 23 10 25 15 21.5 18.5', 'currentColor', 2.6)
+    + circ(21.5, 18.5, 1.5, a) + circ(19, 19.8, 1, a),
+  kite: (a) => STRINGS(a)
+    + pth('M16 8 L25 17 L16 26 L7 17 Z', PAPER_C, 'currentColor', 2)
+    + ln('M16 8 V26 M7 17 H25', a, 1.3)
+    + ln('M16 26 C 14 28.5 18 29.5 15.5 31.5', a, 1.4)
+    + ln('M25 17 L30.5 17', 'currentColor', 2.2),
+  idol: (a) => STRINGS(a)
+    + pth('M9 9 H23 V27 H9 Z')
+    + ln('M11.5 14 H20.5 M11.5 22 H20.5', a, 2)
+    + pth('M13 11 H14.8 V13 H13 Z M17.2 11 H19 V13 H17.2 Z', PAPER_C)
+    + ln('M9 13 L4.5 19 M23 13 L27.5 19', 'currentColor', 2.6),
+  spool: (a) => STRINGS(a) + ART_TRINKET.spool(a),
+  lantern: (a) => STRINGS(a) + ART_TRINKET.censer(a),
+};
 const ART_HEAD = {
   hood: (a) => pth('M5.5 27 C 5 12 9 4.5 16 4.5 C 23 4.5 27 12 26.5 27 Z') + pth('M10.5 24 C 10 15 12.5 11 16 11 C 19.5 11 22 15 21.5 24 Z', PAPER_C) + ln('M10.5 24 C 10 15 12.5 11 16 11 C 19.5 11 22 15 21.5 24', a, 1.8),
   cowl: (a) => ART_HEAD.hood(a) + pth('M8 10 L5 2.5 L12 7 Z') + pth('M24 10 L27 2.5 L20 7 Z'),
@@ -7824,7 +8037,8 @@ function itemArt(id) {
     // named variants first (0 for the plainest), then a stable pick for the rest
     const plain = names[it.weapon].some((w) => it.name.startsWith(w));
     const v = plain ? 0 : 1 + (artHash(id) % 2);
-    body = ART_WEAPON[it.flags && it.flags.staff ? 'staff' : it.flags && it.flags.tome ? 'tome' : it.weapon](v, a);
+    const f = it.flags || {};
+    body = f.pupForm ? ART_PUP[f.pupForm](a) : ART_WEAPON[f.staff ? 'staff' : f.tome ? 'tome' : it.weapon](v, a);
   } else if (it.skill) {
     body = circ(16, 16, 14, 'none', a, 2) + `<g transform="translate(5 5)">${SKILL_ICON[it.skill].replace(/^<svg[^>]*>/, '').replace(/<\/svg>$/, '')}</g>`;
   } else {
@@ -7858,7 +8072,7 @@ const bookName = (id) => (id ? ITEM[id].name : plainName(builds[0].weapon));
 const bookKind = (id) => {
   if (!id) return builds[0].weapon === 'puppet' ? 'a blade arm, six tiles out' : 'the six pages, no weather of its own';
   const f = ITEM[id].flags || {};
-  if (f.pupForm) return PUPFORM[f.pupForm].name;
+  if (f.pupForm) { const F = PUPFORM[f.pupForm]; return `${F.name}: ${F.short}`; }
   return f.tome ? 'Warlock tome' : f.spellSt ? `Codex of ${f.spellSt}` : 'Codex';
 };
 // The picker opens over the top, because the weapon row is already three deep.
@@ -7937,7 +8151,10 @@ function sizeDoll() {
 new ResizeObserver(sizeDoll).observe($('#doll'));
 // The headline numbers for this loadout, like a stat sheet.
 function renderGearStats() {
-  const bd = builds[0], wp = WEAP[bd.weapon], a = ATK[wp.atk], reach = wp.range || a.box[2];
+  const bd = builds[0], wp = WEAP[bd.weapon];
+  // a puppeteer's numbers are the puppet's: how far out it hangs, and how long it takes to get there
+  const pf = bd.weapon === 'puppet' ? PUPFORM[(bd.book && ITEM[bd.book].flags.pupForm) || 'marionette'] : null;
+  const a = ATK[pf ? pf.light : wp.atk], reach = pf ? pf.reach : wp.range || a.box[2];
   const cells = [
     ['Speed', wp.speed.toFixed(1), false], ['Hit in', `${a.w}f`, false], ['Reach', reach.toFixed(1), false],
     ['Skill', bd.skill ? SKILL[bd.skill].stat : '—', !bd.skill], ['On hit', bd.trinket ? `${stSvg(TRINKET[bd.trinket].status)}${STATUS[TRINKET[bd.trinket].status].name}` : '—', !bd.trinket],
