@@ -26,8 +26,8 @@ fights run themselves. **Start a run** is the front door, and everything else
     patches you up by half, not to full. Leaving a drop where it lies is a
     rest worth +35%. Losing a hunt costs its drop, not a life.
   - Each hunt offers three creatures, Easy, Normal and Elite. A card shows the
-    creature, how hard it is, and a line on what its gear is about: the marks
-    of the statuses it carries, then "Evasion and HP gear, Blink, a relic". Win, then pick one of
+    creature, how hard it is, and two words on what its gear is for, under its
+    status's own mark: "Bleed gear", "Chill gear". Win, then pick one of
     three drops. Harder creatures and variants turn up on later days, and
     creatures grow a little faster than gear does.
   - Gear works like ZereshkStory's. Weapons roll a damage range and carry

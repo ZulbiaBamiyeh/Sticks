@@ -7125,6 +7125,7 @@ const SKILL_ICON = {
 };
 // Status glyphs: one line drawing each, in the status's own colour.
 const ST_ICON = {
+  stun: '<path d="M11 2.5 L13.1 8.4 L19.3 8.5 L14.3 12.2 L16.2 18.2 L11 14.5 L5.8 18.2 L7.7 12.2 L2.7 8.5 L8.9 8.4 Z" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
   burn: '<path d="M11 20 C6.5 20 5 16.5 6.5 13.5 C7.5 11.5 9.5 10.5 9 6.5 C12 8 15.5 11.5 15.5 15.5 C15.5 18.5 13.5 20 11 20 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   poison: '<path d="M11 3 C14 8 16.5 10.5 16.5 14 A5.5 5.5 0 0 1 5.5 14 C5.5 10.5 8 8 11 3 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="9.3" cy="14.5" r="1.4" fill="currentColor"/>',
   bleed: '<path d="M11 3 C14 8 16.5 10.5 16.5 14 A5.5 5.5 0 0 1 5.5 14 C5.5 10.5 8 8 11 3 Z" fill="currentColor"/>',
@@ -7132,7 +7133,7 @@ const ST_ICON = {
   shock: '<path d="M13 2.5 L6 12 H11 L9 19.5 L16 10 H11 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
   frozen: '<rect x="3.5" y="3.5" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7 7 L12 12 M10 7 L12.5 9.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
 };
-const ST_COL = { burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#d49000', frozen: '#3d9cc4' };
+const ST_COL = { burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#d49000', frozen: '#3d9cc4', stun: '#6b5a3e' };
 const stSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true" style="color:${ST_COL[k]}">${ST_ICON[k]}</svg>`;
 // Slot icons: one line drawing each, in the same stroke as the skill icons.
 const GEAR_ICON = {
@@ -8082,29 +8083,20 @@ function runHeader() {
 function huntTitle(o) { const h = HUNTS[o.hunt]; return o.tier === 'elite' && h.eliteName ? h.eliteName : h.name; }   // the card's chip gives the risk
 // What this creature's gear is about, in a line you can read at a glance: the statuses it carries, the
 // two stats it leans on, and whether its keystone or relic is on the table.
-const GIST_STAT = { hp: 'HP', atk: 'Atk', def: 'Def', crit: 'Crit', critDmg: 'Crit dmg', haste: 'Haste', evasion: 'Evasion', resist: 'Resist', ls: 'Lifesteal', regen: 'Regen', thorns: 'Thorns', pen: 'Pierce', speed: 'Speed', skillHaste: 'Skill haste' };
+const GIST_STAT = { hp: 'HP', atk: 'Atk', def: 'Def', crit: 'Crit', critDmg: 'Crit', haste: 'Haste', evasion: 'Evasion', resist: 'Resist', ls: 'Lifesteal', regen: 'Regen', thorns: 'Thorns', pen: 'Pierce', speed: 'Speed', skillHaste: 'Skill haste' };
 function dropGist(offer) {
-  const st = new Set(), n = {};
-  let key = false, relic = false, skill = null;
+  const n = {}, st = {};
   for (const id of run.drops(offer)) {
     const it = ITEM[id];
-    if (it.keystone) { key = true; continue; }
-    if (it.relic) { relic = true; continue; }
-    if (it.skill) skill = SKILL[it.skill].name;
-    for (const o of it.onHit || []) if (o.apply && STATUS[o.apply]) st.add(o.apply);
-    for (const t of it.trig || []) if (t.effect && t.effect.apply && STATUS[t.effect.apply]) st.add(t.effect.apply);
+    for (const o of it.onHit || []) if (o.apply && STATUS[o.apply]) st[o.apply] = (st[o.apply] || 0) + 1;
+    for (const t of it.trig || []) if (t.effect && t.effect.apply && STATUS[t.effect.apply]) st[t.effect.apply] = (st[t.effect.apply] || 0) + 1;
     for (const k in it.stats || {}) if (GIST_STAT[k] && it.stats[k] > 0) n[k] = (n[k] || 0) + 1;
   }
-  const fam = FAMILY[offer.family];
-  if (fam.status) st.add(fam.status);
-  const tops = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 2).map((k) => GIST_STAT[k]);
-  const marks = [...st].map((k) => `<i class="gm" title="${stName(k)}">${stSvg(k)}</i>`).join('');
-  const parts = [];
-  if (tops.length) parts.push(`${tops.join(' and ')} gear`);
-  if (skill) parts.push(skill);
-  if (relic) parts.push('a relic');
-  else if (key) parts.push('a keystone');
-  return marks + (parts.length ? `<span>${parts.join(', ')}</span>` : '');
+  // The one thing this creature's gear is for: its status if it has one, otherwise the stat it leans on.
+  const k = FAMILY[offer.family].status || Object.keys(st).sort((a, b) => st[b] - st[a])[0];
+  if (k) return `<i class="gm">${stSvg(k)}</i><span>${stName(k)} gear</span>`;
+  const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+  return top ? `<span>${GIST_STAT[top]} gear</span>` : '';
 }
 function renderRun() {
   const el = ui.runPanel;
