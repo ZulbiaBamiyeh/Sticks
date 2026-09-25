@@ -375,12 +375,10 @@
   .t-elite .tchip { background: var(--red); color: #fff; }
   .hc-fam em { font-style: normal; color: #fff; background: #1b8a3a; border-radius: 4px; padding: 1px 5px; margin-left: 3px; }
   .hc-fam { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
-  .odds { display: flex; gap: 10px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
-  .drops { font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .drops i { display: grid; place-items: center; width: 30px; height: 30px; border: 1.5px solid var(--line); border-radius: 5px; background: #fff; }
-  .drops i svg { width: 22px; height: 22px; }
-  .drops i.key { border: 2px solid #b5651d; }
-  .drops i.relic { border: 2px solid #c9961a; background: #fbf4df; }
+  .drops { display: flex; align-items: center; gap: 5px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+  .drops .gm { display: inline-grid; place-items: center; flex: none; }
+  .drops .gm svg { width: 17px; height: 17px; display: block; }
+  .drops span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .icard { display: grid; gap: 4px; border: 2px solid var(--rc); border-radius: 8px; padding: 10px 12px; background: #f3f4f0; }
   .ihead { display: flex; align-items: center; gap: 10px; }
   .iic svg { width: 36px; height: 36px; display: block; }
@@ -553,7 +551,7 @@
   }
   @media (max-height: 580px) {
     #stage { min-height: 96px; }
-    .runbar small, .odds, .xstats { display: none; }
+    .runbar small, .xstats { display: none; }
     .bslot { border-radius: 5px; }
     .bslot small { display: none; }
     .bslot svg { width: 22px; height: 22px; }
@@ -8099,13 +8097,14 @@ function dropGist(offer) {
   }
   const fam = FAMILY[offer.family];
   if (fam.status) st.add(fam.status);
-  const parts = [], tops = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 2).map((k) => GIST_STAT[k]);
-  if (st.size) { parts.push([...st].map(stName).join(' + ') + ' gear'); if (tops.length) parts.push(tops.join(', ')); }
-  else if (tops.length) parts.push(`${tops.join(', ')} gear`);
+  const tops = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, 2).map((k) => GIST_STAT[k]);
+  const marks = [...st].map((k) => `<i class="gm" title="${stName(k)}">${stSvg(k)}</i>`).join('');
+  const parts = [];
+  if (tops.length) parts.push(`${tops.join(' and ')} gear`);
   if (skill) parts.push(skill);
-  if (relic) parts.push('relic');
-  else if (key) parts.push('keystone');
-  return parts.join(' · ');
+  if (relic) parts.push('a relic');
+  else if (key) parts.push('a keystone');
+  return marks + (parts.length ? `<span>${parts.join(', ')}</span>` : '');
 }
 function renderRun() {
   const el = ui.runPanel;
@@ -8119,13 +8118,11 @@ function renderRun() {
       }).join('')}</div>`;
     actions = '';
   } else if (runScreen === 'pick') {
-    // ZereshkStory's hunt cards: the creature, how hard, the rarity odds of its drops, and what it drops
+    // ZereshkStory's hunt cards: the creature, how hard it is, and a line on what its gear is about
     body = `<div class="row-h"><span class="lbl">Choose your hunt</span><span class="lbl">Hunt ${slotOf(run.round)} of 3</span></div>` + run.offers.map((o, i) => {
-      const odds = rarityOdds(o.card, run.day).map(Math.round);
       const gist = dropGist(o);
       return `<button class="hcard t-${o.card}" data-offer="${i}" title="${FAMILY[o.family].name} set · ${setText(o.family)}">
         <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam" data-set="${o.family}">${FAMILY[o.family].name}${famCount(run.equip, o.family) ? ` <em>${Math.min(famCount(run.equip, o.family), 4)}/4</em>` : ''}</span></span>
-        <span class="odds">${['common', 'rare', 'epic'].map((r, j) => (odds[j] ? `<span style="color:${RAR_COL[r]}">${RARITY[r].name} ${odds[j]}%</span>` : '')).join('')}</span>
         <span class="drops">${gist}</span>
       </button>`;
     }).join('');
