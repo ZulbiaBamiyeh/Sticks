@@ -30,6 +30,12 @@ for (const [W, H] of SIZES) {
   await p.click('[data-sheet="close"]');
   await p.click('#rvEdit'); await over('build-gear');
   for (const slot of ['weapon', 'skill', 'trinket1', 'feet']) { await p.click(`#doll .slot[data-slot="${slot}"]`); await over(`build-${slot}`); }
+  // the weapon page with the book row open under it
+  await p.click('#doll .slot[data-slot="weapon"]');
+  await p.click('#weapons [data-w="spellbook"]'); await over('build-books');
+  await p.click('#bookBtn'); await over('build-booksheet');
+  await p.click('[data-sheet="close"]');
+  await p.click('#weapons [data-w="sword"]');
   await p.click('.tabs [data-tab="turf"]'); await over('build-turf');
   await p.click('#scoutBtn');
   await p.click('#devHome'); await over('home-run');

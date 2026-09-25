@@ -131,7 +131,20 @@ fights run themselves. **Start a run** is the front door, and everything else
     deals about **80% of its damage as statuses**, where a normal caster is
     near 26% and a sword is 18%. The Tome of Rot, the Tome of Ash and the
     Tome of the Mire; they are drawn shut and clasped, with an eye on the
-    cover, and held shut in the hand.
+    cover, and held shut in the hand. A warlock also moves differently again:
+    slower still, hardly falling at all, hunched over the book — and a drain
+    leaves it gliding for a second and a half on what it just took, dragging a
+    thread of ink behind it.
+  - **Casters and puppeteers stand like what they are.** Neither uses the
+    knife-fighter's crouch any more. A caster is upright with the book carried
+    flat in front and the free hand working above it, and it keeps that shape
+    while it walks; a cast gathers a ring of marks over the open page that
+    tightens as it comes due, with the same light in the hand about to throw
+    it, and a tome runs the ink down out of the fingers instead. A puppeteer
+    stands tall and still with both hands up on the strings, and flicks a
+    wrist rather than swinging.
+  - In dev mode the weapon page has a **Book** button under the weapon chips
+    that opens the ten books, so a free build can hold any codex or tome.
   - **Puppet:** you never touch anybody. The marionette hangs on your strings
     and your swings land where it is, **six tiles out**, so you fight from
     beyond a spear with a blade's damage and a hammer's patience. Between

@@ -81,6 +81,7 @@
     background: var(--stage);
   }
   #app.tall #stage { height: 100%; }
+  #bookBtn { min-height: 34px; }
   #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
   #hud {
     position: absolute;
@@ -467,6 +468,11 @@
   .rstats .hpn.low b { color: var(--red); }
   .evopt:disabled { opacity: 0.45; }
   .evpick { grid-template-columns: repeat(5, 1fr); }
+  /* nine books read better as a block of pills than as a column of rows */
+  .bookpick { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .bookpick .evopt { min-height: 40px; padding: 5px 8px; gap: 0; }
+  .bookpick .evopt b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bookpick .evopt small { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .xstats { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12px; font-weight: 700; color: var(--ink-2); }
   .syn { display: grid; gap: 3px; }
   .syn span { font-size: 12px; color: var(--ink-2); line-height: 1.25; }
@@ -578,11 +584,20 @@
     .actions .go.wide, .actions .ghost.wide { grid-column: auto; }
   }
   @media (max-height: 660px) {
+    .bookpick .evopt small { display: none; }
+    .bookpick .evopt { min-height: 34px; }
     .evhead p { display: none; }
     .evopt.path small.p-fam { display: none; }
     .p-top svg { width: 22px; height: 22px; }
   }
   @media (max-width: 379px) {
+    .chips { gap: 6px; }
+    .chips .opt { padding: 4px 6px; }
+    .chips .opt b { font-size: 16px; }
+    .chips .opt small { font-size: 11px; }
+    #bookBtn { min-height: 30px; font-size: 11px; }
+    .bookpick .evopt { min-height: 32px; padding: 4px 7px; }
+    .bookpick .evopt b { font-size: 13px; }
     .rstats .gld { display: none; }
     .evopt.path .p-top .lbl { display: none; }
     .ladder .lbl, .rec { font-size: 11px; white-space: nowrap; }
@@ -689,6 +704,7 @@
       <div class="gstats" id="gearStats"></div>
       <div class="row-h"><span class="lbl" id="slotLbl">Weapon</span><span class="lbl" id="slotSub"></span></div>
       <div class="chips" id="weapons" data-slot="weapon"></div>
+      <button class="ghost sm wide" id="bookBtn" hidden>Book · Plain</button>
       <div class="tools" id="skills" data-slot="skill" hidden></div>
       <div class="tools three" id="trinkets" data-slot="trinket1" hidden></div>
       <div class="acro" id="acro" data-slot="feet" hidden></div>
@@ -1174,8 +1190,10 @@ const STANCE = {
   hammer: { hipH: 0.68, lean: 0.1, head: -0.04, fx: 0.1, fy: 0.12, bx: 0, by: 0.2, wa: -2.15, wb: 0, ffx: 0.27, ffy: 0.68, bfx: -0.25, bfy: 0.68, drop: 0, ai: 0.9, draw: 0 },
   bow: { hipH: 0.72, lean: 0.06, head: -0.02, fx: 0.3, fy: 0.3, bx: -0.06, by: 0.3, wa: 0, wb: 0, ffx: 0.2, ffy: 0.72, bfx: -0.2, bfy: 0.72, drop: 0, ai: 0.95, draw: 0 },
   stars: { hipH: 0.66, lean: 0.2, head: -0.06, fx: 0.2, fy: 0.3, bx: 0.1, by: 0.2, wa: -0.3, wb: 0, ffx: 0.26, ffy: 0.66, bfx: -0.24, bfy: 0.66, drop: 0, ai: 0.9, draw: 0 },
-  spellbook: { hipH: 0.7, lean: 0.08, head: -0.04, fx: 0.3, fy: 0.16, bx: 0.12, by: -0.08, wa: -0.5, wb: 0, ffx: 0.22, ffy: 0.7, bfx: -0.22, bfy: 0.7, drop: 0, ai: 0.9, draw: 0 },
-  puppet: { hipH: 0.7, lean: 0.06, head: -0.06, fx: 0.26, fy: -0.02, bx: 0.2, by: -0.06, wa: -0.9, wb: 0, ffx: 0.24, ffy: 0.7, bfx: -0.24, bfy: 0.7, drop: 0, ai: 0.9, draw: 0 },
+  // a caster: upright, the book carried flat in front and the other hand working above it
+  spellbook: { hipH: 0.76, lean: -0.02, head: 0.02, fx: 0.36, fy: 0.12, bx: 0.3, by: -0.22, wa: -0.08, wb: 0, ffx: 0.16, ffy: 0.76, bfx: -0.2, bfy: 0.76, drop: 0, ai: 0.9, draw: 0 },
+  // a puppeteer: still, tall, both hands up on the strings
+  puppet: { hipH: 0.76, lean: 0.02, head: -0.02, fx: 0.32, fy: -0.34, bx: 0.14, by: -0.4, wa: -1.2, wb: 0, ffx: 0.18, ffy: 0.76, bfx: -0.22, bfy: 0.76, drop: 0, ai: 0.9, draw: 0 },
 };
 const PK = Object.keys(STANCE.sword);
 const LEGK = new Set(['ffx', 'ffy', 'bfx', 'bfy']);
@@ -1187,13 +1205,14 @@ const RUN = {
   hammer: { lean: 0.3, hipH: 0.66, fx: 0.06, fy: 0.12, wa: -2.35 },
   bow: { lean: 0.3, hipH: 0.68, ai: 1.2 },
   stars: { lean: 0.52, hipH: 0.62, head: 0.14, fx: -0.28, fy: 0.3, bx: -0.3, by: 0.28 },
-  spellbook: { lean: 0.36, hipH: 0.64, head: 0.1, fx: 0.06, fy: 0.3, bx: -0.24, by: 0.3 },
-  puppet: { lean: 0.34, hipH: 0.64, head: 0.08, fx: 0.1, fy: 0.08, bx: 0.0, by: 0.04 },
+  // neither of them runs: the caster glides with the book steady, the puppeteer walks with its hands up
+  spellbook: { lean: 0.12, hipH: 0.74, head: 0.04, fx: 0.34, fy: 0.14, bx: 0.26, by: -0.18, wa: -0.08 },
+  puppet: { lean: 0.14, hipH: 0.74, head: 0.0, fx: 0.3, fy: -0.3, bx: 0.12, by: -0.36, wa: -1.2 },
 };
 const AIR = {
   sword: { fx: 0.1, fy: -0.1, wa: -1.5, bx: -0.25, by: -0.15, lean: 0.1 },
-  spellbook: { fx: 0.24, fy: 0.04, bx: -0.2, by: -0.16, lean: 0.12 },
-  puppet: { fx: 0.2, fy: -0.14, bx: 0.12, by: -0.18, lean: 0.12 },
+  spellbook: { fx: 0.32, fy: 0.06, bx: 0.28, by: -0.3, lean: 0.06, hipH: 0.78 },
+  puppet: { fx: 0.3, fy: -0.38, bx: 0.12, by: -0.44, lean: 0.06, hipH: 0.78 },
   daggers: { fx: 0.16, fy: -0.06, wa: -0.9, bx: -0.2, by: 0.08, lean: 0.22 },
   spear: { wa: -0.6, lean: 0.05 },
   hammer: { lean: 0.05 },
@@ -1207,8 +1226,8 @@ const WIN = {
   hammer: { fx: 0.1, fy: -0.42, wa: -1.7, lean: -0.05, head: -0.15 },
   bow: { ai: -1.3, lean: -0.05, head: -0.2 },
   stars: { fx: 0.14, fy: -0.52, lean: -0.05, head: -0.2, hipH: 0.72 },
-  spellbook: { fx: 0.12, fy: -0.46, bx: 0.06, by: -0.3, lean: -0.05, head: -0.2 },
-  puppet: { fx: 0.16, fy: -0.48, bx: 0.14, by: -0.42, lean: -0.05, head: -0.2 },
+  spellbook: { fx: 0.3, fy: -0.2, bx: 0.24, by: -0.52, lean: -0.05, head: -0.2, hipH: 0.78 },
+  puppet: { fx: 0.26, fy: -0.56, bx: 0.1, by: -0.52, lean: -0.05, head: -0.2, hipH: 0.78 },
 };
 const ATK_POSE = {
   slash1: { w: { fx: -0.16, fy: -0.14, wa: -2.5, lean: -0.02, hipH: 0.66, bx: 0.05, by: 0.2 }, a: { fx: 0.46, fy: 0.06, wa: 0.35, lean: 0.34, hipH: 0.62, bx: -0.28, by: 0.18 }, r: { fx: 0.34, fy: 0.26, wa: 1.05, lean: 0.3, hipH: 0.64 } },
@@ -1223,19 +1242,25 @@ const ATK_POSE = {
   hammer: { w: { fx: -0.12, fy: -0.36, wa: -3.0, lean: -0.28, hipH: 0.74 }, a: { fx: 0.36, fy: 0.3, wa: 0.95, lean: 0.5, hipH: 0.54 }, r: { fx: 0.34, fy: 0.34, wa: 1.15, lean: 0.45, hipH: 0.56 } },
   kick: { w: { lean: -0.1, ffx: -0.1, ffy: 0.4 }, a: { lean: -0.35, ffx: 0.72, ffy: 0.05, bx: -0.3, by: -0.1 }, r: { lean: -0.1 } },
   shoot: { w: { lean: -0.06 }, a: {}, r: {} },
-  // a cast: braced low over the open book, then the arm thrown out on the word
-  cast_bolt: { w: { fx: 0.16, fy: 0.3, bx: -0.18, by: -0.1, lean: -0.12, hipH: 0.62, head: 0.06 }, a: { fx: 0.34, fy: 0.08, bx: 0.5, by: -0.14, lean: 0.3, hipH: 0.6 }, r: { fx: 0.3, fy: 0.18, bx: 0.28, by: 0.0, lean: 0.14 } },
-  cast_nova: { w: { fx: 0.1, fy: 0.36, bx: -0.24, by: 0.1, lean: -0.22, hipH: 0.52, head: 0.14 }, a: { fx: 0.4, fy: -0.26, bx: -0.4, by: -0.26, lean: 0, hipH: 0.76 }, r: { fx: 0.3, fy: -0.02, bx: -0.24, by: 0.04, lean: 0.06, hipH: 0.66 } },
-  cast_ward: { w: { fx: 0.14, fy: 0.24, bx: -0.14, by: 0.12, lean: -0.1, hipH: 0.6 }, a: { fx: 0.24, fy: -0.2, bx: 0.24, by: -0.2, lean: 0, hipH: 0.72, head: -0.12 }, r: { fx: 0.24, fy: 0.0, bx: 0.2, by: 0.0, lean: 0.04 } },
-  cast_sigil: { w: { fx: 0.12, fy: 0.3, bx: -0.2, by: 0.16, lean: 0.16, hipH: 0.58, head: 0.12 }, a: { fx: 0.3, fy: 0.3, bx: 0.34, by: 0.28, lean: 0.34, hipH: 0.54 }, r: { fx: 0.26, fy: 0.2, bx: 0.22, by: 0.12, lean: 0.18 } },
-  cast_wall: { w: { fx: 0.16, fy: 0.24, bx: -0.16, by: 0.2, lean: -0.08, hipH: 0.62 }, a: { fx: 0.44, fy: -0.1, bx: 0.4, by: -0.06, lean: 0.22, hipH: 0.6 }, r: { fx: 0.32, fy: 0.04, bx: 0.28, by: 0.04, lean: 0.1 } },
-  cast_grasp: { w: { fx: 0.1, fy: 0.22, bx: -0.22, by: 0.1, lean: -0.14, hipH: 0.6, head: 0.06 }, a: { fx: 0.5, fy: 0.12, bx: 0.42, by: 0.16, lean: 0.36, hipH: 0.56 }, r: { fx: 0.34, fy: 0.16, bx: 0.26, by: 0.14, lean: 0.2 } },
-  // a warlock's hands: low and open on the curse, hauling back on the drain, thrown wide on the rupture
-  cast_curse: { w: { fx: 0.06, fy: 0.3, bx: -0.24, by: 0.24, lean: 0.2, hipH: 0.54, head: 0.16 }, a: { fx: 0.46, fy: 0.24, bx: 0.36, by: 0.26, lean: 0.4, hipH: 0.52 }, r: { fx: 0.3, fy: 0.22, bx: 0.24, by: 0.2, lean: 0.22 } },
-  cast_drain: { w: { fx: 0.44, fy: 0.06, bx: 0.3, by: 0.1, lean: 0.3, hipH: 0.6 }, a: { fx: 0.06, fy: -0.12, bx: -0.2, by: -0.1, lean: -0.24, hipH: 0.68, head: -0.1 }, r: { fx: 0.18, fy: 0.0, bx: -0.06, by: 0.0, lean: -0.08 } },
-  cast_rupture: { w: { fx: 0.04, fy: -0.2, bx: -0.06, by: -0.22, lean: -0.26, hipH: 0.7, head: -0.14 }, a: { fx: 0.52, fy: -0.26, bx: -0.46, by: -0.26, lean: 0.18, hipH: 0.58 }, r: { fx: 0.34, fy: -0.06, bx: -0.28, by: -0.06, lean: 0.08 } },
+  // A cast: the book stays where it is, held flat and forward. The free hand gathers over the page and
+  // then throws. Nothing about it is a knife-fighter's lunge.
+  cast_bolt: { w: { fx: 0.34, fy: 0.14, bx: 0.22, by: -0.12, lean: -0.04, hipH: 0.76, head: 0.06 }, a: { fx: 0.36, fy: 0.1, bx: 0.62, by: -0.26, lean: 0.12, hipH: 0.74 }, r: { fx: 0.35, fy: 0.12, bx: 0.4, by: -0.2, lean: 0.06, hipH: 0.75 } },
+  cast_nova: { w: { fx: 0.3, fy: 0.2, bx: 0.2, by: 0.04, lean: -0.1, hipH: 0.66, head: 0.12 }, a: { fx: 0.44, fy: -0.16, bx: -0.34, by: -0.3, lean: 0, hipH: 0.82 }, r: { fx: 0.36, fy: 0.02, bx: -0.14, by: -0.08, lean: 0.02, hipH: 0.74 } },
+  cast_ward: { w: { fx: 0.32, fy: 0.16, bx: 0.16, by: 0.06, lean: -0.06, hipH: 0.72 }, a: { fx: 0.3, fy: -0.06, bx: 0.3, by: -0.34, lean: 0, hipH: 0.8, head: -0.12 }, r: { fx: 0.32, fy: 0.06, bx: 0.26, by: -0.2, lean: 0.02, hipH: 0.76 } },
+  cast_sigil: { w: { fx: 0.32, fy: 0.18, bx: 0.18, by: 0.02, lean: 0.06, hipH: 0.7, head: 0.12 }, a: { fx: 0.34, fy: 0.16, bx: 0.44, by: 0.3, lean: 0.16, hipH: 0.64, head: 0.18 }, r: { fx: 0.34, fy: 0.14, bx: 0.3, by: 0.18, lean: 0.08, hipH: 0.72 } },
+  cast_wall: { w: { fx: 0.32, fy: 0.16, bx: 0.14, by: 0.04, lean: -0.06, hipH: 0.74 }, a: { fx: 0.34, fy: 0.12, bx: 0.56, by: -0.04, lean: 0.06, hipH: 0.76 }, r: { fx: 0.34, fy: 0.14, bx: 0.4, by: -0.06, lean: 0.02, hipH: 0.76 } },
+  cast_grasp: { w: { fx: 0.32, fy: 0.16, bx: 0.16, by: 0.1, lean: -0.08, hipH: 0.72, head: 0.06 }, a: { fx: 0.36, fy: 0.14, bx: 0.6, by: 0.16, lean: 0.14, hipH: 0.7 }, r: { fx: 0.34, fy: 0.14, bx: 0.36, by: 0.14, lean: 0.06, hipH: 0.74 } },
+  // a warlock's free hand: turned palm-down over the page on the curse, hauling back on the drain,
+  // thrown wide on the rupture. The tome itself never leaves the other hand.
+  cast_curse: { w: { fx: 0.3, fy: 0.2, bx: 0.2, by: 0.12, lean: 0.06, hipH: 0.68, head: 0.16 }, a: { fx: 0.32, fy: 0.18, bx: 0.56, by: 0.22, lean: 0.2, hipH: 0.64 }, r: { fx: 0.32, fy: 0.18, bx: 0.36, by: 0.2, lean: 0.1, hipH: 0.7 } },
+  cast_drain: { w: { fx: 0.32, fy: 0.14, bx: 0.58, by: 0.04, lean: 0.18, hipH: 0.7 }, a: { fx: 0.3, fy: 0.1, bx: -0.16, by: -0.2, lean: -0.16, hipH: 0.8, head: -0.1 }, r: { fx: 0.31, fy: 0.12, bx: 0.02, by: -0.12, lean: -0.04, hipH: 0.76 } },
+  cast_rupture: { w: { fx: 0.3, fy: 0.16, bx: 0.08, by: -0.24, lean: -0.14, hipH: 0.8, head: -0.14 }, a: { fx: 0.36, fy: 0.02, bx: 0.66, by: -0.3, lean: 0.14, hipH: 0.72 }, r: { fx: 0.34, fy: 0.1, bx: 0.42, by: -0.16, lean: 0.06, hipH: 0.76 } },
   // a tug on the strings: both hands snap up and forward
-  acast_bolt: { w: { fx: 0.2, fy: 0.16, bx: -0.16, by: -0.14, lean: 0.06 }, a: { fx: 0.36, fy: 0.02, bx: 0.46, by: -0.18, lean: 0.24 }, r: { fx: 0.3, fy: 0.1, bx: 0.24, by: -0.04, lean: 0.12 } },
+  acast_bolt: { w: { fx: 0.32, fy: 0.1, bx: 0.24, by: -0.18, lean: 0.04, hipH: 0.78 }, a: { fx: 0.34, fy: 0.08, bx: 0.58, by: -0.28, lean: 0.1, hipH: 0.78 }, r: { fx: 0.33, fy: 0.1, bx: 0.38, by: -0.22, lean: 0.06, hipH: 0.78 } },
+  // the puppeteer: a wrist flick, both hands riding the strings, feet planted
+  pswing: { w: { fx: 0.22, fy: -0.42, bx: 0.08, by: -0.46, lean: -0.08, hipH: 0.78 }, a: { fx: 0.46, fy: -0.2, bx: 0.3, by: -0.3, lean: 0.14, hipH: 0.74 }, r: { fx: 0.36, fy: -0.3, bx: 0.2, by: -0.38, lean: 0.06, hipH: 0.76 } },
+  pswing2: { w: { fx: 0.4, fy: -0.24, bx: 0.26, by: -0.32, lean: 0.1, hipH: 0.75 }, a: { fx: 0.2, fy: -0.46, bx: 0.36, by: -0.18, lean: -0.06, hipH: 0.78 }, r: { fx: 0.3, fy: -0.36, bx: 0.28, by: -0.28, lean: 0.02, hipH: 0.77 } },
+  pspin: { w: { fx: 0.12, fy: -0.5, bx: -0.02, by: -0.52, lean: -0.18, hipH: 0.8, head: -0.1 }, a: { fx: 0.58, fy: -0.06, bx: 0.44, by: -0.16, lean: 0.24, hipH: 0.7 }, r: { fx: 0.4, fy: -0.26, bx: 0.3, by: -0.34, lean: 0.08, hipH: 0.76 } },
   command: { w: { fx: 0.18, fy: -0.16, bx: 0.1, by: -0.2, lean: -0.1, hipH: 0.68 }, a: { fx: 0.48, fy: -0.3, bx: 0.36, by: -0.34, lean: 0.24, hipH: 0.64 }, r: { fx: 0.3, fy: -0.1, bx: 0.24, by: -0.14, lean: 0.1 } },
   throw: { w: { fx: -0.28, fy: -0.26, lean: -0.1, hipH: 0.64, bx: 0.2, by: 0.22 }, a: { fx: 0.54, fy: 0.04, lean: 0.36, hipH: 0.6 }, r: { fx: 0.44, fy: 0.14, lean: 0.32 } },
   throw2: { w: { bx: -0.08, by: -0.12, fx: 0.3, fy: 0.26, lean: 0.26 }, a: { bx: 0.54, by: 0.02, fx: -0.12, fy: 0.3, lean: 0.42 }, r: { bx: 0.4, by: 0.14, lean: 0.3 } },
@@ -1292,6 +1317,12 @@ const SK_POSE = {
 const NO_STATS = { hp: 0, atk: 0, def: 0, crit: 0, critDmg: 0, haste: 0, evasion: 0, resist: 0, ls: 0, regen: 0, thorns: 0, pen: 0, speed: 0, skillHaste: 0, hpMult: 1, statusMult: 1, onHit: [], trig: [], flags: {}, wpn: null };
 // how often a weapon's hits land, relative to a sword: fast weapons roll their status chances at less per hit
 const STATUS_W = { sword: 1, daggers: 0.6, spear: 1.1, hammer: 1.8, bow: 1.3, stars: 0.55 };
+// A free build has no gear, so a chosen book hands over its flags and on-hit the way a worn one would.
+function bookStats(bd) {
+  const it = bd && bd.book && ITEM[bd.book];
+  if (!it) return null;
+  return { flags: { ...(it.flags || {}) }, onHit: (it.onHit || []).map((o) => ({ ...o, name: it.name })) };
+}
 function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
   const gs = { ...NO_STATS, ...(stats || {}) }, hpMax = Math.round((100 + gs.hp) * gs.hpMult);
   gs.trig = gs.trig.map((t) => ({ ...t }));   // each fighter keeps its own once-only trigger state
@@ -1302,7 +1333,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro: WEAP[weapon].noAcro ? 0 : acro, macros: MACROS_BY_ACRO[WEAP[weapon].noAcro ? 0 : acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
     look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
     onHit: trinket ? [TRINKET[trinket]] : [],
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: WEAP[weapon].float || 1 },
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed) * (gs.flags.tome ? 0.86 : 1), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: gs.flags.tome ? 0.16 : WEAP[weapon].float || 1 },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
@@ -4387,6 +4418,13 @@ function act(u) {
   if (u.skCd > 0 && u.state !== 'skill') u.skCd--;
   if (u.sCd) for (const k in u.sCd) if (u.sCd[k] > 0) u.sCd[k]--;
   if (u.w === 'puppet') pupStep(u);
+  // the siphon: stolen life spent on the floor, with a thread of ink dragged behind
+  if (u.siphonT > 0) {
+    if (u.b.base === undefined) u.b.base = u.b.speed;
+    u.b.speed = u.b.base * 1.4;
+    if (--u.siphonT <= 0) u.b.speed = u.b.base;
+    if (world.t % 4 === 0 && Math.abs(u.b.vx) > 1) parts.push({ k: 'b', x: u.b.x - Math.sign(u.b.vx) * 0.2, y: u.b.y - 0.15, vx: 0, vy: -0.3, r: 0.05 + Math.random() * 0.05, life: 0, max: 26, c: 'poison' });
+  }
   // A shift runs on its own clock, gear or no gear, so the form always ends.
   if (u.shift && --u.shift.t <= 0) endShift(u);
   if (u.gs) {
@@ -4594,6 +4632,7 @@ function castDrain(u, dr) {
   if (dmg < 1) return;
   hurt(e, dmg, 'status', u.side, 'poison');
   heal(u, dmg * dr.back);
+  u.siphonT = 100;   // full of what it just took: the warlock glides for a second and a half
   const c = TEAM[u.side];
   for (let i = 0; i < 9; i++) { const k = i / 9; streak(e.b.x + (u.b.x - e.b.x) * k, e.b.y - 0.9 + (u.b.y - e.b.y) * k * 0.9, Math.atan2(u.b.y - e.b.y, u.b.x - e.b.x), 0.5, c); }
   popText(u.b.x, u.b.y - H - 0.4, `+${Math.round(dmg * dr.back)}`, 'poison', 0.5);
@@ -4771,6 +4810,12 @@ function poseTarget(u) {
   }
   // A caster is never quite on the floor: the robe breathes and the book rides on it.
   if (w === 'spellbook' && st === 'free') { const h = Math.sin(world.t * 0.045) * 0.022; T.hipH += h; T.fy -= h * 1.6; T.by -= h; }
+  // A warlock carries the book shut and low, hunched over it, and barely picks its feet up to move.
+  if (u.gs && u.gs.flags.tome) {
+    T.lean += 0.16; T.hipH -= 0.06; T.head += 0.14; T.fy += 0.1; T.by += 0.12; T.bx -= 0.06;
+    if (st === 'free' && b.gr) { const g = Math.sin(u.gait) * 0.5; T.ffx = 0.16 + g * 0.16; T.bfx = -0.18 + g * 0.16; T.ffy = 0.62; T.bfy = 0.66; }
+    if (u.siphonT > 0) { T.lean += 0.1; T.hipH -= 0.03; }
+  }
   // Waiting with nothing in reach: now and then twirl the weapon.
   if (u.twirlT > 0) {
     const lift = Math.sin((1 - u.twirlT / 40) * Math.PI);   // the hand rises and settles over the turn
@@ -4865,7 +4910,7 @@ function weaponGeom(w, hf, hb, wd, draw, wdb = wd) {
   if (w === 'spear') return { butt: at(hf, -0.95), neck: at(hf, 1.06), tip: at(hf, 1.36), h1: at(hf, 1.15, 0.08), h2: at(hf, 1.15, -0.08), base: at(hf, 0.6) };
   if (w === 'stars') return { s1: at(hf, 0.02), s2: hb };
   // an open book lying across the front hand, and a puppeteer's empty hands
-  if (w === 'spellbook') return { spine: at(hf, 0), a1: at(hf, 0.3, 0.2), a2: at(hf, 0.3, -0.2), b1: at(hf, 0.36, 0.13), b2: at(hf, 0.36, -0.13) };
+  if (w === 'spellbook') return { spine: at(hf, -0.04), a1: at(hf, 0.34, 0.26), a2: at(hf, 0.34, -0.26), b1: at(hf, 0.42, 0.17), b2: at(hf, 0.42, -0.17) };
   if (w === 'puppet') return { hand: hf, back: hb };
   if (w === 'hammer') return { end: at(hf, -0.36), neck: at(hf, 0.6), c1: at(hf, 0.6, 0.21), c2: at(hf, 0.86, 0.21), c3: at(hf, 0.86, -0.21), c4: at(hf, 0.6, -0.21), base: at(hf, 0.35), tip: at(hf, 0.88) };
   const drawn = draw > 0.04;
@@ -6772,13 +6817,18 @@ function drawWeapon(S, side, pal, ink) {
     stroke([w.a1, w.b1], pal.steel, 0.028);
     stroke([w.spine, { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 }], team, 0.04);
   } else if (S.w === 'spellbook') {
-    // two covers opened from the spine, pale pages between them, and the team's ribbon down the middle
-    ctx.fillStyle = pal.steel; ctx.beginPath();
+    // an open book: ink covers with pale pages between them, and the team's ribbon down the spine
+    const mid = { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 };
+    ctx.fillStyle = ink; ctx.beginPath();
     ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a1.x, w.a1.y); ctx.lineTo(w.b1.x, w.b1.y); ctx.closePath(); ctx.fill();
     ctx.beginPath(); ctx.moveTo(w.spine.x, w.spine.y); ctx.lineTo(w.a2.x, w.a2.y); ctx.lineTo(w.b2.x, w.b2.y); ctx.closePath(); ctx.fill();
-    stroke([w.a1, w.spine, w.a2], ink, 0.055);
-    stroke([w.b1, w.spine, w.b2], ink, 0.03);
-    stroke([w.spine, { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 }], team, 0.035);
+    ctx.fillStyle = pal.steel; ctx.beginPath();
+    ctx.moveTo(w.spine.x, w.spine.y);
+    ctx.lineTo(w.a1.x * 0.82 + w.spine.x * 0.18, w.a1.y * 0.82 + w.spine.y * 0.18);
+    ctx.lineTo(mid.x, mid.y);
+    ctx.lineTo(w.a2.x * 0.82 + w.spine.x * 0.18, w.a2.y * 0.82 + w.spine.y * 0.18);
+    ctx.closePath(); ctx.fill();
+    stroke([w.spine, mid], team, 0.04);
   } else if (S.w === 'puppet') {
     // nothing in the hands but the strings, which the puppet draws from its own end
     ctx.globalAlpha = 0.45; stroke([w.hand, { x: w.hand.x, y: w.hand.y - 0.22 }], team, 0.02);
@@ -6847,6 +6897,41 @@ function drawTrail(u, pal) {
     ctx.globalAlpha = al * 2; stroke([{ x: a.tx, y: a.ty }, { x: b.tx, y: b.ty }], c, 0.05);
   }
   ctx.globalAlpha = 1;
+}
+// A cast, seen: the page gathers a ring of marks that tightens through the wind-up and lets go on the
+// word, and the free hand carries the same light. A tome does it the other way — the ink runs down out
+// of the hand instead of up off the page.
+function drawCast(u, S, pal) {
+  const d = u.atkDef, tome = !!(u.gs && u.gs.flags.tome);
+  const st = (u.gs && u.gs.flags.spellSt) || null, c = (st && ST_COL[st]) || pal[TEAM[u.side]];
+  const k = u.phase === 'w' ? Math.min(1, u.af / d.w) : 1;
+  const w = S.wp, page = w && w.b1 ? { x: (w.b1.x + w.b2.x) / 2, y: (w.b1.y + w.b2.y) / 2 } : S.hf;
+  const hand = S.hb || S.hf;
+  ctx.save();
+  if (tome) {
+    // ink gathering in the free hand and running off its fingers
+    ctx.globalAlpha = 0.35 + 0.5 * k; ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.05 + 0.09 * k, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = 0.3 + 0.4 * k; ctx.strokeStyle = c; ctx.lineWidth = 0.03;
+    for (let i = 0; i < 3; i++) {
+      const dx = (i - 1) * 0.07, len = 0.1 + 0.22 * k * (0.6 + 0.4 * Math.sin(world.t * 0.3 + i));
+      ctx.beginPath(); ctx.moveTo(hand.x + dx, hand.y + 0.04); ctx.lineTo(hand.x + dx, hand.y + 0.04 + len); ctx.stroke();
+    }
+  } else {
+    // a ring of marks over the open page, closing as the cast comes due
+    const r = 0.42 - 0.2 * k, n = 6;
+    ctx.globalAlpha = 0.3 + 0.55 * k; ctx.strokeStyle = c; ctx.lineWidth = 0.035;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * 6.283 + world.t * 0.06, cx = page.x + Math.cos(a) * r, cy = page.y - 0.3 + Math.sin(a) * r * 0.45;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - 0.07 - 0.1 * k); ctx.stroke();
+    }
+    ctx.globalAlpha = 0.25 + 0.45 * k;
+    ctx.beginPath(); ctx.ellipse(page.x, page.y - 0.3, r, r * 0.45, 0, 0, 6.283); ctx.stroke();
+    // and the same light in the hand that is about to throw it
+    ctx.globalAlpha = 0.4 + 0.5 * k; ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.04 + 0.08 * k, 0, 6.283); ctx.fill();
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
 }
 // A sigil charging on the floor: a ring that closes, ticks that stand up as it comes due.
 // A wall of ink: a pane that ripples, thinning as its time runs out.
@@ -6983,6 +7068,7 @@ function drawUnit(u, pal) {
   if (f < 0.99) { ctx.globalAlpha = 1 - f; drawFig(S, u.side, pal, u.flash > 0 && u.flash % 2 === 0, u.stasis > 0 ? '#d9a524' : undefined); }
   if (f > 0.01) { ctx.globalAlpha = f * 0.95; drawFig(S, u.side, pal, false, checkerPattern()); }
   ctx.globalAlpha = 1;
+  if (u.state === 'atk' && u.atkDef && u.atkDef.cast) drawCast(u, S, pal);
   if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
   if (f < 0.5) drawMarks(u, S, pal);
 }
@@ -7616,6 +7702,28 @@ const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill]
 
 // Weapon and skill chips are generated from the tables so the numbers on them never drift.
 $('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
+// Which book: the plain one, or any of the ones a run can drop. Free build only — in a run the book is the
+// weapon you are wearing.
+const BOOKS = ['', ...Object.keys(ITEM).filter((id) => ITEM[id].weapon === 'spellbook')];
+const bookName = (id) => (id ? ITEM[id].name : 'A plain book');
+const bookKind = (id) => (!id ? 'the six pages, no weather of its own' : ITEM[id].flags && ITEM[id].flags.tome ? 'Warlock tome' : ITEM[id].flags && ITEM[id].flags.spellSt ? `Codex of ${ITEM[id].flags.spellSt}` : 'Codex');
+// The book picker opens over the top, because the weapon row is already three deep.
+function bookSheet() {
+  openSheet(`<div class="sh-head"><span class="sh-t"><b>Which book</b></span><span class="lbl">${BOOKS.length} of them</span></div>
+    <div class="evopts bookpick">${BOOKS.map((id) => `<button class="evopt ${(builds[0].book || null) === (id || null) ? '' : 'leave'}" data-book="${id}">
+      <b>${bookName(id)}</b><small>${bookKind(id)}</small></button>`).join('')}</div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
+$('#bookBtn').addEventListener('click', bookSheet);
+$('#sheet').addEventListener('click', (ev) => {
+  const b = ev.target.closest('[data-book]'); if (!b) return;
+  builds[0].book = b.dataset.book || null;
+  U = [demoUnit(0, builds[0])];
+  playDemo(U[0], 'weapon');
+  const it = builds[0].book && ITEM[builds[0].book];
+  ui.hint.textContent = it ? `${it.name}: ${it.desc || 'A plain book of the usual six pages.'}` : 'A plain book: the six pages, and no weather of its own.';
+  closeSheet(); refreshBuildUI();
+});
 $('#acro').innerHTML = ACRO_MOVES.map((m, i) => `<button data-a="${i}" aria-pressed="false" aria-label="Acrobatics ${i}: ${m}">${m}</button>`).join('');
 $('#trinkets').innerHTML = [null, ...TRINKETS].map((k) => `<button class="opt tool" data-tr="${k || ''}" aria-pressed="false"><span class="ic"><span class="tr-ic">${k ? stSvg(TRINKET[k].status) : '<svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/></svg>'}</span><small>${k ? STATUS[TRINKET[k].status].name : ''}</small></span><b>${k ? TRINKET[k].name.split(' ')[0] : 'None'}</b></button>`).join('');
 $('#skills').innerHTML = SKILLS.map((k) => `<button class="opt tool skill" data-s="${k}" aria-pressed="false"><span class="ic"><span class="sk-ic">${SKILL_ICON[k]}</span><small>${SKILL[k].stat}</small></span><b>${SKILL[k].name}</b></button>`).join('');
@@ -7705,6 +7813,11 @@ function pickSlot(k) {
 }
 function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
+  // which book you are holding, only while you are holding one
+  const bb = $('#bookBtn');
+  bb.hidden = !(builds[0].weapon === 'spellbook' && gearSlot === 'weapon');
+  bb.textContent = `Book · ${bookName(builds[0].book)}`;
+  ui.hint.hidden = !bb.hidden;   // one line under the weapons, not two
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
   for (const b of document.querySelectorAll('#trinkets .opt')) b.setAttribute('aria-pressed', String((b.dataset.tr || null) === (builds[0].trinket || null)));
   for (const b of document.querySelectorAll('#tools .opt')) b.setAttribute('aria-pressed', String(b.dataset.t === tool));
@@ -7856,7 +7969,7 @@ function demoWorld() {
   shots = []; parts = [];
 }
 function demoUnit(side, bd) {
-  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0, bd.trinket);
+  const u = makeUnit(side, bd.weapon, bd.skill, bd.acro || 0, bd.trinket, bookStats(bd));
   u.look = (bd.stats && bd.stats.look) || null;   // the doll wears your gear
   u.nav = buildNav(side, u.b.speed, COLS, u.acro);
   const mid = u.nav.idx[10 * COLS + (side ? 10 : 9)];
@@ -8014,8 +8127,8 @@ function startFight(seed, replay = false) {
   if (hunt) {
     const mobs = hunt.spawn(huntTier), max = mobs.reduce((s, m) => s + mobWorth(m), 0);
     world.hunt = { kind: huntKind, tier: huntTier, name: huntTier === 'elite' && hunt.eliteName ? hunt.eliteName : `${huntTier === 'easy' ? '' : TIER[huntTier].label + ' '}${hunt.name}`, max, show: 100 };
-    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket, builds[0].stats), ...mobs];
-  } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket, builds[side].stats));
+    U = [makeUnit(0, builds[0].weapon, builds[0].skill, builds[0].acro || 0, builds[0].trinket, builds[0].stats || bookStats(builds[0])), ...mobs];
+  } else U = [0, 1].map((side) => makeUnit(side, builds[side].weapon, builds[side].skill, builds[side].acro || 0, builds[side].trinket, builds[side].stats || bookStats(builds[side])));
   // Wounds carried in from an earlier hunt: you start the fight already marked.
   const hp0 = builds[0].hp0;
   if (hp0 > 0 && hp0 < 1) U[0].hp = U[0].hpShow = Math.max(1, Math.round(U[0].hpMax * hp0));
