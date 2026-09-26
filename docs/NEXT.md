@@ -56,4 +56,4 @@ Headless API for custom tests: `window.__homeTurf` (`fight`, `play`, `step`, `fo
 
 ## Publishing
 Copy the `<!-- artifact:start -->`…`<!-- artifact:end -->` span of index.html (drop the `</head>` and
-`<body>` lines) to a file and republish it to https://claude.ai/artifact/VG7ZugxConEAPifdQn9Hgh. The music files are not published with it, so the artifact plays without music.
+`<body>` lines) to a file and republish it to https://claude.ai/artifact/VG7ZugxConEAPifdQn9Hgh, with the five `Music/*.mp3` tracks as supporting files at the same `Music/...` paths (the page loads them by relative URL).
