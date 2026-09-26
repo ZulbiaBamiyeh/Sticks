@@ -47,13 +47,29 @@ fights run themselves. **Start a run** is the front door, and everything else
     per stack), Echo Conch (statuses land twice 30% of the time), Phoenix
     Feather (rise once at 25% HP) and Gilded Hourglass (turn to gold below 40%
     HP).
-  - **A creature drops one thing.** No picking from three: what it drops is
-    what you get, with two rerolls a day to change your mind — and a free one
-    whenever the drop is for a slot you have already filled. Elite hunts can
-    turn up a **legendary** instead, the only place they come from: nineteen
-    rule-breaking items like the Gambler's Die (every hit is half or double),
-    Pacifist's Vow (your hits do nothing, your statuses deal triple) and
-    Thousand Cuts (every hit deals exactly 6, and you swing 60% faster).
+  - **Every choice shows what's at stake.** Before a hunt, each card is a
+    bet: your odds against it, worked out by fighting it unseen eight times
+    with your real build and your wounds, the HP you'd likely come out with,
+    the gold it pays, the rarity it tends to drop, how much its best drop would
+    add to your power, and a ★ when its keystone can drop. Tap a card and the
+    creatures step onto the stage beside you; tap again, or Hunt, to go. The
+    result screen remembers the odds you took ("won at 38% odds").
+  - **Pick one of three drops.** Every win deals three cards: one of the
+    creature's own, one from a family you're already building, and a wildcard
+    that's a little more likely to be rare. Each card says in two words what it
+    would do for you: "+11% power", "Set 2/4", "Keystone", "Empty slot",
+    "→ Stars" for a different weapon, or "−8% power". Tap one to try it on: your
+    fighter wears it on the stage and its slot lights up, with the full card to
+    read. Two rerolls a day, plus a free one when all three are for slots you've
+    already filled; or take none and rest instead. Elite hunts can deal a
+    **legendary**, the only place they come from: twenty rule-breaking items
+    like the Gambler's Die (every hit is half or double), Pacifist's Vow (your
+    hits do nothing, your statuses deal triple) and Thousand Cuts (every hit
+    deals exactly 6, and you swing 60% faster).
+  - **The duel shows who you're up against.** Tonight's rival stands on the
+    stage opposite you with its whole build laid out (tap a piece to read it),
+    your odds against it, what beats its weapon, and what winning or losing
+    costs. Change your gear first if the odds are long.
   - **Three of them turn you into something else.** For a few seconds you stop
     being a stick figure: the Batskin Cowl makes you a bat every 9s (you barely
     fall, you are far harder to hit, your hits open cuts), Slimeskin makes you a
@@ -91,8 +107,7 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Tap a trait to read it.** Set chips, keystones, relics, legendaries and
     the status icons on the gear screen all open a card explaining what they
     do for this build and where they came from.
-  - Hunt cards show how many pieces of that family you wear. Item cards say
-    when a piece completes a 2- or 4-piece bonus. The end of a run shows your
+  - Hunt cards show how many pieces of that family you wear. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
   - 314 items: 98 weapons, 96 head, core and feet pieces, 103 trinkets and 17
     skill items; 12 of them are keystones, 21 relics and 20 legendaries, in 29 families,

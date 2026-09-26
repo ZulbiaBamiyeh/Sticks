@@ -378,6 +378,57 @@
   .drops .gm { display: inline-grid; place-items: center; flex: none; }
   .drops .gm svg { width: 17px; height: 17px; display: block; }
   .drops span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* the decisions: hunt bets, loot picks, the duel rival */
+  .hcard { animation: dealIn .32s both; animation-delay: var(--d, 0ms); transition: border-color .12s, transform .12s; gap: 5px; padding: 8px 12px; }
+  .hcard.sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: #fff; }
+  .hcard:active { transform: scale(.985); }
+  .odds { display: grid; grid-template-columns: minmax(64px, 30%) 1fr; align-items: center; gap: 9px; min-width: 0; }
+  .odds .ob { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+  .odds .ob i { display: block; height: 100%; border-radius: 4px; background: var(--ink-2); transition: width .35s ease-out; }
+  .odds.busy .ob { background: repeating-linear-gradient(-45deg, var(--line) 0 6px, #d5dad2 6px 12px); background-size: 17px 17px; animation: busy .8s linear infinite; }
+  .odds.hi .ob i { background: #1b8a3a; } .odds.ok .ob i { background: #5a9a2a; } .odds.mid .ob i { background: #d49000; } .odds.lo .ob i { background: var(--red); }
+  .odds .ot { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; overflow: hidden; min-width: 0; }
+  .odds .ot b { font: 900 17px/1 var(--display); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .odds.lo .ot b { color: var(--red); } .odds.hi .ot b { color: #1b8a3a; }
+  .odds .ot em { font-style: normal; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+  .hc-rw { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); min-width: 0; }
+  .hc-rw .gold { font-weight: 800; color: #93700a; flex: none; }
+  .hc-rw .ups { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hc-rw .ups.on { color: #1b8a3a; font-weight: 800; }
+  .hc-rw .ups { flex: none; }
+  .hc-rw .drops { margin-left: auto; font-size: 12px; }
+  .hc-rw .krule { color: #b5651d; font-weight: 900; flex: none; }
+  .rar { display: inline-flex; flex: none; width: 38px; height: 7px; border-radius: 4px; overflow: hidden; }
+  .rar i { display: block; height: 100%; }
+  .lootrow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; perspective: 700px; }
+  .lcard { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; min-width: 0; border: 2px solid var(--rc); border-radius: 10px; background: #f3f4f0; padding: 7px 5px 8px; overflow: hidden; animation: flipIn .5s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: var(--d, 0ms); }
+  .lcard .lwhy { font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+  .lcard .lic svg { width: 40px; height: 40px; display: block; }
+  .lcard .lnm { font: 900 15px/1.02 var(--display); letter-spacing: .02em; color: var(--nc, var(--ink)); min-height: 2.05em; display: flex; align-items: center; overflow-wrap: anywhere; }
+  .lcard small { font-size: 10px; font-weight: 700; color: var(--ink-2); text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .lcard.rare { background: #eef7f8; } .lcard.epic { background: #f1eefb; box-shadow: 0 3px 12px rgba(106, 79, 209, .22); }
+  .lcard.legend { background: #fff3e0; box-shadow: 0 3px 14px rgba(217, 131, 36, .35); }
+  .lcard.epic::after, .lcard.legend::after { content: ''; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, .7) 50%, transparent 65%); transform: translateX(-120%); animation: shine 2.6s ease-in-out 0.7s infinite; pointer-events: none; }
+  .lcard.sel { outline: 3px solid var(--ink); outline-offset: 1px; }
+  .vd { margin-top: 2px; font-size: 11px; font-weight: 800; border-radius: 4px; padding: 2px 6px; background: var(--line); color: var(--ink); white-space: nowrap; }
+  .vd.up, .vd.set { background: #1b8a3a; color: #fff; } .vd.dn { background: #f6dcd7; color: #b22d1b; } .vd.rule { background: #b5651d; color: #fff; } .vd.new { background: var(--blue); color: #fff; }
+  .dcard2 { display: grid; gap: 7px; border: 2px solid var(--red); border-radius: 10px; padding: 9px 12px; background: #f3f4f0; animation: dealIn .32s both; }
+  .dtop { display: flex; align-items: center; gap: 10px; }
+  .dic svg { width: 34px; height: 34px; display: block; }
+  .dname { display: block; font: 900 21px/1 var(--display); letter-spacing: .03em; color: var(--red); }
+  .dtop small { font-size: 12px; font-weight: 700; color: var(--ink-2); }
+  .dgear { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dg { width: 36px; height: 36px; padding: 2px; border: 2px solid var(--rc); border-radius: 6px; background: #fff; display: grid; place-items: center; }
+  .dg svg { width: 26px; height: 26px; }
+  .dtip { margin: 0; font-size: 12px; color: var(--ink-2); }
+  .dtip .gm svg { width: 13px; height: 13px; vertical-align: -2px; }
+  .dstake { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 800; flex-wrap: wrap; }
+  .dstake .w { color: #1b8a3a; } .dstake .l { color: var(--red); }
+  @keyframes dealIn { from { opacity: 0; transform: translateY(8px); } }
+  @keyframes flipIn { from { opacity: 0; transform: rotateY(80deg) translateY(6px); } }
+  @keyframes shine { 0% { transform: translateX(-120%); } 45%, 100% { transform: translateX(120%); } }
+  @keyframes busy { to { background-position: 17px 0; } }
+  @media (prefers-reduced-motion: reduce) { .hcard, .lcard, .dcard2, .lcard::after, .odds.busy .ob { animation: none !important; } }
   .icard { display: grid; gap: 4px; border: 2px solid var(--rc); border-radius: 8px; padding: 10px 12px; background: #f3f4f0; }
   .ihead { display: flex; align-items: center; gap: 10px; }
   .iic svg { width: 36px; height: 36px; display: block; }
@@ -2928,7 +2979,7 @@ function stepParts() {
 
 function log(txt, side) {
   world.log.push({ t: world.t, txt, side });
-  renderTicker();
+  if (!headless) renderTicker();   // a fight run unseen leaves the ticker alone
 }
 
 // ---------------------------------------------------------------- combat resolution
@@ -6383,6 +6434,66 @@ function simStep() {
   for (const u of U) { if (u.hpShow > u.hp) u.hpShow = Math.max(u.hp, u.hpShow - (w.t % 2 ? 0.6 : 0)); }
 }
 
+// ---- odds
+// A fight run unseen, start to finish, with everything it touched put back afterwards: the screen you are
+// on never notices. The run's screens use it to tell you what a hunt or a duel is likely to cost.
+function simFight(seed, blue, red, cap = TIME_CAP * 60 + 200) {
+  const save = { A, world, U, shots, parts, b0: builds[0], b1: builds[1], huntKind, huntTier, huntPower, huntVariant, headless };
+  try {
+    builds[0] = blue; headless = true;
+    if (typeof red === 'string') { let p; [huntKind, huntTier = 'easy', p = '1'] = red.split(':'); huntPower = +p; } else { builds[1] = red; huntKind = null; }
+    setupFight(seed);
+    let f = 0;
+    while (f++ < cap && !(world.over && world.overT > 5)) { if (world.hs > 0) { world.hs--; continue; } simStep(); }
+    return { won: world.winner === 0, hp: U[0].state === 'dead' ? 0 : U[0].hp / U[0].hpMax };
+  } finally {
+    ({ A, world, U, shots, parts, huntKind, huntTier, huntPower, huntVariant, headless } = save);
+    builds[0] = save.b0; builds[1] = save.b1;
+  }
+}
+// Odds are read a fight at a time between frames, so the cards fill in while you look at them. Each key
+// (this round, this card, this build) is only ever worked out once.
+const ODDS_N = 8;
+const oddsCache = new Map();
+let oddsQueue = [], oddsTimer = 0;
+function wantOdds(key, blue, red, seedTag) {
+  if (!oddsCache.has(key)) { oddsCache.set(key, { n: 0, won: 0, hp: 0 }); oddsQueue.push({ key, blue, red, seedTag }); }
+  if (!oddsTimer && oddsQueue.length) oddsTimer = setTimeout(oddsTick, 30);
+  return oddsCache.get(key);
+}
+function oddsTick() {
+  oddsTimer = 0;
+  const t0 = performance.now();
+  while (oddsQueue.length && performance.now() - t0 < 24) {
+    const job = oddsQueue[0], o = oddsCache.get(job.key);
+    const r = simFight(1 + hashStr(`${job.seedTag}:odds:${o.n}`) % 99999, job.blue, job.red);
+    o.n++; if (r.won) o.won++; o.hp += r.hp;
+    if (o.n >= ODDS_N) oddsQueue.shift();
+    paintOdds(job.key, o);
+  }
+  if (oddsQueue.length) oddsTimer = setTimeout(oddsTick, 16);
+}
+function cancelOdds() { oddsQueue = []; clearTimeout(oddsTimer); oddsTimer = 0; for (const [k, o] of oddsCache) if (o.n < ODDS_N) oddsCache.delete(k); }
+// How a card shows its odds: a bar that fills as the fights come in, the chance, and what you walk away with.
+function oddsHtml(key, o) {
+  const done = o.n >= ODDS_N, p = o.n ? o.won / o.n : 0, hp = o.n ? o.hp / o.n : 0;
+  const word = !o.n ? 'Reading the odds' : p >= 0.8 ? 'Likely' : p >= 0.55 ? 'Good odds' : p >= 0.35 ? 'Coin flip' : 'Long odds';
+  const cls = !o.n ? '' : p >= 0.8 ? 'hi' : p >= 0.55 ? 'ok' : p >= 0.35 ? 'mid' : 'lo';
+  return `<span class="odds ${cls} ${done ? 'done' : 'busy'}" data-odds="${key}"><span class="ob"><i style="width:${Math.round(p * 100)}%"></i></span>
+    <span class="ot"><b>${o.n ? `${Math.round(p * 100)}%` : '…'}</b> ${word}${o.n && hp > 0 ? `<em title="The HP you would likely come out with">→ ${Math.round(hp * 100)}% HP</em>` : ''}</span></span>`;
+}
+function paintOdds(key, o) {
+  const el = document.querySelector(`[data-odds="${CSS.escape(key)}"]`);
+  if (el) el.outerHTML = oddsHtml(key, o);
+}
+// A rough worth for a build: damage per hit times how often, times how long it stays up, with a little for
+// a skill, acrobatics and every rule it carries. Good enough to say "better" or "worse" at a glance.
+function buildPower(b) {
+  const st = b.stats, w = st.wpn || { min: 6, max: 10, base: 8 };
+  const off = ((w.min + w.max) / 2 + st.atk) / w.base * (1 + st.crit * (0.6 + st.critDmg)) * (1 + st.haste) * (1 + st.ls * 2) * (1 + 0.06 * st.onHit.length + 0.05 * st.trig.length);
+  const tough = (100 + st.hp) * st.hpMult * (1 + st.def / 26) / (1 - Math.min(0.4, st.evasion)) * (1 + st.regen * 0.03) * (1 + st.resist * 0.2) * (1 + st.thorns * 0.02);
+  return off * tough * (1 + (b.acro || 0) * 0.03) * (b.skill ? 1.08 : 1) * (1 + 0.08 * Object.keys(st.flags).length);
+}
 // ---------------------------------------------------------------- builds & rivals
 const B = (c, r) => ({ t: 'block', c, r }), S_ = (c, r) => ({ t: 'spikes', c, r }), PD = (c, r) => ({ t: 'pad', c, r });
 const row = (c0, c1, r) => Array.from({ length: c1 - c0 + 1 }, (_, i) => B(c0 + i, r));
@@ -7362,13 +7473,15 @@ function makeGhost(seed, round) {
   const card = day >= 6 ? 'elite' : day >= 3 ? 'normal' : 'easy';
   // A little less geared than a player can be by that day, filled in this order. Their gear keeps pace
   // with a real build: one drop a hunt, minus the hunts that go wrong, so about a slot a day.
-  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 1 + day));
+  // players pick the best of three drops, so a ghost is geared like one: a slot ahead, and the better of two rarities
+  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + day));
   // from day 4 their families' keystones can turn up, from day 6 their relics
   const extra = fams.flatMap((f) => [...(day >= 4 ? KEYSTONE_OF[f] || [] : []), day >= 6 && RELIC_OF[f]]).filter(Boolean);
   for (const s of slots) {
     const pool = [...fams.flatMap((f) => FAMILY_ITEMS[f]), ...extra].filter((id) => ITEM[id].slot === slotKind(s) && !Object.values(equip).some((x) => x.item === id));
     if (!pool.length) continue;
-    equip[s] = rollInstance(r.pick(pool), rollRarity(card, day, r), Math.max(1, day - (r() < 0.6)), r);   // a real build's gear dropped over the last day or two
+    const ra = rollRarity(card, day, r), rb = rollRarity(card, day, r), rar = RARITY[ra].mult >= RARITY[rb].mult ? ra : rb;
+    equip[s] = rollInstance(r.pick(pool), rar, Math.max(1, day - (r() < 0.6)), r);   // a real build's gear dropped over the last day or two
   }
   if (!equip.weapon) equip.weapon = rollInstance('rusty_sword', 'common', day, r);
   const l = Math.floor(r() * Math.min(3, day));
@@ -7441,23 +7554,43 @@ class Run {
     return out;
   }
   // A creature drops one thing. Elites can turn up a legendary instead: the only place they come from.
+  // Three to choose from, each for a different reason: one of the creature's own, one that fits what you
+  // are already building, and a wildcard from anywhere that is a little more likely to be rare.
   lootFor(offer, n) {
     if (!n) this.lootRolls = 0;
     const r = runRng(this.seed, this.round, 'loot', n);
     const odds = { easy: 0, normal: 0.04, elite: 0.14 }[offer.card] * (this.day >= 2 ? 1 : 0);
-    const have = new Set(this.owned().map((i) => i.item)), pool = LEGENDS.filter((id) => !have.has(id));
-    const inst = pool.length && r.chance(odds)
-      ? rollInstance(r.pick(pool), 'legend', this.day, r)
-      : rollInstance(r.pick(r.shuffle(this.drops(offer))), rollRarity(offer.card, this.day, r), this.day, r);
-    this.loot = { offer, items: [inst] };
+    const have = new Set(this.owned().map((i) => i.item)), legends = LEGENDS.filter((id) => !have.has(id));
+    const taken = new Set(), slots = new Set();
+    // prefer a piece for a slot none of the others is for, and never the same piece twice
+    const pickFrom = (ids) => {
+      const ok = ids.filter((id) => ITEM[id] && !taken.has(id) && !have.has(id));
+      const fresh = ok.filter((id) => !slots.has(ITEM[id].slot));
+      const pool = fresh.length ? fresh : ok.length ? ok : ids.filter((id) => ITEM[id] && !taken.has(id));
+      return pool.length ? r.pick(pool) : null;
+    };
+    const make = (id, rar, why) => { if (!id) return null; taken.add(id); slots.add(ITEM[id].slot); const inst = rollInstance(id, rar, this.day, r); inst.why = why; return inst; };
+    const items = [];
+    items.push(legends.length && r.chance(odds) ? make(r.pick(legends), 'legend', 'hunt') : make(pickFrom(this.drops(offer)), rollRarity(offer.card, this.day, r), 'hunt'));
+    // what you are building: the families you wear most, and your path's
+    const worn = {};
+    for (const i of Object.values(this.equip)) { const f = i && ITEM[i.item].family; if (f && FAMILY[f]) worn[f] = (worn[f] || 0) + 1; }
+    const P = PATHS[this.path];
+    const fams = [...Object.keys(worn).sort((a, b) => worn[b] - worn[a]), ...(P ? P.fams : [])].filter((f) => f !== offer.family && FAMILY_ITEMS[f] && FAMILY_ITEMS[f].length);
+    const bf = fams.length ? (r.chance(0.7) ? fams[0] : r.pick(fams)) : r.pick(Object.keys(FAMILY));
+    items.push(make(pickFrom(FAMILY_ITEMS[bf]), rollRarity(offer.card, this.day, r), 'build'));
+    const wild = r.pick(Object.keys(FAMILY).filter((f) => f !== offer.family && f !== bf && FAMILY_ITEMS[f].length));
+    let wr = rollRarity(offer.card, this.day, r);
+    if (r.chance(0.3) && wr !== 'epic' && wr !== 'legend') wr = upR(wr);
+    items.push(make(pickFrom(FAMILY_ITEMS[wild]), wr, 'wild'));
+    this.loot = { offer, items: items.filter(Boolean) };
   }
   // A drop for a slot you have already filled is the least interesting one you can get, so the first
   // reroll of one is free and costs you nothing from the day's two.
   freeReroll() {
     const l = this.loot;
     if (!l || l.freeUsed) return false;
-    const k = ITEM[l.items[0].item].slot;
-    return k === 'trinket' ? !!(this.equip.trinket1 && this.equip.trinket2) : !!this.equip[k];
+    return l.items.every((i) => { const k = ITEM[i.item].slot; return k === 'trinket' ? !!(this.equip.trinket1 && this.equip.trinket2) : !!this.equip[k]; });
   }
   rerollLoot() {
     if (!this.loot) return false;
@@ -7835,7 +7968,7 @@ function camTarget() {
   if (mode === 'build' && buildTab === 'gear' && U[0]) {
     // the paper doll: the fighter large in the middle, slots down both sides; at an event, the fighter
     // and the event's character side by side
-    const u = U[0], ev = runScreen === 'event', z = Math.min(CH / 4.4, CW / (ev ? 6.2 : 5.2)), hw = CW / z / 2, hh = CH / z / 2;
+    const u = U[0], ev = runScreen === 'event' || (U.length > 1 && (runScreen === 'duel' || runScreen === 'pick')), z = Math.min(CH / 4.4, CW / (ev ? 6.2 : 5.2)), hw = CW / z / 2, hh = CH / z / 2;
     const x = ev ? (u.b.x + EVENT_X) / 2 + 0.2 : u.b.x;
     return { z, x: Math.max(hw, Math.min(COLS - hw, x)), y: Math.max(hh, Math.min(ROWS - hh, u.b.y - 1.2)) };
   }
@@ -9872,7 +10005,7 @@ const SLOTS = {
 };
 function slotFace(k) {
   if (run) {
-    const inst = run.equip[k];
+    const inst = trying && trying.to === k ? trying.inst : run.equip[k];
     return inst ? [itemIcon(inst), ITEM[inst.item].name.split(' ')[0], RAR_COL[inst.rarity]] : [gearSvg('none'), 'Empty'];
   }
   const bd = builds[0];
@@ -10083,6 +10216,8 @@ function showResult() {
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
   ui.resK.textContent = world.hunt ? `${world.ko ? 'Cleared' : 'Out of time'} · ${clockStr(world.t - world.overT)}` : world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
   if (world.hunt && w === 0) ui.resK.textContent = `Cleared · ${clockStr(world.t - world.overT)} · ${Math.round(U[0].hp)} HP left`;
+  // in a run, the odds you took on: an upset reads as one
+  if (run && runOddsAt !== null) ui.resK.textContent += ` · ${w === 0 ? 'won' : 'lost'} at ${Math.round(runOddsAt * 100)}% odds`;
   renderWhy(ui.resS, world.dmg[0]);
   ui.result.hidden = false; ui.live.hidden = true; ui.end.hidden = false;
   for (const id of ['replayBtn', 'rematchBtn', 'edit2Btn', 'nextBtn']) $('#' + id).hidden = !!run;
@@ -10184,6 +10319,7 @@ function runDemo(u) {
 function demoStep() {
   world.t++;
   for (const u of U) {
+    if (u.mob) { act(u); continue; }   // a creature on show just idles
     runDemo(u);
     if (u.demoParry && u.state === 'skill' && u.sf === u.demoParry) { u.demoParry = 0; parrySuccess(u, null); }
     act(u);
@@ -10250,9 +10386,8 @@ function enterBuild() {
   setBuildTab(buildTab);
   pickSlot(gearSlot);
 }
-function startFight(seed, replay = false) {
-  mode = 'fight';
-  fightSeed = seed;
+// The fight itself: arena, clock and fighters. Nothing on screen changes, so it can also run unseen.
+function setupFight(seed, replay = false) {
   if (!builds[1]) setRival(rivalIx);
   const hunt = huntKind && HUNTS[huntKind];
   huntVariant = hunt ? hunt.variant || null : null;
@@ -10275,6 +10410,12 @@ function startFight(seed, replay = false) {
     u.react = 8 + Math.floor(rng() * 10);
   }
   shots = []; parts = [];
+  return hunt;
+}
+function startFight(seed, replay = false) {
+  mode = 'fight';
+  fightSeed = seed;
+  const hunt = setupFight(seed, replay);
   ui.wB.textContent = WEAP[builds[0].weapon].name; ui.wR.textContent = hunt ? 'Hunt' : WEAP[builds[1].weapon].name; ui.nR.textContent = rivalName();
   skShown[0] = {}; skShown[1] = {}; stShown[0] = stShown[1] = '-';
   for (const u of U) { const el = ui.sk[u.side]; el.classList.remove('fired', 'ready'); if (u.skill) el.querySelector('.skn').textContent = SKILL[u.skill].name; }
@@ -10536,7 +10677,7 @@ function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs 
 }
 // The sheet: details and choices over the top, so no screen ever has to scroll.
 function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; }
-function closeSheet() { $('#sheet').hidden = true; sheetFor = null; }
+function closeSheet() { $('#sheet').hidden = true; sheetFor = null; if (trying) { tryOff(); if (runSel && runSel.loot !== undefined) { runSel = null; renderRun(); } } }
 let sheetFor = null;
 let sheetNote = '';
 function itemSheet(inst, actions, title = '', note = '') {
@@ -10588,6 +10729,129 @@ function dropGist(offer) {
   const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
   return top ? `<span>${GIST_STAT[top]} gear</span>` : '';
 }
+// ---- the decisions, made worth reading
+// Every choice between fights shows what is at stake: a hunt's odds (from fights run unseen with your
+// actual build) and what it could give you, each drop's verdict against what you wear, and the duel
+// rival's build laid out with your odds against it.
+const runBlue = () => ({ ...run.build(freeBuild.pieces), name: 'You', hp0: run.hp });
+const buildSig = () => `${Object.values(run.equip).map((i) => (i ? i.uid : '-')).join('.')}:${run.hp.toFixed(2)}:${run.day}`;
+const ghostBuild = (g) => ({ ...runBuild(g.equip, TEMPLATES[g.t], g.boons), name: g.name });
+// what your build is worth with `inst` on, against now (the best of the two trinket slots when both are full)
+function powerWith(inst) {
+  const pieces = freeBuild.pieces, base = buildPower(runBuild(run.equip, pieces, run.boons, run.gold));
+  const k = ITEM[inst.item].slot, tos = k === 'trinket' && run.equip.trinket1 && run.equip.trinket2 ? ['trinket1', 'trinket2'] : [targetSlot(inst)];
+  let best = null;
+  for (const to of tos) {
+    const p = buildPower(runBuild({ ...run.equip, [to]: inst }, pieces, run.boons, run.gold)) / base;
+    if (!best || p > best.ratio) best = { ratio: p, to };
+  }
+  return best;
+}
+// the set tier wearing it would reach, if it reaches one
+function setJump(inst, to) {
+  const f = ITEM[inst.item].family;
+  if (!f || !FAMILY[f] || !FAMILY[f].set4) return 0;
+  const cur = run.equip[to], before = famCount(run.equip, f), after = before + 1 - (cur && ITEM[cur.item].family === f ? 1 : 0);
+  return after > before && (after === 2 || after === 4) ? after : 0;
+}
+// A drop's verdict in two words, the way you would say it looking at it
+function lootVerdict(inst) {
+  const it = ITEM[inst.item], w = powerWith(inst), to = w.to, cur = run.equip[to], d = w.ratio - 1;
+  if (it.legend) return ['rule', 'Legendary'];
+  if (it.keystone || it.relic) return ['rule', it.keystone ? 'Keystone' : 'Relic'];
+  if (!cur) return ['new', 'Empty slot'];
+  // a different kind of weapon is a different way of fighting, not a bigger number
+  if (it.weapon && ITEM[cur.item].weapon !== it.weapon) return ['new', `→ ${it.weapon === 'spellbook' ? 'Tome' : WEAP[it.weapon].name}`];
+  const set = setJump(inst, to);
+  if (set) return ['set', `Set ${set}/4`];
+  if (it.trig && it.trig.length && !(ITEM[cur.item].trig && ITEM[cur.item].trig.length)) return d > -0.03 ? ['rule', 'New trick'] : ['side', 'New trick'];
+  if (d > 0.025) return ['up', `+${Math.round(d * 100)}% power`];
+  if (d < -0.025) return ['dn', `${Math.round(d * 100)}% power`];
+  return ['side', 'Sidegrade'];
+}
+// how many of a creature's drops would be an upgrade for you, at the rarity its card usually gives
+const upCache = new Map();
+function upgradesIn(offer) {
+  const key = `${run.round}:${offer.hunt}:${offer.card}:${buildSig()}`;
+  if (upCache.has(key)) return upCache.get(key);
+  const rar = { easy: 'common', normal: 'rare', elite: 'epic' }[offer.card], r = runRng(run.seed, run.round, 'probe', offer.hunt);
+  const ids = [...new Set(run.drops(offer))];
+  let n = 0, best = 1, rule = false;
+  for (const id of ids) {
+    const inst = rollInstance(id, rar, run.day, r); inst.perks = [];
+    const it = ITEM[id], w = powerWith(inst).ratio;
+    if (it.keystone || it.relic) rule = true;
+    if (w > 1.03) n++;
+    best = Math.max(best, w);
+  }
+  const out = { n, of: ids.length, best, rule };
+  upCache.set(key, out);
+  return out;
+}
+const rarBar = (card) => { const [c, r, e] = rarityOdds(card, run.day); return `<span class="rar" title="${Math.round(c)}% common · ${Math.round(r)}% rare · ${Math.round(e)}% epic"><i style="flex:${c};background:${RAR_COL.common}"></i><i style="flex:${r};background:${RAR_COL.rare}"></i><i style="flex:${e};background:${RAR_COL.epic}"></i></span>`; };
+function huntCard(o, i) {
+  const sel = runSel && runSel.offer === i, key = `h${run.seed}.${run.round}.${i}.${buildSig()}`;
+  const od = wantOdds(key, runBlue(), `${o.hunt}:${o.tier}:${mobPower(run.day)}`, `${run.seed}:${run.round}:${i}`);
+  const up = upgradesIn(o), fc = famCount(run.equip, o.family);
+  return `<button class="hcard t-${o.card} ${sel ? 'sel' : ''}" data-offer="${i}" style="--d:${i * 70}ms" aria-pressed="${sel}">
+    <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam">${FAMILY[o.family].name}${fc ? ` <em>${Math.min(fc, 4)}/4</em>` : ''}</span></span>
+    ${oddsHtml(key, od)}
+    <span class="hc-rw"><span class="gold">+${CARD_GOLD[o.card]}g</span>${rarBar(o.card)}<span class="ups ${up.best > 1.03 ? 'on' : ''}">${up.best > 1.03 ? `▲ up to +${Math.round((up.best - 1) * 100)}%` : 'Little for you'}</span><span class="drops">${dropGist(o)}</span>${up.rule && o.card !== 'easy' ? '<span class="krule" title="Its keystone can drop">★</span>' : ''}</span>
+  </button>`;
+}
+const WHY_LBL = (why) => ({ hunt: 'Its drop', build: 'Your build', wild: 'Wildcard' }[why] || 'Drop');
+function lootCard(inst, i) {
+  const it = ITEM[inst.item], [vc, vt] = lootVerdict(inst), sel = runSel && runSel.loot === i;
+  const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
+  const kind = it.weapon ? WEAP[it.weapon].name : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  return `<button class="lcard ${inst.rarity} ${it.legend ? 'legend' : ''} ${sel ? 'sel' : ''}" data-pick="${i}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]};--d:${i * 120}ms">
+    <span class="lwhy">${WHY_LBL(inst.why)}</span><span class="lic">${itemIcon(inst)}</span>
+    <b class="lnm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>
+    <span class="vd ${vc}">${vt}</span></button>`;
+}
+// what a duel rival is about, and the one thing that tends to beat it
+const DUEL_TIP = {
+  sword: 'Combos, parries, knocks shots down. Evasion and Def blunt it.', daggers: 'Fastest hands, shortest reach. Reach and armour keep it off you.',
+  spear: 'Out-reaches every blade. Get inside the tip, or shoot it.', hammer: 'Slow armoured swings. Let one miss, then hit back.',
+  bow: 'Lobs arrows from range. Closing fast wins it: Blink, Hook, acrobatics.', stars: 'Flat, fast throws. Walls break the line.',
+  spellbook: 'A caster, rooted while it reads. Get on top of it.',
+};
+function duelTip(red) {
+  const st = [...new Set([...red.stats.onHit.map((o) => o.apply), ...red.stats.trig.map((t) => t.effect.apply)].filter((k) => STATUS[k]))];
+  return `${DUEL_TIP[red.weapon] || ''}${st.length ? ` Carries ${st.map((k) => `${stMark(k)}${stName(k)}`).join(', ')}.` : ''}`;
+}
+// On the stage beside you: the creatures you are looking at hunting, or tonight's rival.
+function stageExtras() {
+  U.length = Math.min(U.length, 1);
+  if (runScreen === 'duel' && run.ghost) {
+    const r = demoUnit(1, ghostBuild(run.ghost));
+    r.b.x = EVENT_X + 0.3; r.face = -1; r.demo = null;
+    U.push(r);
+  } else if (runScreen === 'pick' && runSel && runSel.offer !== undefined && run.offers) {
+    const o = run.offers[runSel.offer], Hn = HUNTS[o.hunt], sv = [huntVariant, huntPower];
+    huntVariant = Hn.variant || null; huntPower = 1;
+    const mobs = Hn.spawn(o.tier).slice(0, 3);
+    [huntVariant, huntPower] = sv;
+    mobs.forEach((m, i) => {
+      const fly = !!(MOB[m.mob].fly && MOB[m.mob].fly(m));
+      m.b.x = EVENT_X + 0.1 + i * 0.95; m.b.y = U[0].b.y - (fly ? 1.5 + (i % 2) * 0.4 : 0); m.b.vx = 0; m.b.vy = 0; m.b.gr = !fly;
+      m.face = -1; m.react = 999; m.cd = 999; m.state = 'free';
+      U.push(m);
+    });
+  }
+}
+// Trying a drop on: your fighter wears it on the stage and its slot lights up, until you close the card.
+let trying = null;
+function tryOn(inst, to) {
+  trying = { inst, to };
+  U[0] = demoUnit(0, { ...runBuild({ ...run.equip, [to]: inst }, freeBuild.pieces, run.boons, run.gold), name: 'You' });
+  renderDoll();
+}
+function tryOff() {
+  if (!trying) return;
+  trying = null;
+  if (run && runScreen) { applyRunBuild(); U[0] = demoUnit(0, builds[0]); renderDoll(); }
+}
 function renderRun() {
   const el = ui.runPanel;
   let body = '', actions = '';
@@ -10600,22 +10864,20 @@ function renderRun() {
       }).join('')}</div>`;
     actions = '';
   } else if (runScreen === 'pick') {
-    // ZereshkStory's hunt cards: the creature, how hard it is, and a line on what its gear is about
-    body = `<div class="row-h"><span class="lbl">Choose your hunt</span><span class="lbl">Hunt ${slotOf(run.round)} of 3</span></div>` + run.offers.map((o, i) => {
-      const gist = dropGist(o);
-      return `<button class="hcard t-${o.card}" data-offer="${i}" title="${FAMILY[o.family].name} set · ${setText(o.family)}">
-        <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam" data-set="${o.family}">${FAMILY[o.family].name}${famCount(run.equip, o.family) ? ` <em>${Math.min(famCount(run.equip, o.family), 4)}/4</em>` : ''}</span></span>
-        <span class="drops">${gist}</span>
-      </button>`;
-    }).join('');
-    actions = `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Home</button>`;
+    // Each hunt is a bet: your odds against it (fights run unseen with your build and your wounds), the
+    // gold and loot it pays, and how much of what it drops would help you. Tap to look, tap again to go.
+    const o = runSel && runSel.offer !== undefined ? run.offers[runSel.offer] : null;
+    body = `<div class="row-h"><span class="lbl">Choose your hunt</span><span class="lbl">Hunt ${slotOf(run.round)} of 3${run.hp < 1 ? ` · you are at ${Math.round(run.hp * 100)}%` : ''}</span></div>` + run.offers.map(huntCard).join('');
+    actions = o ? `<button class="ghost" data-go="gear">Gear</button><button class="go" data-go="hunt">${huntTitle(o).length > 9 ? 'Hunt it' : `Hunt ${huntTitle(o)}`}</button>`
+      : `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Home</button>`;
   } else if (runScreen === 'loot') {
-    const drop = run.loot.items[0], free = run.freeReroll(), slot = ITEM[drop.item].slot;
-    const note = free ? `${slot === 'trinket' ? 'Both trinkets' : slotName(slot)} already worn` : `From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}`;
-    body = `<div class="row-h"><span class="lbl">${ITEM[drop.item].legend ? 'A legendary dropped' : 'It dropped'}</span><span class="lbl">${note}</span></div>`
-      + itemCard(drop, `${wearBtns(drop, 'data-loot="0" data-act')}<button class="ghost" data-loot="0" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, true);
+    // Three to choose from, dealt face up: where each came from, what it is, and what it would do for you.
+    const free = run.freeReroll(), legend = run.loot.items.some((x) => ITEM[x.item].legend);
+    body = `<div class="row-h"><span class="lbl">${legend ? 'A legendary is among them' : 'Pick one'}</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>
+      <div class="lootrow">${run.loot.items.map(lootCard).join('')}</div>
+      <p class="hint">Tap one to try it on and read it.</p>`;
     const rest = run.hp < 1 ? ` · rest +${Math.round(Math.min(REST_HEAL, 1 - run.hp) * 100)}%` : '';
-    actions = `<button class="ghost" data-go="reroll" ${free || run.rerolls > 0 ? '' : 'disabled'}>Reroll ${free ? '· free' : `(${run.rerolls})`}</button><button class="ghost" data-go="skip">Leave it${rest}</button>`;
+    actions = `<button class="ghost" data-go="reroll" ${free || run.rerolls > 0 ? '' : 'disabled'}>Reroll ${free ? '· free' : `(${run.rerolls})`}</button><button class="ghost" data-go="skip">Take none${rest}</button>`;
   } else if (runScreen === 'gear') {
     const b = builds[0], st = b.stats, w = st.wpn;
     const applies = [...new Set([...st.onHit.map((o) => o.apply), ...st.trig.map((t) => t.effect.apply)].filter((k) => ST_ICON[k]))];
@@ -10664,10 +10926,19 @@ function renderRun() {
       }).join('')}</div>`;
     }
   } else if (runScreen === 'duel') {
-    const g = run.ghost;
-    body = `<div class="row-h"><span class="lbl">Tonight's duel</span><span class="lbl">Day ${run.day}</span></div>
-      <div class="dcard"><span class="dq">?</span><div><b class="dname">${g.name}</b><small>${g.mine ? 'One of your past builds' : `Record ${g.record}`}</small>
-      <p>Their build stays hidden until the fight starts.</p></div></div>`;
+    // Tonight's rival, with its build laid out: tap a piece to read it, then change your gear to meet it.
+    const g = run.ghost, red = ghostBuild(g), key = `d${run.seed}.${run.round}.${buildSig()}`;
+    const od = wantOdds(key, runBlue(), red, `${run.seed}:${run.round}:duel`);
+    const worn = SLOTS_RUN.map((k) => g.equip[k]).filter(Boolean);
+    body = `<div class="row-h"><span class="lbl">Tonight's duel</span><span class="lbl">Duels ${run.wins}/${RUNCFG.winTarget}</span></div>
+      <div class="dcard2">
+        <div class="dtop"><span class="dic">${g.equip.weapon ? itemIcon(g.equip.weapon) : gearSvg(red.weapon)}</span><div><b class="dname">${g.name}</b>
+          <small>${g.mine ? 'One of your past builds' : `Record ${g.record}`} · ${WEAP[red.weapon].name}${red.skill ? ` · ${SKILL[red.skill].name}` : ''}</small></div></div>
+        <div class="dgear">${worn.map((i2) => `<button class="dg" data-theirs="${i2.uid}" style="--rc:${ITEM[i2.item].keystone ? KEY_COL : ITEM[i2.item].relic ? RELIC_COL : RAR_COL[i2.rarity]}" aria-label="${ITEM[i2.item].name}">${itemIcon(i2)}</button>`).join('')}</div>
+        ${oddsHtml(key, od)}
+        <p class="dtip">${duelTip(red)}</p>
+        <div class="dstake"><span class="w">Win: +${CARD_GOLD.duel}g, duel ${run.wins + 1}/${RUNCFG.winTarget}</span><span class="l">Lose: a heart, +${CARD_GOLD.duelLoss}g</span></div>
+      </div>`;
     actions = `<button class="ghost" data-go="gear">Gear</button><button class="go" data-go="duel">Fight ${g.name}</button>`;
   } else if (runScreen === 'over') {
     const hist = run.history.map((h) => `<i class="${h.result === 'W' ? 'w' : 'l'} ${h.duel ? 'duel' : ''}" title="${h.label}"></i>`).join('');
@@ -10705,6 +10976,9 @@ function showRun(screen) {
   A = makeArena([builds[0], null]);
   demoWorld();
   U = [demoUnit(0, builds[0])];
+  trying = null;
+  if (screen !== 'pick' && screen !== 'duel') cancelOdds();
+  stageExtras();
   ui.hud.hidden = true; ui.result.hidden = true;
   showPanel('run');
   $('#doll').hidden = screen !== 'gear' && screen !== 'loot';
@@ -10726,7 +11000,11 @@ function leaveRun() {
   freeBuild = null; run = null; runScreen = null; huntKind = null; huntPower = 1;
   enterHome();
 }
+let runOddsAt = null;   // the odds the card showed when you took the fight on
 function runFight(offer) {
+  const key = offer ? `h${run.seed}.${run.round}.${run.offers.indexOf(offer)}.${buildSig()}` : `d${run.seed}.${run.round}.${buildSig()}`, od = oddsCache.get(key);
+  runOddsAt = od && od.n ? od.won / od.n : null;
+  cancelOdds(); trying = null;
   applyRunBuild(); runOffer = offer;
   if (run.isDuel) {
     const g = run.ghost;
@@ -10754,7 +11032,22 @@ function runClick(ev) {
   if (t.dataset.rule) { ruleSheet(t.dataset.rule); return; }
   if (t.dataset.status) { statusSheet(t.dataset.status); return; }
   if (t.dataset.path) { run.takePath(t.dataset.path); toast(`${PATHS[t.dataset.path].name}. ${ITEM[PATHS[t.dataset.path].key].name} is yours.`); applyRunBuild(); showRun(runHome()); return; }
-  if (t.dataset.offer !== undefined) { runFight(run.offers[+t.dataset.offer]); return; }
+  if (t.dataset.offer !== undefined) {   // the first tap looks, the second goes
+    const i = +t.dataset.offer;
+    if (runSel && runSel.offer === i) { runFight(run.offers[i]); return; }
+    runSel = { offer: i }; stageExtras(); renderRun(); return;
+  }
+  if (t.dataset.pick !== undefined) {   // a drop: try it on, and read it
+    const i = +t.dataset.pick, inst = run.loot.items[i], w = powerWith(inst);
+    runSel = { loot: i, slot: w.to }; tryOn(inst, w.to); renderRun();
+    itemSheet(inst, `${wearBtns(inst, `data-loot="${i}" data-act`)}<button class="ghost" data-loot="${i}" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, WHY_LBL(inst.why), lootVerdict(inst)[1]);
+    return;
+  }
+  if (t.dataset.theirs !== undefined) {
+    const inst = Object.values(run.ghost.equip).find((x) => x && x.uid === t.dataset.theirs);
+    if (inst) openSheet(`<div class="sh-head"><b>${run.ghost.name}'s gear</b></div>${itemCard(inst)}<div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+    return;
+  }
   // a drop, a ware or a piece of your own gear: the full card and its choices, over the top
   if (t.dataset.lootrow !== undefined) {
     const i = +t.dataset.lootrow, inst = run.loot.items[i];
@@ -10805,7 +11098,8 @@ function runClick(ev) {
   else if (go === 'leave') leaveRun();
   else if (go === 'new') { Run.clear(); startRun(new Run()); }
   else if (go === 'duel') runFight(null);
-  else if (go === 'reroll') { run.rerollLoot(); renderRun(); }
+  else if (go === 'hunt' && runSel && runSel.offer !== undefined) runFight(run.offers[runSel.offer]);
+  else if (go === 'reroll') { run.rerollLoot(); runSel = null; tryOff(); renderRun(); }
   else if (go === 'shopreroll') { run.rerollShop(); run.save(); renderRun(); }
   else if (go === 'shopleave') { run.leaveShop(); showRun(runHome()); }
   else if (go === 'skip') { run.skipLoot(); if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }

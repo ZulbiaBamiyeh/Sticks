@@ -80,14 +80,15 @@ for (const [W, H] of SIZES) {
   // loot, straight after a won hunt
   await p.evaluate(() => {
     const R = window.__homeTurf.run, r = R.Run.load() || new R.Run(3);
-    r.over = false; r.crown = false; r.event = null; r.shop = null; r.round = 9; r.rollRound();
+    r.over = false; r.crown = false; r.event = null; r.shop = null; r.pathDone = true; r.round = 9; r.rollRound();
     r.lootFor({ ...r.offers[2] }, 0); r.save();
   });
   await p.reload(); await p.evaluate(() => document.fonts.ready);
   await p.click('#runStart'); await over('run-loot');
-  if (await p.$('.irow[data-lootrow]')) { await p.click('.irow[data-lootrow]'); await over('run-loot-item'); }
+  if (await p.$('.lcard[data-pick]')) { await p.click('.lcard[data-pick="0"]'); await over('run-loot-item'); await p.click('[data-sheet="close"]'); }
   // a fight, and the result sheet with its damage donut
   await p.evaluate(() => { const H = window.__homeTurf; H.runState.loot = null; H.showRun('pick'); });
+  await p.click('[data-offer="0"]'); await over('run-pick-selected');   // the first tap looks, the second goes
   await p.click('[data-offer="0"]');
   await over('fight');
   for (let i = 0; i < 120; i++) { const done = await p.evaluate(() => { window.__homeTurf.step(120); return !document.getElementById('result').hidden; }); if (done) break; }

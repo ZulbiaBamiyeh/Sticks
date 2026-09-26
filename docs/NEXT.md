@@ -4,6 +4,21 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **The run's choices got stakes.** Hunt, loot and duel screens were rows of names, so picking was a
+  shrug. Now:
+  - **Odds:** `simFight` runs a fight unseen (`setupFight` is the fight without its screen) and puts
+    everything back. `wantOdds`/`oddsTick` run 8 of them per card between frames, so the bars fill in,
+    with results kept in `oddsCache`. Hunt cards show odds, likely HP after, gold, rarity odds, best
+    power gain from its drops (`upgradesIn`, from `buildPower`) and a ★ for a keystone. Duels show the
+    ghost's build, odds and a counter tip (`DUEL_TIP`). Results recall the odds you took (`runOddsAt`).
+  - **Pick 1 of 3** (`Run.lootFor`): the creature's drop, one from a family you wear (or your path's),
+    and a wildcard with a rarity bump. Verdicts come from `lootVerdict`. Tapping a card tries it on
+    (`tryOn`: the stage fighter wears it and its doll slot lights up).
+  - **Stage previews** (`stageExtras`): the hunt's creatures, or the duel ghost, stand beside you.
+  - Ghosts are geared like a player who picks from three (one slot ahead, better of two rarities).
+  - Run bot, 30 runs: careful play crowns 12 of 30 and random play 0 (before: 9 and 1). Duels 64%.
+
+## Before that
 - **Fighters play around what is on the floor.** Spikes were switched off because fighters kept walking
   into them. The cause wasn't knowledge: about two-thirds of hits were on spikes the fighter already
   knew about, including 95 walk-ins on its own. The route planner priced spikes in, but the small moves
@@ -65,8 +80,10 @@ stars 42%).
 
 ## Next up
 1. **Placed items for the run** (Brazier, Totem, Mirror block): each declares where it is dangerous to
-   the rival and where its owner wants to stand, so `dangerAt` and `holdHome` handle it. Pick 1 of 3 loot
-   first. Spikes back on needs a balance fix for blades first (see above).
+   the rival and where its owner wants to stand, so `dangerAt` and `holdHome` handle it. Spikes back on
+   needs a balance fix for blades first (see below).
+   Odds on the hunt cards also show where hunt tiers are off (a Mantis Queen at 88% next to a Normal
+   Fire Serpent at 50%).
 2. **Next tome** (flame or storm). Give it its own verbs, its own way of moving, and its own answer to
    melee: slime melts away, ice seals itself in. The shelved schools are in the backup for reference.
 3. The Slime Tome is lopsided against the bow (13%). Slimes chasing archers helped; something that

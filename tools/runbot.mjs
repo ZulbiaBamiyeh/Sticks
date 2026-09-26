@@ -42,21 +42,23 @@ const out = await p.evaluate(([N, strat]) => {
         res.huntWin[o.card][1]++; if (won) res.huntWin[o.card][0]++;
         run.resolve(won, o, r.hpFrac);
         if (run.loot) {
-          // one drop: wear it if it helps, else bag it
-          const inst = run.loot.items[0], k = R.ITEM[inst.item].slot;
-          let best = 'bag', bs = score(b);
-          for (const t of k === 'trinket' ? ['trinket1', 'trinket2'] : [k]) { const s = score(R.runBuild({ ...run.equip, [t]: inst })); if (s > bs) { bs = s; best = k === 'trinket' ? t : 'wear'; } }
-          // a weak drop is worth a reroll: free when the slot is already filled, else one of the day's two
+          // three to choose from: wear the one that helps most, else bag the best of them, else rest
+          const best = () => {
+            let pick = null, bs = score(b);
+            run.loot.items.forEach((inst, i) => {
+              const k = R.ITEM[inst.item].slot;
+              for (const t of k === 'trinket' ? ['trinket1', 'trinket2'] : [k]) { const s = score(R.runBuild({ ...run.equip, [t]: inst })); if (s > bs) { bs = s; pick = { i, act: k === 'trinket' ? t : 'wear' }; } }
+            });
+            return pick;
+          };
+          let pick = best();
+          // nothing worth wearing is worth a reroll: free when all three are for filled slots, else one of the day's two
           const wasFree = run.freeReroll();
-          if (best === 'bag' && (wasFree || run.rerolls > 0) && run.rerollLoot()) {
-            res.rerolls++; if (wasFree) res.free++;
-            const i2 = run.loot.items[0], k2 = R.ITEM[i2.item].slot;
-            for (const t of k2 === 'trinket' ? ['trinket1', 'trinket2'] : [k2]) { const s = score(R.runBuild({ ...run.equip, [t]: i2 })); if (s > bs) { bs = s; best = k2 === 'trinket' ? t : 'wear'; } }
-          }
+          if (!pick && (wasFree || run.rerolls > 0) && run.rerollLoot()) { res.rerolls++; if (wasFree) res.free++; pick = best(); }
           // badly hurt with nothing worth wearing: walk away and rest instead
-          if (best === 'bag' && (run.hp < 0.55 || run.bagFull())) { run.skipLoot(); res.rests++; }
-          else run.takeLoot(0, best);
-          if (run.loot) run.takeLoot(0, 'bag');
+          if (!pick && (run.hp < 0.55 || run.bagFull())) { run.skipLoot(); res.rests++; }
+          else if (pick) run.takeLoot(pick.i, pick.act);
+          else run.takeLoot(0, 'bag');
         }
       }
       run.next();
