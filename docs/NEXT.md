@@ -4,6 +4,16 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **Engines and fusions** for builds that snowball (Bazaar-style). Engine core: `u.grow` (atk, crit, haste,
+  def, dmg, ls) used in `applyHit` and `hasteStep`, capped by `GROW_CAP`; effect `grow` (flat parts scale
+  with item power in `scaleEffect`/`scaleText`); new trigger moments `onApply` (key = status), `onFreeze`,
+  `onDischarge`, `onBurst`, `onShield` (`gainShield`), `onHeal` (heals of 2+); `fire` takes a key, honours
+  `chance` on every type, and a chain stops at `fireDepth` 5. 16 engine items (`eng()`, keystones with
+  `engine: true`), `emptyDmg` flag. `FUSIONS` (14) switch on at `FUSE_AT` 3 + 3, applied in `runBuild`.
+  UI: `growChips` in the HUD, `fusionChip`, `fusionSheet`, `fusionJump` for loot verdicts, fusions listed
+  in `schoolSheet`. Run bot: careful 14/30 crowns, random 0/30.
+
+## Before that (goal, feeding)
 - **The goal in view.** `runHeader` has a goal row (`crownRow`: five crowns filled per duel won,
   "N wins to the Crown", lives), the day shows "/7" and "Hunt 2 of 3" or "Duel tonight", the path screen
   states the rules, and the result sheet has `#resGoal` saying what the fight did to the goal.

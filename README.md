@@ -37,6 +37,29 @@ fights run themselves. **Start a run** is the front door, and everything else
     `SCHOOL_OF`, `schoolCounts`, tiers applied in `runBuild`). The thirty
     families are still there for drops and flavour, but their old 2- and
     4-piece sets are gone.
+  - **Engines and fusions: builds that snowball.** Sixteen **engines** (a kind
+    of keystone) grow you during the fight or turn one thing into another:
+    Tinderbox (each time you Burn them, +1.5 Atk for the rest of the fight),
+    Static Battery (each Shock you apply: 3 Shield), Furnace Heart (whenever
+    you gain Shield: Burn them), Whetstone (each crit: +2 Atk), Frost Lens
+    (each freeze: +10% Crit), Empty Hand (+25% damage per empty slot) and
+    more. Chained, they feed each other: Tesla Coil Shocks, Static Battery
+    turns the Shock into Shield, Furnace Heart turns the Shield into Burn,
+    Tinderbox turns the Burn into Atk. A chain runs at most five links deep
+    per event, so a loop is huge but never infinite. Growth scales with the
+    item's power and has a ceiling per kind (`GROW_CAP`). The HUD shows
+    what each fighter has grown this fight ("▲+23 Atk ▲+15% Crit"), with a
+    small orange tick over the head each time it grows and a callout at
+    every big step. New trigger moments: `onApply` (with the status),
+    `onFreeze`, `onDischarge`, `onBurst`, `onShield` (all Shield goes through
+    `gainShield`), `onHeal`; new effect `grow`. **Fusions**: when two schools
+    both reach 3 pieces a named rule switches on, fourteen in all (`FUSIONS`),
+    e.g. Superconduct (Chill + Shock: freezing them also Shocks them 3
+    times), Furnace (Guard + Burn), Execution (Bleed + Edge), Wildfire (Burn +
+    Poison). Fusions sit first in the school bar; loot says "Superconduct!"
+    when a piece would switch one on, and each school's sheet lists its
+    partners. On Normal and Elite hunts the "your build" card is an engine
+    of your top school 30% of the time.
   - **Crests.** Each duel won deals three crests: the school you have most
     of, the next, and one you have none of. A crest counts as one more piece
     of its school for the rest of the run, and the card says which rule it

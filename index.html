@@ -262,6 +262,7 @@
   .hp.r .skm { flex-direction: row-reverse; }
   .sts { display: flex; gap: 6px; min-height: 14px; margin-top: 4px; }
   .hp.r .sts { flex-direction: row-reverse; }
+  .sts .grw { color: #b5651d; font-size: 10px; letter-spacing: .02em; }
   .sts span { display: inline-flex; align-items: center; gap: 2px; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; animation: stIn 0.25s ease-out; }
   .sts svg { width: 13px; height: 13px; }
   @keyframes stIn { from { transform: scale(1.6); } }
@@ -546,6 +547,9 @@
   .hc-fam svg { width: 14px; height: 14px; vertical-align: -2px; }
   .ihead .sch.mini { margin-left: 6px; vertical-align: 1px; }
   .lcard .sch.mini { margin: 1px 0; }
+  .fus { display: inline-flex; align-items: center; gap: 1px; font: inherit; font-size: 11px; font-weight: 900; color: #fff; border: 0; border-radius: 999px; padding: 2px 8px 2px 4px; white-space: nowrap; cursor: pointer; background: linear-gradient(90deg, var(--fa), var(--fb)); }
+  .fus svg { width: 14px; height: 14px; filter: brightness(0) invert(1); }
+  .fus span { margin-left: 3px; }
   .sbar { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; margin-top: 5px; min-height: 20px; }
   .sbar .lbl { align-self: center; flex: none; }
   .evopt.crest { border-color: color-mix(in srgb, var(--sc) 55%, var(--line)); }
@@ -1551,7 +1555,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
   for (const k of PK) { pose.p[k] = STANCE[weapon][k]; pose.v[k] = 0; }
   const u = {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro: WEAP[weapon].noAcro ? 0 : acro, macros: MACROS_BY_ACRO[WEAP[weapon].noAcro ? 0 : acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
-    look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
+    look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0, grow: { atk: 0, crit: 0, haste: 0, def: 0, dmg: 0, ls: 0 },
     onHit: trinket ? [TRINKET[trinket]] : [],
     b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed) * (gs.flags.tome ? 0.86 : gs.flags.skate ? 1.15 : 1), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: gs.flags.tome ? 0.16 : WEAP[weapon].float || 1 },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
@@ -3417,17 +3421,26 @@ function hurt(u, d, src, by, c, split) {
 function heal(u, amt) {
   if (!(amt > 0) || u.state === 'dead' || world.over) return;
   u.hp = Math.min(u.hpMax, u.hp + amt);
+  if (amt >= 2) fire(u, 'onHeal', foeOf(u));
   const hd = u.gs && u.gs.flags.healDamage, f = hd && foeOf(u);
   if (f && f.state !== 'dead') hurt(f, amt * hd, 'hit', u.side, null, [['hits', 1]]);
 }
 const foeOf = (u) => (u.mob && u.side ? U[0] : foe(u));
 // Triggers: a trinket's "when" and "what", fired from the fight at the matching moment.
-function fire(u, type, other) {
+// Triggers can set each other off (a Shock that gives Shield that Burns that grows your Atk), so a chain
+// is allowed to run a few links deep and no further.
+let fireDepth = 0;
+function fire(u, type, other, key) {
   const g = u.gs;
-  if (!g || !g.trig.length || u.state === 'dead' || world.over || world.demo) return;
+  if (!g || !g.trig.length || u.state === 'dead' || world.over || world.demo || fireDepth > 4) return;
+  fireDepth++;
+  try { fireAll(u, g, type, other, key); } finally { fireDepth--; }
+}
+function fireAll(u, g, type, other, key) {
   for (const t of g.trig) {
     if (t.type !== type) continue;
-    if ((type === 'onHit' || type === 'onHitTaken') && t.chance && rng() >= t.chance) continue;
+    if (t.key && t.key !== key) continue;
+    if (t.chance && rng() >= t.chance) continue;
     if (type === 'nth' && u.hits % t.n !== 0) continue;
     if (type === 'hpBelow') { if (t.used || u.hp / u.hpMax >= t.pct) continue; t.used = true; }
     if (type === 'every' && world.t % Math.round(t.s * 60) !== 0) continue;
@@ -3439,7 +3452,8 @@ function triggerEffect(u, t, target) {
   const e = t.effect;
   if (e.apply === 'frenzy') { u.frenzyT = Math.round(e.duration * 60); callout(u, 'FRENZY'); }
   else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
-  if (e.shield) { u.shield += e.shield; u.shUpT = 16; }
+  if (e.shield) gainShield(u, e.shield);
+  if (e.grow) growBy(u, e.grow, t.src);
   if (e.shift) startShift(u, e.shift, e.duration);
   if (e.critNext) { u.critNext = true; }
   if (e.halveHp) { u.hpMax = Math.max(20, Math.round(u.hpMax / 2)); u.hp = Math.min(u.hp, u.hpMax); callout(u, 'LAST PAGE'); }
@@ -3452,11 +3466,39 @@ function triggerEffect(u, t, target) {
   if (e.detonate && target && target.st.poison > 0) {   // Sunstone Idol: all the Poison at once
     const n = target.st.poison; target.st.poison = 0;
     hurt(target, n * 4, 'status', u.side, 'poison'); ring(target.b.x, target.b.y - H / 2, 1.2, 'poison');
+    fire(u, 'onBurst', target);
   }
   if (e.stasis) {   // Gilded Hourglass: gold, untouchable and frozen for a moment
     u.stasis = Math.round(e.stasis * 60); u.iT = Math.max(u.iT, u.stasis);
     u.state = 'stun'; u.stunT = u.stasis; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0;
     callout(u, 'GILDED');
+  }
+}
+// Shield from anywhere goes through here, so "whenever you gain Shield" means whenever.
+function gainShield(u, n) {
+  if (!(n > 0) || u.state === 'dead') return;
+  u.shield += n; u.shUpT = 16;
+  fire(u, 'onShield', foeOf(u));
+}
+// Growth for the rest of the fight: engines feed this, and it's what makes a build snowball. Each kind
+// has a ceiling so a runaway engine is huge rather than infinite.
+const GROW_CAP = { atk: 60, crit: 0.7, haste: 1.2, def: 40, dmg: 2, ls: 0.4 };
+const GROW_LBL = { atk: 'Atk', crit: 'Crit', haste: 'Haste', def: 'Def', dmg: 'Dmg', ls: 'Lifesteal' };
+function growBy(u, g, src) {
+  if (!u.grow) u.grow = { atk: 0, crit: 0, haste: 0, def: 0, dmg: 0, ls: 0 };
+  for (const [k, v] of Object.entries(g)) {
+    const was = u.grow[k];
+    u.grow[k] = Math.min(GROW_CAP[k], was + v);
+    // a callout each time a kind passes another big step, so you can watch it build
+    const step = k === 'atk' || k === 'def' ? 10 : 0.25;
+    if (Math.floor(u.grow[k] / step) > Math.floor(was / step)) callout(u, `+${k === 'atk' || k === 'def' ? Math.round(u.grow[k]) : Math.round(u.grow[k] * 100) + '%'} ${GROW_LBL[k].toUpperCase()}`);
+  }
+  if (!world.demo) world.stats[u.side].grown = (world.stats[u.side].grown || 0) + 1;
+  // a small orange tick over the head each time it grows (not every frame of a chain)
+  if (!headless && !(u.growPopT > world.t)) {
+    u.growPopT = world.t + 10;
+    const [k, v] = Object.entries(g)[0];
+    popText(u.b.x + (Math.random() - 0.5) * 0.4, u.b.y - H - 0.35, `+${k === 'atk' || k === 'def' ? Math.round(v * 10) / 10 : Math.round(v * 100) + '%'} ${GROW_LBL[k]}`, '#b5651d', 0.32);
   }
 }
 // ---- shapeshifting: for a few seconds you stop being a stick figure. The creature's body is drawn over
@@ -3562,7 +3604,7 @@ function applyHit(att, def, d, dirX, crit) {
   if (def.w === 'spellbook') (def.hitT ||= []).push(world.t);
   if (def.state === 'atk' && def.atkDef && def.atkDef.cast && def.phase === 'w' && def.shield <= 0) fizzle(def);
   const ag = att.gs, dg = def.gs;
-  const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
+  const critCh = (att.critCh || 0) + ((att.grow && att.grow.crit) || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
   if (!crit && critCh > 0 && d.dmg && rng() < critCh) crit = true;   // gear crit chance
   if (!crit && att.critNext && d.dmg) { crit = true; att.critNext = false; }
   if (ag && ag.flags.firstCrit && d.dmg && !att.struck) { att.struck = true; crit = true; heal(att, 15); }   // Understudy's Hood
@@ -3599,9 +3641,10 @@ function applyHit(att, def, d, dirX, crit) {
   if (j >= 2) def.iT = Math.max(def.iT, 30);
   // the weapon's own damage range scales every move it makes; flat Atk, Juggernaut and Dervish rage add on top
   const wr = ag && ag.wpn && d.dmg ? (ag.wpn.min + rng() * (ag.wpn.max - ag.wpn.min)) / ag.wpn.base : 1;
-  const flat = ag && d.dmg ? ag.atk + (ag.flags.juggernaut ? ag.def * ag.flags.juggernaut : 0) + att.rage + (ag.flags.shieldBash ? att.shield * ag.flags.shieldBash : 0) : 0;
+  const ga = att.grow || {}, gd = def.grow || {};
+  const flat = ag && d.dmg ? ag.atk + (ag.flags.juggernaut ? ag.def * ag.flags.juggernaut : 0) + att.rage + (ga.atk || 0) + (ag.flags.shieldBash ? att.shield * ag.flags.shieldBash : 0) : 0;
   const nSt = (def.st.burn > 0) + (def.st.poison > 0) + (def.st.bleed > 0) + (def.st.chill > 0) + (def.st.shock > 0);
-  let mods = (ag && ag.flags.statusCount ? 1 + ag.flags.statusCount * nSt : 1) * (ag && ag.flags.glass ? 1.5 : 1) * (dg && dg.flags.glass ? 1.25 : 1);
+  let mods = (1 + (ga.dmg || 0)) * (ag && ag.flags.statusCount ? 1 + ag.flags.statusCount * nSt : 1) * (ag && ag.flags.glass ? 1.5 : 1) * (dg && dg.flags.glass ? 1.25 : 1);
   if (ag) {   // perks: more damage against a status, against a foe nearly down, or while nearly down yourself
     const f = ag.flags;
     if (f.vs) for (const [k, v] of Object.entries(f.vs)) if (def.st[k] > 0) mods *= 1 + v;
@@ -3620,7 +3663,7 @@ function applyHit(att, def, d, dirX, crit) {
     if (f.dmgPerShock && def.st.shock) mods *= 1 + f.dmgPerShock * def.st.shock;
     if (f.dmgPerPoison && def.st.poison) mods *= 1 + f.dmgPerPoison * def.st.poison;
   }
-  const defNow = (dg ? dg.def + (dg.flags.shieldToDef ? def.shield : 0) : 0) + ((dSh && dSh.def) || 0);   // Tidal Ledger: a shield is armour too
+  const defNow = (dg ? dg.def + (dg.flags.shieldToDef ? def.shield : 0) : 0) + ((dSh && dSh.def) || 0) + (gd.def || 0);   // Tidal Ledger: a shield is armour too
   const armour = dg ? 26 / (26 + Math.max(0, defNow - (ag ? ag.pen : 0))) : 1;
   const zap = s.shock * STATUS.shock.per * dotPwr(def);
   let dmg = ((d.dmg * wr + flat) * (att.dmgMul || 1) * (crit ? CRIT + (ag ? ag.critDmg : 0) : 1) * Math.max(0.4, 1 - 0.3 * j) * mods + zap + (shattered ? STATUS.chill.shatter * (1 + ((ag && ag.flags.shatter) || 0)) * powerOf(att) : 0)) * armour;
@@ -3641,7 +3684,7 @@ function applyHit(att, def, d, dirX, crit) {
   if (crit) sfx.play('crit');
   hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap * armour / dmg], ['shock', zap * armour / dmg]] : [[kind, 1]]);
   if (att.mob === 'bud') world.stats[att.side].budDmg = (world.stats[att.side].budDmg || 0) + taken;   // for the balance tables
-  if (ag && ag.ls > 0 && att.state !== 'dead') heal(att, taken * ag.ls);
+  if (ag && ag.ls + (ga.ls || 0) > 0 && att.state !== 'dead') heal(att, taken * (ag.ls + (ga.ls || 0)));
   const aSh = shiftOf(att);
   if (aSh && att.state !== 'dead') {   // the form's own bite
     if (aSh.heal) heal(att, aSh.heal * powerOf(att));
@@ -3734,6 +3777,7 @@ function applyStatus(att, def, k, stacks = 1, t = null, echoed = false) {
     }
   }
   if (echoed) return;
+  if (att !== def && att.gs) fire(att, 'onApply', def, k);   // "each time you Burn them", and so on
   if (af.echo && rng() < af.echo) applyStatus(att, def, k, stacks, t, true);   // Echo Conch: lands twice
   const df = (def.gs && def.gs.flags) || {};
   if ((df.reflectAll || (df.reflect && rng() < df.reflect)) && att !== def) applyStatus(def, att, k, stacks, t, true);   // Cursed Mirror, Mirror Mask
@@ -3745,6 +3789,7 @@ function freeze(u) {
   u.ai.macro = null; u.ai.path.length = 0; u.skName = null; u.hidden = 0;
   if (!world.stats[1 - u.side].frozen++) log(u.side ? `${rivalName()} froze solid.` : 'Your fighter froze solid.', 1 - u.side);
   callout(u, 'FROZEN', 1 - u.side); sfxShake(4);
+  { const by = U.find((x) => x.side === s.by && !x.mob && x.state !== 'dead'); if (by) fire(by, 'onFreeze', u); }
   for (let i = 0; i < 8; i++) streak(u.b.x + (Math.random() - 0.5) * 0.9, u.b.y - Math.random() * H, Math.random() * 6.283, 0.35, 'chill');
 }
 function shatter(u) {
@@ -3764,6 +3809,7 @@ function discharge(u, overload) {
   if (u.state === 'free' || u.state === 'atk') { u.state = 'stun'; u.stunT = 20; u.tumble = false; u.ai.macro = null; u.ai.path.length = 0; }
   u.zap = 14; ring(u.b.x, u.b.y - H / 2, 1.4, 'shock'); world.hs = Math.max(world.hs, 5); sfxShake(5);
   callout(u, 'DISCHARGE', s.by >= 0 ? s.by : 1 - u.side);
+  { const by = U.find((x) => x.side === s.by && !x.mob && x.state !== 'dead'); if (by) fire(by, 'onDischarge', u); }
 }
 // Bleed: every attack the bleeder starts costs it a cut of that attack's own damage.
 function bleedOnAttack(u, name) {
@@ -5414,7 +5460,7 @@ function spikeHit(u, i) {
 
 // Attack speed from gear and Frenzy: an extra step of the attack every so often.
 function hasteStep(u) {
-  const h = Math.max(0, (u.gs && u.gs.haste) || 0) + (u.frenzyT > 0 ? 0.3 : 0);
+  const h = Math.max(0, (u.gs && u.gs.haste) || 0) + (u.frenzyT > 0 ? 0.3 : 0) + ((u.grow && u.grow.haste) || 0);
   if (!h || u.state !== 'atk') return;
   u.hasteAcc += h;
   if (u.hasteAcc >= 1) { u.hasteAcc -= 1; atkStep(u); }
@@ -5905,7 +5951,7 @@ function castFear(u, fe) {
 // A shell that answers back: anything that hits you up close while it holds comes away with some of it.
 function castArmor(u, ar) {
   const b = u.b, cy = b.y - H / 2;
-  u.shield += ar.shield; u.shUpT = 16;
+  gainShield(u, ar.shield);
   u.retal = { st: ar.apply, stacks: ar.stacks || 1, t: Math.round(ar.secs * 60), steady: ar.steady || 0, col: ar.col };
   ring(b.x, cy, 1.4, ar.col); ring(b.x, cy, 0.9, 'steel');
   for (let i = 0; i < 10; i++) streak(b.x, cy, (i / 10) * 6.283, 0.5, ar.col);
@@ -7739,6 +7785,25 @@ const SCHOOLS = {
       { n: 6, desc: 'Your crits heal 5 and bring your skill back 1s sooner.', trig: [{ type: 'onCrit', effect: { heal: 5, skillCd: 1 } }] }] },
 };
 const SCHOOL_IDS = Object.keys(SCHOOLS);
+// Fusions: two schools at 3 pieces each, and something new happens between them.
+const FUSE_AT = 3;
+const FUSIONS = [
+  { a: 'burn', b: 'poison', name: 'Wildfire', desc: 'Burning them has a 30% chance to Poison them too, and Poisoning them a 30% chance to Burn.', trig: [{ type: 'onApply', key: 'burn', chance: 0.3, effect: { apply: 'poison' } }, { type: 'onApply', key: 'poison', chance: 0.3, effect: { apply: 'burn' } }] },
+  { a: 'chill', b: 'shock', name: 'Superconduct', desc: 'Freezing them also Shocks them 3 times.', trig: [{ type: 'onFreeze', effect: { apply: 'shock', stacks: 3 } }] },
+  { a: 'bleed', b: 'edge', name: 'Execution', desc: 'Your crits make them Bleed, and Bleeding foes take +30%.', flags: { vs: { bleed: 0.3 } }, trig: [{ type: 'onCrit', effect: { apply: 'bleed' } }] },
+  { a: 'guard', b: 'burn', name: 'Furnace', desc: 'Whenever you gain Shield, Burn them.', trig: [{ type: 'onShield', effect: { apply: 'burn' } }] },
+  { a: 'guard', b: 'shock', name: 'Capacitor', desc: 'When hit: 3 Shield, and a 35% chance to Shock the attacker.', trig: [{ type: 'onHitTaken', effect: { shield: 3 } }, { type: 'onHitTaken', chance: 0.35, effect: { apply: 'shock' } }] },
+  { a: 'guard', b: 'poison', name: 'Plague Wall', desc: '+4 Thorns, and your Thorns carry your on-hit statuses.', stats: { thorns: 4 }, flags: { thornsProc: true } },
+  { a: 'edge', b: 'shock', name: 'Chain Lightning', desc: 'Each crit Shocks them twice.', trig: [{ type: 'onCrit', effect: { apply: 'shock', stacks: 2 } }] },
+  { a: 'bleed', b: 'burn', name: 'Cauterise', desc: 'Each time you Burn them: heal 3. Each time you Bleed them: +1 Atk for the rest of the fight.', trig: [{ type: 'onApply', key: 'burn', effect: { heal: 3 } }, { type: 'onApply', key: 'bleed', effect: { grow: { atk: 1 } } }] },
+  { a: 'chill', b: 'guard', name: 'Permafrost', desc: 'When hit: 30% chance to Chill the attacker. +20% damage to frozen or stunned foes.', flags: { vsStun: 0.2 }, trig: [{ type: 'onHitTaken', chance: 0.3, effect: { apply: 'chill' } }] },
+  { a: 'edge', b: 'chill', name: 'Cold Steel', desc: 'Freezing them makes your next hit crit and grows your Crit 5% for the fight.', trig: [{ type: 'onFreeze', effect: { critNext: true, grow: { crit: 0.05 } } }] },
+  { a: 'poison', b: 'edge', name: 'Venom Tips', desc: 'Each crit adds 2 Poison.', trig: [{ type: 'onCrit', effect: { apply: 'poison', stacks: 2 } }] },
+  { a: 'bleed', b: 'poison', name: 'Sepsis', desc: 'Each time you Poison them: +1% damage for the fight. Bleeding foes take +15%.', flags: { vs: { bleed: 0.15 } }, trig: [{ type: 'onApply', key: 'poison', effect: { grow: { dmg: 0.01 } } }] },
+  { a: 'burn', b: 'shock', name: 'Overcharge', desc: 'Each time their Shock discharges, Burn them twice and +3 Atk for the fight.', trig: [{ type: 'onDischarge', effect: { apply: 'burn', stacks: 2, grow: { atk: 3 } } }] },
+  { a: 'burn', b: 'edge', name: 'Flashpoint', desc: 'Each crit: +1 Atk for the rest of the fight. +10% damage to Burning foes.', trig: [{ type: 'onCrit', effect: { grow: { atk: 1 } } }], flags: { vs: { burn: 0.1 } } },
+];
+const fusionsOf = (n) => FUSIONS.filter((F) => (n[F.a] || 0) >= FUSE_AT && (n[F.b] || 0) >= FUSE_AT);
 // families without a status of their own: the sturdy ones stand guard, the quick ones are Edge
 const FAM_SCHOOL = { gel: 'guard', iron: 'guard', shell: 'guard', bog: 'guard', quill: 'edge', scythe: 'edge', spectre: 'edge' };
 const SCHOOL_OF = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, FAM_SCHOOL[f] || (SCHOOLS[FAMILY[f].status] ? FAMILY[f].status : 'edge')]));
@@ -7909,6 +7974,30 @@ for (const id of ['ironblood_sigil', 'duelists_tally', 'whetted_edge', 'plague_l
 const SHELVED = ['spore_codex', 'rime_codex', 'ember_codex', 'storm_codex', 'blood_codex', 'rot_tome', 'ash_tome', 'mire_tome',
   'wing_marionette', 'scale_scorpion', 'silk_marionette', 'silk_spool', 'iron_effigy', 'toxic_censer', 'scythe_puppet', 'venom_scorpion'];
 for (const id of SHELVED) delete ITEM[id];
+// ---- engines
+// Pieces that grow during the fight, and bridges that turn one thing into another. On their own they're
+// modest. Put two or three together and they feed each other: a Shock that gives Shield that Burns that
+// grows your Atk. That's where the big builds come from. They drop like keystones, from their family's
+// creatures on Normal and Elite hunts, and the "your build" card leans toward them.
+const eng = (x) => ({ keystone: true, engine: true, ...x });
+Object.assign(ITEM, {
+  tinderbox: iT('Tinderbox', 'ember', eng({ stats: { atk: 1 }, trig: [{ type: 'onApply', key: 'burn', effect: { grow: { atk: 1.5 } } }], desc: 'Each time you Burn them: +1.5 Atk for the rest of the fight.', flavor: 'Always one spark from something.' })),
+  bellows_plate: iA('Bellows Plate', 'blaze', 'core', { hp: 14 }, eng({ trig: [{ type: 'onApply', key: 'burn', effect: { grow: { haste: 0.03 } } }], desc: 'Each time you Burn them: +3% Haste for the rest of the fight.', flavor: 'Breathe in. Breathe fire.' })),
+  plague_engine: iT('Plague Engine', 'venom', eng({ trig: [{ type: 'onApply', key: 'poison', effect: { grow: { dmg: 0.02 } } }], desc: 'Each time you Poison them: +2% damage for the rest of the fight.', flavor: 'Tick. Tick. Tick.' })),
+  rot_bloom: iA('Rot Bloom', 'rot', 'head', { hp: 10 }, eng({ trig: [{ type: 'onBurst', effect: { heal: 10, grow: { atk: 4 } } }, { type: 'nth', n: 8, effect: { detonate: 'poison' } }], desc: 'Every 8th hit bursts their Poison. Each burst: heal 10 and +4 Atk for the rest of the fight.', flavor: 'Flowers on the grave, and then some.' })),
+  leech_crown: iA('Leech Crown', 'vampire', 'head', { hp: 12, ls: 0.03 }, eng({ trig: [{ type: 'onHeal', effect: { grow: { def: 0.6 } } }], desc: 'Every time you heal: +0.6 Def for the rest of the fight.', flavor: 'It drinks when you drink.' })),
+  red_harvest: iT('Red Harvest', 'reaper', eng({ trig: [{ type: 'onApply', key: 'bleed', effect: { grow: { ls: 0.02 } } }], desc: 'Each time you Bleed them: +2% Lifesteal for the rest of the fight.', flavor: 'Reap what you sow.' })),
+  frost_lens: iT('Frost Lens', 'frostgel', eng({ stats: { crit: 0.03 }, trig: [{ type: 'onFreeze', effect: { grow: { crit: 0.1 } } }], desc: 'Each time you freeze them: +10% Crit for the rest of the fight.', flavor: 'Everything is clearer when it holds still.' })),
+  cold_snap_boots: iA('Cold Snap Boots', 'wisp', 'feet', { evasion: 0.04 }, eng({ acro: 2, trig: [{ type: 'onApply', key: 'chill', effect: { grow: { dmg: 0.02 } } }], desc: 'Each time you Chill them: +2% damage for the rest of the fight.', flavor: 'Crisp.' })),
+  static_battery: iT('Static Battery', 'thunder', eng({ trig: [{ type: 'onApply', key: 'shock', effect: { shield: 3 } }], desc: 'Each time you Shock them: 3 Shield.', flavor: 'Store it up. Wear it.' })),
+  capacitor_coat: iA('Capacitor Coat', 'storm', 'core', { hp: 16 }, eng({ trig: [{ type: 'onDischarge', effect: { grow: { haste: 0.15 } } }], desc: 'Each time their Shock discharges: +15% Haste for the rest of the fight.', flavor: 'Hair on end, all fight long.' })),
+  furnace_heart: iA('Furnace Heart', 'iron', 'core', { hp: 20, def: 2 }, eng({ trig: [{ type: 'onShield', effect: { apply: 'burn' } }], desc: 'Whenever you gain Shield: Burn them.', flavor: 'Stoke it with whatever hits you.' })),
+  spiked_bulwark: iA('Spiked Bulwark', 'shell', 'head', { hp: 14, def: 2 }, eng({ trig: [{ type: 'onShield', effect: { grow: { atk: 1 } } }], desc: 'Whenever you gain Shield: +1 Atk for the rest of the fight.', flavor: 'Every wall is a weapon if you swing it.' })),
+  chain_charm: iT('Chain Charm', 'tide', eng({ trig: [{ type: 'onShield', effect: { apply: 'shock' } }], desc: 'Whenever you gain Shield: Shock them.', flavor: 'The links hum.' })),
+  whetstone: iT('Whetstone', 'quill', eng({ stats: { crit: 0.04 }, trig: [{ type: 'onCrit', effect: { grow: { atk: 2 } } }], desc: 'Each crit: +2 Atk for the rest of the fight.', flavor: 'Sharper every time it bites.' })),
+  ghost_step: iA('Ghost Step', 'spectre', 'feet', { evasion: 0.06 }, eng({ acro: 3, trig: [{ type: 'onDodge', effect: { grow: { crit: 0.05 } } }], desc: 'Each dodge: +5% Crit for the rest of the fight.', flavor: 'Missed me. Watch this.' })),
+  empty_hand: iT('Empty Hand', 'scythe', eng({ flags: { emptyDmg: 0.25 }, desc: '+25% damage for each empty slot. Wear less, hit harder.', flavor: 'The master carries nothing.' })),
+});
 for (const id of Object.keys(ITEM)) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
 // Every family's drop list, keystone and relic, rebuilt once all the items above are registered.
 for (const id of Object.keys(ITEM)) if (ITEM[id].keystone && ITEM[id].family) (KEYSTONE_OF[ITEM[id].family] ||= []).push(id);
@@ -8018,8 +8107,14 @@ function instRange(inst) {
   return [(it.min ?? wt.min) * p, (it.max ?? wt.max) * p];
 }
 // trigger numbers (heals, shields, damage) grow like the item's other flat numbers
-const scaleEffect = (e, p) => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, ['heal', 'shield', 'damage'].includes(k) ? Math.round(v * p) : v]));
-const scaleText = (text, e, p) => { let d = text; for (const k of ['heal', 'shield', 'damage']) if (e && e[k]) d = d.replace(String(e[k]), String(Math.round(e[k] * p))); return d; };
+const scaleEffect = (e, p) => Object.fromEntries(Object.entries(e).map(([k, v]) => [k, ['heal', 'shield', 'damage'].includes(k) ? Math.round(v * p)
+  : k === 'grow' ? Object.fromEntries(Object.entries(v).map(([g, x]) => [g, g === 'atk' || g === 'def' ? Math.round(x * p * 10) / 10 : x])) : v]));
+const scaleText = (text, e, p) => {
+  let d = text;
+  for (const k of ['heal', 'shield', 'damage']) if (e && e[k]) d = d.replace(String(e[k]), String(Math.round(e[k] * p)));
+  for (const [g, lbl] of [['atk', 'Atk'], ['def', 'Def']]) if (e && e.grow && e.grow[g]) d = d.replace(`+${e.grow[g]} ${lbl}`, `+${Math.round(e.grow[g] * p * 10) / 10} ${lbl}`);
+  return d;
+};
 // Flags: numbers add up, switches just turn on; thresholds keep the best (lowest).
 function mergeFlags(into, flags) {
   for (const [k, v] of Object.entries(flags || {})) {
@@ -8062,6 +8157,11 @@ function runBuild(equip, pieces = [], boons = null, gold = 0) {
       for (const t of T.trig || []) stats.trig.push({ ...t, effect: scaleEffect(t.effect, p), src: `${SCHOOLS[k].name} ${T.n}` });
     }
   }
+  for (const F of fusionsOf(schools)) {
+    const p = (spow[F.a] / schools[F.a] + spow[F.b] / schools[F.b]) / 2;
+    addStats(F.stats); mergeFlags(stats.flags, F.flags);
+    for (const t of F.trig || []) stats.trig.push({ ...t, effect: scaleEffect(t.effect, p), src: F.name });
+  }
   const w = equip.weapon;
   if (w) { const [min, max] = instRange(w); stats.wpn = { min, max, base: WTYPE[ITEM[w.item].weapon].base }; }
   const get = (s, k) => (equip[s] ? ITEM[equip[s].item][k] : null);
@@ -8069,6 +8169,7 @@ function runBuild(equip, pieces = [], boons = null, gold = 0) {
   if (boons) { stats.hp += boons.hpFlat; stats.hpMult = boons.hpMult; stats.skillHaste += boons.skillHaste; }
   if (stats.flags.hpMul) stats.hpMult *= stats.flags.hpMul;                                 // Glass Quill
   if (stats.flags.goldAtk) stats.atk += Math.min(30, gold * stats.flags.goldAtk);           // Hoarder's Ledger
+  if (stats.flags.emptyDmg) stats.flags.dmgUp = (stats.flags.dmgUp || 0) + stats.flags.emptyDmg * SLOTS_RUN.filter((s) => !equip[s]).length;   // Empty Hand
   applySynergies(stats, schools);
   return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: schools, fams };
 }
@@ -8276,7 +8377,9 @@ class Run {
     const sk = top.length ? (r.chance(0.75) ? top[0] : r.pick(top)) : P ? P.school : r.pick(SCHOOL_IDS);
     const fams = SCHOOL_FAMS[sk].filter((f) => f !== offer.family && FAMILY_ITEMS[f] && FAMILY_ITEMS[f].length);
     const bf = fams.length ? r.pick(fams) : r.pick(Object.keys(FAMILY));
-    items.push(make(pickFrom(FAMILY_ITEMS[bf]), rollRarity(offer.card, this.day, r), 'build'));
+    const engines = Object.keys(ITEM).filter((id) => ITEM[id].engine && SCHOOL_OF[ITEM[id].family] === sk && !have.has(id));
+    const engineCard = offer.card !== 'easy' && engines.length && r.chance(0.3);
+    items.push(make(engineCard ? pickFrom(engines) : pickFrom(FAMILY_ITEMS[bf]), rollRarity(offer.card, this.day, r), 'build'));
     const wild = r.pick(Object.keys(FAMILY).filter((f) => f !== offer.family && f !== bf && FAMILY_ITEMS[f].length));
     let wr = rollRarity(offer.card, this.day, r);
     if (r.chance(0.3) && wr !== 'epic' && wr !== 'legend') wr = upR(wr);
@@ -10927,6 +11030,19 @@ function statusChips(u) {
   if (s.shock > 0) out.push(['shock', s.shock]);
   return out;
 }
+// What a fighter has grown this fight: the engine readout under its HP bar
+function growChips(u) {
+  const g = u.grow;
+  if (!g) return '';
+  const out = [];
+  if (g.atk >= 1) out.push(`+${Math.round(g.atk)} Atk`);
+  if (g.dmg >= 0.01) out.push(`+${Math.round(g.dmg * 100)}% Dmg`);
+  if (g.crit >= 0.01) out.push(`+${Math.round(g.crit * 100)}% Crit`);
+  if (g.haste >= 0.01) out.push(`+${Math.round(g.haste * 100)}% Haste`);
+  if (g.def >= 1) out.push(`+${Math.round(g.def)} Def`);
+  if (g.ls >= 0.01) out.push(`+${Math.round(g.ls * 100)}% LS`);
+  return out.map((t) => `<span class="grw">▲${t}</span>`).join('');
+}
 function updateHud() {
   if (mode !== 'fight') return;
   const [b, r] = U;
@@ -10941,10 +11057,10 @@ function updateHud() {
   ui.clock.classList.toggle('sq', world.zone > 1.001 && !world.over);
   for (const side of [0, 1]) {
     const u = U.find((x) => x.side === side && x.state !== 'dead') || U.find((x) => x.side === side);
-    const chips = statusChips(u), sig = chips.map((c) => c.join('')).join(' ');
+    const chips = statusChips(u), gr = growChips(u), sig = chips.map((c) => c.join('')).join(' ') + '|' + gr;
     if (sig !== stShown[u.side]) {
       stShown[u.side] = sig;
-      ui.st[u.side].innerHTML = chips.map(([k, n]) => `<span title="${k === 'frozen' ? 'Frozen' : STATUS[k].name}" style="color:${ST_COL[k]}">${stSvg(k)}${n}</span>`).join('');
+      ui.st[u.side].innerHTML = chips.map(([k, n]) => `<span title="${k === 'frozen' ? 'Frozen' : STATUS[k].name}" style="color:${ST_COL[k]}">${stSvg(k)}${n}</span>`).join('') + gr;
     }
   }
   for (const u of U) {
@@ -11473,12 +11589,13 @@ function schoolShift(inst, to) {
   return out;
 }
 function setProgress(inst, to) {
-  return schoolShift(inst, to).map(({ k, a, b, up, down }) => {
+  const fz = fusionJump(inst, to);
+  return (fz ? [`<span class="set-up">Fusion · ${fz.name}: ${fz.desc}</span>`] : []).concat(schoolShift(inst, to).map(({ k, a, b, up, down }) => {
     const S = SCHOOLS[k];
     if (up) return `<span class="set-up">${S.name} ${b}: ${S.tiers[schoolTier(b) - 1].desc}</span>`;
     if (down) return `<span class="dn">Loses ${S.name} ${a}: ${S.tiers[schoolTier(a) - 1].desc}</span>`;
     return b > a ? `<span>${S.name} ${a} → ${b}${nextTierAt(b) ? ` (${nextTierAt(b)} for the next rule)` : ''}</span>` : '';
-  }).filter(Boolean);
+  }).filter(Boolean));
 }
 // the slot a piece would go into: a trinket fills an empty trinket slot first
 function targetSlot(inst) {
@@ -11504,7 +11621,7 @@ function compareLine(inst, to = targetSlot(inst)) {
 }
 // A compact row: icon, name, and either a compare line, a price or a tag. Tapping it opens the sheet.
 function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs = '', cls = '' } = {}) {
-  const it = ITEM[inst.item], kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const it = ITEM[inst.item], kind = it.engine ? 'Engine' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${SCHOOLS[schoolOfItem(it)].name}` : ''}`;
   return `<button class="irow ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
@@ -11526,7 +11643,7 @@ function itemSheet(inst, actions, title = '', note = '') {
 }
 function itemCard(inst, actions = '', compare = false) {
   const it = ITEM[inst.item], fam = it.family ? FAMILY[it.family] : null;
-  const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const kind = it.engine ? 'Engine' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   return `<div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
     <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}${inst.lvl ? `<span class="lvl">+${inst.lvl}</span>` : ''}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>${fam ? schoolChip(schoolOfItem(it), 0, true) : ''}</div></div>
@@ -11599,7 +11716,9 @@ function setJump(inst, to) {
 function lootVerdict(inst) {
   const it = ITEM[inst.item], w = powerWith(inst), to = w.to, cur = run.equip[to], d = w.ratio - 1;
   if (it.legend) return ['rule', 'Legendary'];
-  if (it.keystone || it.relic) return ['rule', it.keystone ? 'Keystone' : 'Relic'];
+  const fz = fusionJump(inst, to);
+  if (fz) return ['set', `${fz.name}!`];
+  if (it.keystone || it.relic) return ['rule', it.engine ? 'Engine' : it.keystone ? 'Keystone' : 'Relic'];
   const set = setJump(inst, to);
   if (set && set.dir > 0) return ['set', `${SCHOOLS[set.k].name} ${set.b}!`];
   if (!cur) return ['new', 'Empty slot'];
@@ -11651,7 +11770,7 @@ const WHY_LBL = (why) => ({ hunt: 'Its drop', build: 'Your build', wild: 'Wildca
 function lootCard(inst, i) {
   const it = ITEM[inst.item], [vc, vt] = lootVerdict(inst), sel = runSel && runSel.loot === i;
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
-  const kind = it.weapon ? WEAP[it.weapon].name : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
+  const kind = it.weapon ? WEAP[it.weapon].name : it.engine ? 'Engine' : it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   return `<button class="lcard ${inst.rarity} ${it.legend ? 'legend' : ''} ${sel ? 'sel' : ''}" data-pick="${i}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]};--d:${i * 120}ms">
     <span class="lwhy">${WHY_LBL(inst.why)}</span><span class="lic">${itemIcon(inst)}</span>
     <b class="lnm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>
@@ -11897,6 +12016,7 @@ function runClick(ev) {
   if (t.dataset.sheet === 'close') { closeSheet(); return; }
   if (t.dataset.set) { setSheet(t.dataset.set); return; }
   if (t.dataset.school) { schoolSheet(t.dataset.school); return; }
+  if (t.dataset.fusion !== undefined) { fusionSheet(+t.dataset.fusion); return; }
   if (t.dataset.crest) { if (run.takeCrest(t.dataset.crest)) { sfx.play('rare'); run.save(); applyRunBuild(); toast(`${SCHOOLS[t.dataset.crest].name} crest taken.`); showRun(runHome()); } return; }
   if (t.dataset.rule) { ruleSheet(t.dataset.rule); return; }
   if (t.dataset.status) { statusSheet(t.dataset.status); return; }
@@ -11989,10 +12109,28 @@ function schoolChip(k, n, mini = false) {
   return mini ? `<span class="sch mini t${t}" style="--sc:${S.col}">${schSvg(k)}${S.name}</span>`
     : `<button class="sch t${t}" data-school="${k}" style="--sc:${S.col}" title="${title}">${schSvg(k)}<span>${S.name}</span><span class="sn">${n}</span><span class="nt">${notches}</span></button>`;
 }
-// what you're building, at a glance: every school you wear, most first
+// a fusion's chip: both schools' marks and its name
+const fusionChip = (F, mini = false) => `<${mini ? 'span' : 'button'} class="fus" data-fusion="${FUSIONS.indexOf(F)}" style="--fa:${SCHOOLS[F.a].col};--fb:${SCHOOLS[F.b].col}" title="${F.name}: ${F.desc}">${schSvg(F.a)}${schSvg(F.b)}<span>${F.name}</span></${mini ? 'span' : 'button'}>`;
+// what you're building, at a glance: every fusion you have, then every school you wear, most first
 function schoolBar(equip = run.equip, max = 4, crests = equip === run.equip && run.boons ? run.boons.crests : null) {
   const n = schoolCounts(equip, crests), ks = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, max);
-  return ks.length ? ks.map((k) => schoolChip(k, n[k])).join('') : '';
+  const fz = fusionsOf(n).map((F) => fusionChip(F)).join('');
+  return ks.length ? fz + ks.map((k) => schoolChip(k, n[k])).join('') : '';
+}
+// the fusion wearing `inst` in `to` would switch on, if any
+function fusionJump(inst, to) {
+  const was = new Set(fusionsOf(mySchools()).map((F) => F.name));
+  return fusionsOf(mySchools({ ...run.equip, [to]: inst })).find((F) => !was.has(F.name)) || null;
+}
+function fusionSheet(i) {
+  const F = FUSIONS[i], n = run ? mySchools() : {}, on = (n[F.a] || 0) >= FUSE_AT && (n[F.b] || 0) >= FUSE_AT;
+  openSheet(`<div class="sh-head" style="--rc:${SCHOOLS[F.a].col}"><span class="sh-t">${fusionChip(F, true)}</span><span class="lbl">${on ? 'Working' : 'Not yet'}</span></div>
+    <div class="icard scd" style="--rc:${SCHOOLS[F.b].col};--nc:var(--ink)">
+      <p class="il-rule" style="font-size:14px">${F.desc}</p>
+      <p class="il-stat">${[F.a, F.b].map((k) => `${SCHOOLS[k].name} ${n[k] || 0}/${FUSE_AT}`).join(' · ')}</p>
+      <p class="il-sig">A fusion switches on when two schools both reach ${FUSE_AT} pieces.</p>
+    </div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
 function schoolSheet(k) {
   const S = SCHOOLS[k], n = (run ? mySchools() : {})[k] || 0, t = schoolTier(n), cr = (run && run.boons.crests && run.boons.crests[k]) || 0;
@@ -12003,6 +12141,8 @@ function schoolSheet(k) {
       <p class="iflav" style="margin:0 0 4px">${S.gist}</p>
       ${S.tiers.map((T, i) => `<div class="tier ${t > i ? 'on' : ''}"><b>${T.n}</b><span>${T.desc}</span></div>`).join('')}
       <p class="il-stat" style="margin-top:6px">${worn.length ? `You wear: ${worn.map((i) => ITEM[i.item].name).join(', ')}` : 'You wear none of it yet.'}${cr ? ` · ${cr} crest${cr > 1 ? 's' : ''}` : ''}</p>
+      <p class="il-sig" style="margin-top:6px"><b>Fusions</b> (both schools at ${FUSE_AT}):</p>
+      ${FUSIONS.filter((F) => F.a === k || F.b === k).map((F) => { const o = F.a === k ? F.b : F.a, ok = n >= FUSE_AT && (run ? mySchools()[o] || 0 : 0) >= FUSE_AT; return `<p class="il-${ok ? 'rule' : 'sig'}" style="margin:2px 0">${ok ? '✓' : '·'} <b>${F.name}</b> with ${SCHOOLS[o].name}: ${F.desc}</p>`; }).join('')}
       <p class="il-sig">Every piece in this school counts, whichever creature it came from. Dropped by ${hunts.map((h) => h.toLowerCase()).join(', ')}.</p>
     </div>
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
@@ -12027,7 +12167,7 @@ function setSheet(f) {
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
 function ruleSheet(id) {
-  const it = ITEM[id], kind = it.legend ? 'Legendary' : it.keystone ? 'Keystone' : 'Relic';
+  const it = ITEM[id], kind = it.legend ? 'Legendary' : it.engine ? 'Engine' : it.keystone ? 'Keystone' : 'Relic';
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : RELIC_COL;
   openSheet(`<div class="sh-head" style="--rc:${rim}">
       <span class="sh-t"><span class="sh-ic">${itemArt(id)}</span><b>${it.name}</b></span><span class="lbl">${kind}</span></div>
