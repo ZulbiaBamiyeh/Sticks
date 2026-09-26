@@ -4,6 +4,23 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **More moves, less repetition.** An audit of attack counts showed the spear and hammer each had
+  essentially one move and blade exchanges started about twice a fight. Now:
+  - Spear **javelin** (`tryJavelin`, `SHOT.javelin`): thrown to finish or at a far shooter. A kill
+    skewers the body and pins it where the spear sticks (`rag.pin`).
+  - **Loose weapons** (`world.loose`, `dropWeapon`, `javelinDown`, `stepLoose`, `fetchWeapon`,
+    `takeWeapon`, `drawLoose`): the owner fights unarmed (`punch`, `kick`, fists up), walks or jumps to
+    it, or it's recalled after `LOOSE_RECALL` frames. `u.unarmed` hides the weapon (`S.unarmed`) and
+    keeps it out of exchanges.
+  - Hammer **whirl** (`hspin`, a `multi` hit that flips facing every 5 frames) and **meteor** (`meteorStep`,
+    `landMeteor`, `crater` floor cracks as part `'k'`).
+  - Sword **launcher** (`upper`) as a combo branch, jumping after the rival for an air slash.
+  - Exchanges: `DUEL_REST` 420 frames and `DUEL_MAX` 3 (was 75 frames, uncapped). New strikes
+    `rising` and `pommel`; new endings `disarm` and `throw`.
+  - Sim: spear 46%, hammer 48%, sword 43% (slash1/2 damage 8 → 9 to make up for fewer exchanges).
+    All entries 43–57%. Run bot: no errors.
+
+## Before that (sound and fixes)
 - **Sound effects** (`sfx`, `SFX`): quiet Web Audio sounds for swings, hits, clangs, shots, spells,
   landings, spikes, KOs and UI ticks. Master level `SFX_VOL` 0.2 through a limiter; they follow the speaker button.
 - **Music carries on** between fights: a KO sinks it, then `music.duck` keeps it quiet and muffled under

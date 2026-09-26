@@ -119,11 +119,27 @@ fights run themselves. **Start a run** is the front door, and everything else
     and reaches day 5 or later in nearly all of them.
 - **Weapons:**
   - **Sword:** 7-frame windup, 3-hit combo, a dash slash from just out of
-    reach, and it knocks arrows and stars out of the air.
+    reach, and it knocks arrows and stars out of the air. With some
+    acrobatics the third hit is often a **launcher** (`upper`) that sends the
+    rival up; the sword jumps after it and meets it with an air slash.
   - **Daggers:** 4-frame flurry and the fastest feet, with the shortest reach.
   - **Spear:** longest reach, keeps you at the tip, and stabs up at jumpers.
+    It can be **thrown** (`javelin`), mostly as a finisher when one throw
+    would put the rival down, now and then at a shooter across the arena. A
+    throw that kills carries the body with it and pins it to the wall. Then
+    the spear is gone: it sticks in a wall or the floor, or drops by whatever
+    it hit, and the fighter fights with fists and feet (`punch`, `kick`) until
+    it walks over and picks it up (`fetchWeapon`). If it can't get there in
+    5.5 seconds, or the spear is out of reach, it flies back to the hand.
   - **Hammer:** 17-frame windup that hits can't interrupt, and it launches on
     hit. Its swing sends a shockwave along the floor that a roll can't get under.
+    It also has a **whirl** (`hspin`): held straight out and swung round
+    twice, hitting everything on both sides, for something at its back or a
+    crowd. And a **meteor** (`meteor`): from a ledge above the rival (or now
+    and then across open floor at a shooter) it crouches, leaps with a turn in
+    it, and comes straight down, cracking the floor and sending a wide
+    shockwave. The leap is simulated first (`meteorLands`), so it only goes
+    when it will come down on them, never onto a known spike.
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
@@ -198,7 +214,7 @@ fights run themselves. **Start a run** is the front door, and everything else
     swings wildly. It does best against blades and slime, and worst against
     shooters.
 - **Balance** (`tools/sim.mjs --fights 2000`, each tome counted as its own
-  entry): every entry wins between 44% and 57%. The Slime Tome wins 52% and
+  entry): every entry wins between 43% and 57%. The Slime Tome wins 52% and
   the Ice Tome 54%.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
@@ -318,9 +334,15 @@ fights run themselves. **Start a run** is the front door, and everything else
   drives a blocker down onto its knees (swords and hammers), and a low
   **sweep** along the floor that has to be hopped (daggers and spears). The
   defender blocks, ducks, hops, leans away, or **ripostes**, blocking and
-  cutting straight back in the same beat. An exchange ends in a finishing cut,
-  a vault over the top, a draw, a skill that breaks it, or a **kick** that
-  knocks the loser off its feet.
+  cutting straight back in the same beat. There's also a **rising** cut up
+  from the knee and a **pommel** strike to the face that staggers. An exchange
+  ends in a finishing cut, a vault over the top, a draw, a skill that breaks
+  it, a **kick** that knocks the loser off its feet, a **shoulder throw** that
+  lands them flat behind the winner, or a **disarm** (once a fight at most)
+  that sends the loser's weapon spinning away, to be fetched like a thrown
+  spear. Exchanges are kept rare so they stay a set piece: at least 7
+  seconds apart and 3 a fight at most (`DUEL_REST`, `DUEL_MAX`), about one a
+  fight between two blades.
 - **No trading hits:** a fighter who lands a hit keeps the initiative, and combos
   only continue when the next hit will connect. A fighter just shaken off a hit
   swings back, backs off, or puts its guard up. A swing into a guard becomes an
