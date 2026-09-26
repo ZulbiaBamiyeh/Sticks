@@ -110,103 +110,47 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
-  - **Spellbook:** a caster holds ground instead of moving on it. It is the
-    slowest thing in the game, it cannot roll, wall-run or double jump, it
-    sinks rather than falls, and it **plants its feet for the whole
-    incantation** — every page has a cast time, the bar over its head says how
-    much is left on it, and a hit landing during the cast knocks the page out
-    of its hands.
-  - **Every book answers the same six questions** — something to throw,
-    something to hide behind, something to stop what is running at you,
-    something for when it is already too close, something to leave on the
-    floor, and something to put on yourself — and there are no shared spells:
-    each book answers all six in its own **school**. A plain book is frost.
-    - **Frost** (the Rime Codex): an ice **lance**; a **slab of ice** that
-      bursts into chilling shards when it goes; legs **encased**; **spikes**
-      up through the floor; a **shatter** that hits harder for every Chill
-      already on them; and **ice armour** that will not be knocked about and
-      chills whatever hits it.
-    - **Flame** (the Ember Codex): a **fireball** that goes off where it
-      lands; a **pillar of flame** tall enough to catch somebody jumping it; a
-      **line of fire** that burns anything thrown through it; **embers**; an
-      **immolation** that costs you a little; and **cauterise**, which burns
-      every status out of you and heals you for each one.
-    - **Storm** (the Storm Codex): **arcs**; a **lightning rod** that pulls
-      the next few shots into itself and zaps anyone near it; a **tether**
-      that holds them at the end of a line and keeps biting; a **discharge**
-      that hits harder the more Shock they carry; a **thunder cloud** that
-      gathers over them before it strikes; and a **static shell**.
-    - **Slime** (the Gel Grimoire, and the Spore Codex with Poison on top):
-      it hardly hurts anybody — it sticks them. Gobs that **snare**, gel
-      poured on a charger, a **slick** on the floor, a **splash** that throws
-      everything back and glues it where it lands, a **membrane** that
-      swallows two shots, and **regrowth**, which heals you every third of a
-      second for six. **Snared** is its own state: rooted to the floor, but
-      still able to swing at whatever is in reach.
-  - **The book looks like a book.** It is held open and level in front of the
-    chest with both hands, tipped back toward the reader, with lines of
-    writing on the pages and a ribbon out of the spine. In a cast the book
-    hand slides under the spine, the pages light up in the school's colour
-    and turn over by themselves, and the words lift off them and drift up.
-  - **Warlock tomes** are spellbooks that have given up on doing damage now.
-    Their pages are **fear** (the target stops fighting and runs for a
-    second and a half), a **curse** (no damage at all, just the book's weather
-    driven deep, paid for in your own HP), a **drain** that pulls the
-    afflictions on them back up the line and into you, and a **rupture** that
-    tears every status out at once for a burst that scales with how much you
-    left in there. Their statuses deal +55% to +90%, **get worse the longer
-    they burn**, and every tick of them heals you back a fifth. A tome build
-    deals about **80% of its damage as statuses**, where a normal caster is
-    near 26% and a sword is 18%. The Tome of Rot, the Tome of Blood (whose
-    Bleed runs whether they swing or not), the Ashen Staff and the Mire Staff; they are drawn shut and clasped, with an eye on the
-    cover, and held shut in the hand. A warlock also moves differently again:
-    slower still, hardly falling at all, hunched over the book — and a drain
-    leaves it gliding for a second and a half on what it just took, dragging a
-    thread of ink behind it.
-  - **A caster wears a hat and walks.** No headband: a wide soft brim and a
-    cone that flops back off the head, with a band of your own ink. And it
-    never breaks into a run — the same leg cycle at two thirds the stride and
-    a slower count, so it walks everywhere it goes.
-  - **A tome can be a staff instead of a book**: a long shaft with a crook at
-    the head and a stone caught in it, held upright whatever the wrist is
-    doing. The Ashen Staff and the Mire Staff are staves; the Tome of Rot is a
-    book.
-  - **Casters and puppeteers stand like what they are.** Neither uses the
-    knife-fighter's crouch any more. A caster is upright with the book carried
-    flat in front and the free hand working above it, and it keeps that shape
-    while it walks; a cast gathers a ring of marks over the open page that
-    tightens as it comes due, in the colour of the school it is casting, with
-    the same light in the hand about to throw it, and a tome runs the ink down
-    out of the fingers instead. A **long** incantation adds a second ring
-    turning the other way around the free hand and draws a circle closing on
-    the ground under the caster's feet, so you can read what is coming. A puppeteer
-    stands tall and still with both hands up on the strings, and flicks a
-    wrist rather than swinging.
-  - In dev mode the weapon page has a **Book** (or **Puppet**) button under
-    the weapon chips that opens the ten books or the eight puppets, so a free
-    build can hold any codex, tome or form.
-  - **Puppet:** you never touch anybody, and you barely move — no roll, no
-    wall run, no double jump, and the slowest feet of any blade. The puppet
-    does the moving. Your swings land where it is, and between them it hangs
-    at your shoulder and **takes a shot meant for you**. A puppeteer never
-    crosses blades with anyone — there is nothing in its hands to cross — and
-    inside the strings all it has left is a **boot** that shoves you back out.
-    The heavy swing only comes out on an opening: something stunned, frozen or
-    on the floor.
-  - **Six forms**, and each one is a different verb, not a different number.
-    The **Marionette** swings a blade arm six tiles out and chains a second
-    swing behind it. The **Scorpion** plants its tail in someone and *holds
-    them there* while it is in, leaving Poison in the hole. The **Kite** is
-    thrown flat through them and reeled back along the same line, so it passes
-    twice. The **Idol** is hauled over their head and let go of, and the
-    landing cracks the floor either side of it. The **Spool** hangs three
-    tiles out with a wire running back to your hands that cuts whatever walks
-    into it, and its own strike winds them in. The **Lantern** hardly strikes
-    at all: it drifts over whoever you are looking at, drips on them, and
-    pours a little of it back into you.
-  - Each travelling puppet **aims during its wind-up and commits when it
-    goes**, so stepping aside is the answer to all of them, and each one
-    reaches a different distance: 4 tiles for the Lantern, 8 for the Spool.
+  - **Tome (the Slime Tome):** the only caster for now. The other books, both
+    staves and all six puppets are shelved while each tome is rebuilt to
+    fight its own way; their code is still in the file, and
+    `versions/inkfall-v4-schools-puppets.html` is the game with all of them in
+    it. A caster **looks like a caster**: a long robe with your colour round
+    the hem and at the collar, wide sleeves, a pointed hat, and no headband or
+    scarf. It **does not walk or run**. It floats a hand's width off the floor
+    with its feet together under the robe, leans into wherever it is gliding,
+    and never rolls, wall-runs, double jumps or flips away. When a blade comes
+    it glides back.
+  - **The tome looks like a tome.** A thick book floats in front of the caster,
+    bound in ink with pale metal corners, a drop of gel set into the cover that
+    blinks, your strap buckled round it, and gel dripping off the page ends. At
+    rest it lies shut with light leaking out. For a page the cover swings over
+    on the spine, the pages glow, and bubbles boil up off them.
+  - **It fights through what it grows.** Its pages:
+    - **Pour a slime** (up to three at a time): gel runs out of the pages to
+      the floor and a slime swells up out of the puddle. Slimes are small,
+      see-through, and wear a sprout in your colour so you can tell whose they
+      are. They stay near the book, hop at anything that comes close (and hunt
+      down anything shooting at it), glue what they bite, and get in the way:
+      a fighter has to go through them or walk round them to reach the book.
+      After 16 seconds a slime runs back into the tome and heals it a little.
+    - **Call them home** when it is hurt: every slime still out there flies
+      back into the book as a gob of gel and heals it for what was left of it.
+    - **Gob:** a lobbed gob of gel that hardly hurts but snares.
+    - **Splash:** anything that gets inside is thrown back and glued where it
+      lands.
+    - **Regrowth** when it is hurt and has no slimes to call.
+  - **The melt: a caster that can't be stunlocked.** Hit twice in a breath, or
+    about to be hit again while already hurt, the caster slumps into a puddle
+    that nothing can touch. The puddle slides out from under the blade, away if
+    there is floor behind it and straight under the attacker if not, with the
+    hat riding on top, the tome floating along above and two eyes peering out
+    the front. It leaves a slick where it was standing, then pulls itself back
+    together a few tiles off, pushing off and snaring whatever is standing on
+    it. It comes back every 7 seconds.
+  - **Matchups:** the melt eats combos, so the sword, daggers, spear and stars
+    struggle against it. A hammer's single heavy hit gives it nothing to melt
+    from, and a bow kites the slimes, so those two are its counters. In the
+    sim it wins 53% overall, with every weapon between 46% and 57%.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):

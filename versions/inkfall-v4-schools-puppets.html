@@ -780,11 +780,10 @@ const WEAP = {
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
-  spellbook: { name: 'Tome', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: 'slime · summon', desc: 'The Slime Tome. Glides instead of running, and never rolls or flips. Pours out slimes that hop at the rival and get in its way, calls them home to heal, and melts out from under a blade that has it pinned.' },
-  puppet: { name: 'Puppet', shelved: 1, speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, noDuel: 1, stat: '6 forms · reach', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. Everything happens out on the strings, and which puppet hangs on them changes what your attack is — a blade arm that swings, a tail that pins them down, a kite thrown out and back, a slab dropped on their head, a bobbin trailing a wire across the floor, or a lantern that hangs over them and pours.' },
+  spellbook: { name: 'Spellbook', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '5 schools', desc: 'Slow, and it cannot roll, wall-run or double jump — a caster holds ground instead of moving on it, and plants its feet for the whole incantation. Every book answers the same six questions — something to throw, something to hide behind, something to stop what is running at you, something for when it is already too close, something to leave on the floor, and something to put on yourself — but what it answers them *with* is the school it was written in. Frost, flame, storm and slime each do all six their own way, and a warlock\'s tome curses, drains, ruptures and frightens instead.' },
+  puppet: { name: 'Puppet', speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, noDuel: 1, stat: '6 forms · reach', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. Everything happens out on the strings, and which puppet hangs on them changes what your attack is — a blade arm that swings, a tail that pins them down, a kite thrown out and back, a slab dropped on their head, a bobbin trailing a wire across the floor, or a lantern that hangs over them and pours.' },
 };
-// shelved weapons keep their code (see versions/) but are never offered or rolled
-const WEAPONS = Object.keys(WEAP).filter((w) => !WEAP[w].shelved);
+const WEAPONS = Object.keys(WEAP);
 const MIN_SPEED = 5.7;
 const SKILL = {
   blink: { name: 'Blink', cd: 450, stat: '7.5s', desc: 'Teleports up to three tiles, through walls. Dodges, closes gaps, gets away.' },
@@ -842,14 +841,14 @@ const PAL = {
   blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
   tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
   burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#eda100', ice: 'rgba(61,156,196,0.16)',
-  goo: '#2fa58a', gooDk: '#17614f', gooHi: '#9fe6d2',
+  goo: '#2fa58a',
 };
 const PAL_INV = {
   out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
   ink: '#ffffff', far: '#d9ddd6', hatch: 'rgba(0,0,0,0)', grid: 'rgba(0,0,0,0)',
   blue: '#7fa3ff', red: '#ff7c66', spark: '#ffffff', steel: '#16191d', fog: 'rgba(22,25,29,0.9)',
   tintB: 'rgba(0,0,0,0)', tintR: 'rgba(0,0,0,0)', label: 'rgba(0,0,0,0)',
-  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)', goo: '#6fe0c2', gooDk: '#1f8a70', gooHi: '#d4fff2',
+  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)', goo: '#6fe0c2',
 };
 const TEAM = ['blue', 'red'];
 
@@ -1207,16 +1206,10 @@ const ATK = {
   acast_goo: { w: 17, a: 1, r: 11, shot: 'goo', air: 1, cd: 10, cast: 1 },
   cast_membrane: { w: 22, a: 2, r: 14, cd: 8, cast: 1, membrane: { hits: 2, secs: 6 } },
   cast_snare: { w: 22, a: 2, r: 15, cd: 8, cast: 1, snare: { secs: 1.4, reach: 7.5, dmg: 6 } },
-  cast_splash: { w: 26, a: 2, r: 16, cd: 8, cast: 1, splash: { r: 3.0, dmg: 11, kb: [10, -5], stun: 20, hs: 6, snare: 0.8, big: 1 } },
+  cast_splash: { w: 26, a: 2, r: 16, cd: 8, cast: 1, splash: { r: 3.0, dmg: 16, kb: [10, -5], stun: 20, hs: 6, snare: 0.8, big: 1 } },
   cast_slick: { w: 26, a: 2, r: 15, cd: 8, cast: 1, slick: { secs: 5, span: 1.4, every: 30, dmg: 2 } },
   // regrowth: nothing now, and a little every third of a second for the next six
   cast_regrow: { w: 24, a: 2, r: 14, cd: 10, cast: 1, regrow: { per: 2, every: 20, secs: 6 } },
-  // the slime tome: the book opens and something crawls out of it
-  cast_bud: { w: 30, a: 2, r: 14, cd: 6, cast: 1, bud: { hp: 22, life: 16 } },
-  // and calls them home: every slime still out there comes back in, and what is left of it is yours
-  cast_reabsorb: { w: 20, a: 2, r: 14, cd: 6, cast: 1, reabsorb: { per: 5, keep: 0.4 } },
-  // a slime's bite: a hop onto whatever it is looking at, and it sticks
-  budhop: { w: 14, a: 40, r: 16, dmg: 6, kb: [3, -4], stun: 14, hs: 3, box: [-0.4, -0.6, 0.4, 0.05], melee: 1, mob: 1 },
   // creatures: an ink slime's leap and a paper bat's dive
   hop2: { w: 18, a: 40, r: 16, dmg: 13, kb: [6, -7], stun: 22, hs: 5, box: [-0.55, -0.9, 0.55, 0.05], melee: 1, mob: 1 },
   hop3: { w: 22, a: 40, r: 18, dmg: 16, kb: [8, -9], stun: 26, hs: 7, box: [-0.75, -1.2, 0.75, 0.05], melee: 1, mob: 1, big: 1 },
@@ -1310,10 +1303,6 @@ const ATK_POSE = {
   acast_goo: { w: { fx: 0.3, fy: 0.1, bx: 0.06, by: 0.08, lean: -0.04, hipH: 0.78 }, a: { fx: 0.32, fy: 0.08, bx: 0.6, by: -0.18, lean: 0.1, hipH: 0.78 }, r: { fx: 0.32, fy: 0.1, bx: 0.4, by: -0.08, lean: 0.04, hipH: 0.78 } },
   cast_membrane: { w: { fx: 0.3, fy: 0.16, bx: 0.1, by: 0.02, lean: -0.04, hipH: 0.74 }, a: { fx: 0.34, fy: -0.04, bx: -0.1, by: -0.4, lean: -0.04, hipH: 0.82, head: -0.12 }, r: { fx: 0.32, fy: 0.08, bx: 0.06, by: -0.16, lean: 0, hipH: 0.76 } },
   cast_snare: { w: { fx: 0.32, fy: 0.16, bx: 0.2, by: -0.2, lean: -0.04, hipH: 0.76 }, a: { fx: 0.34, fy: 0.16, bx: 0.58, by: 0.32, lean: 0.22, hipH: 0.64, head: 0.14 }, r: { fx: 0.34, fy: 0.15, bx: 0.4, by: 0.18, lean: 0.1, hipH: 0.72 } },
-  // pulling something up out of the pages, then setting it down on the floor in front
-  cast_bud: { w: { fx: 0.3, fy: -0.22, bx: 0.18, by: -0.3, lean: 0.02, hipH: 0.8, head: -0.12 }, a: { fx: 0.52, fy: 0.3, bx: 0.42, by: 0.26, lean: 0.24, hipH: 0.7, head: 0.16 }, r: { fx: 0.44, fy: 0.2, bx: 0.3, by: 0.16, lean: 0.12, hipH: 0.74 } },
-  // arms flung wide to call them, then gathered in
-  cast_reabsorb: { w: { fx: 0.5, fy: -0.14, bx: -0.34, by: -0.12, lean: -0.1, hipH: 0.82, head: -0.14 }, a: { fx: 0.22, fy: 0.1, bx: 0.16, by: 0.12, lean: 0.12, hipH: 0.74, head: 0.08 }, r: { fx: 0.3, fy: 0.1, bx: 0.12, by: 0.12, lean: 0.04, hipH: 0.76 } },
   cast_splash: { w: { fx: 0.22, fy: 0.2, bx: -0.08, by: 0.2, lean: 0.14, hipH: 0.62, head: 0.12 }, a: { fx: 0.5, fy: 0.06, bx: -0.46, by: 0.02, lean: 0.02, hipH: 0.8 }, r: { fx: 0.36, fy: 0.1, bx: -0.2, by: 0.04, lean: 0.02, hipH: 0.74 } },
   cast_slick: { w: { fx: 0.32, fy: 0.18, bx: 0.3, by: -0.06, lean: 0.04, hipH: 0.72 }, a: { fx: 0.34, fy: 0.2, bx: 0.52, by: 0.36, lean: 0.24, hipH: 0.6, head: 0.18 }, r: { fx: 0.34, fy: 0.18, bx: 0.36, by: 0.22, lean: 0.12, hipH: 0.7 } },
   // a warlock's free hand: turned palm-down over the page on the curse, hauling back on the drain,
@@ -1408,7 +1397,7 @@ const NO_STATS = { hp: 0, atk: 0, def: 0, crit: 0, critDmg: 0, haste: 0, evasion
 const STATUS_W = { sword: 1, daggers: 0.6, spear: 1.1, hammer: 1.8, bow: 1.3, stars: 0.55 };
 // A free build has no gear, so a chosen book hands over its flags and on-hit the way a worn one would.
 function bookStats(bd) {
-  const it = bd && ITEM[bd.book || (bd.weapon === 'spellbook' ? 'slime_tome' : '')];   // a book with no name is the Slime Tome
+  const it = bd && bd.book && ITEM[bd.book];
   if (!it) return null;
   return { flags: { ...(it.flags || {}) }, onHit: (it.onHit || []).map((o) => ({ ...o, name: it.name })) };
 }
@@ -1460,7 +1449,7 @@ const SPELL_CD = {
   cast_icewall: 260, cast_encase: 210, cast_shatter: 160, cast_spike: 190, cast_icearmor: 270,
   cast_firewall: 250, cast_pillar: 170, cast_immolate: 175, cast_cinder: 260, cast_cauterize: 300,
   cast_rod: 260, cast_tether: 210, cast_discharge: 160, cast_thunder: 190, cast_static: 260,
-  cast_membrane: 250, cast_snare: 200, cast_splash: 210, cast_slick: 220, cast_regrow: 380, cast_bud: 170, cast_reabsorb: 300,
+  cast_membrane: 250, cast_snare: 200, cast_splash: 160, cast_slick: 220, cast_regrow: 380,
   cast_drain: 130, cast_rupture: 330, cast_fear: 230,
 };
 // A caster needs the same six answers every fight — something to throw, something to hide behind,
@@ -1471,14 +1460,11 @@ const SCHOOL = {
   frost: { name: 'Frost', col: 'chill', bolt: 'cast_lance', air: 'acast_lance', guard: 'cast_icewall', stop: 'cast_encase', burst: 'cast_shatter', trap: 'cast_spike', ward: 'cast_icearmor' },
   flame: { name: 'Flame', col: 'burn', bolt: 'cast_fireball', air: 'acast_fireball', guard: 'cast_firewall', stop: 'cast_pillar', burst: 'cast_immolate', trap: 'cast_cinder', ward: 'cast_cauterize' },
   storm: { name: 'Storm', col: 'shock', bolt: 'cast_arc', air: 'acast_arc', guard: 'cast_rod', stop: 'cast_tether', burst: 'cast_discharge', trap: 'cast_thunder', ward: 'cast_static' },
-  // the slime tome does not answer the six questions: it grows something to answer them for it, calls it
-  // back in to heal, and when a blade has it pinned it is not there to be hit (see startMelt)
-  slime: { name: 'Slime', col: 'goo', bolt: 'cast_goo', air: 'acast_goo', burst: 'cast_splash', summon: 'cast_bud', mend: 'cast_reabsorb', ward: 'cast_regrow' },
+  slime: { name: 'Slime', col: 'goo', bolt: 'cast_goo', air: 'acast_goo', guard: 'cast_membrane', stop: 'cast_snare', burst: 'cast_splash', trap: 'cast_slick', ward: 'cast_regrow' },
   // a warlock does not throw anything: the curse is its bolt, and fear is how it keeps people off it
   tome: { name: 'Warlock', col: null, bolt: 'cast_curse', air: 'cast_curse', aim: 'lance' },
 };
-const schoolOf = (u) => (u && u.gs && u.gs.flags.tome ? SCHOOL.tome : SCHOOL[(u && u.gs && u.gs.flags.school) || 'slime'] || SCHOOL.slime);
-const slimeTome = (u) => u && u.w === 'spellbook' && schoolOf(u) === SCHOOL.slime && !(u.gs && u.gs.flags.staff);
+const schoolOf = (u) => (u && u.gs && u.gs.flags.tome ? SCHOOL.tome : SCHOOL[(u && u.gs && u.gs.flags.school) || 'frost'] || SCHOOL.frost);
 // whether a ward is worth saying now: a shell wants something coming, a regrowth wants a wound, and
 // cauterising wants something in you to burn out
 function wardWanted(u, name) {
@@ -1507,14 +1493,6 @@ function pickSpell(u, fallback) {
     return 'cast_curse';
   }
   const ready = (role) => { const n = S[role]; return n && !(cd[n] > 0) ? n : null; };
-  if (S === SCHOOL.slime) {
-    const buds = budsOf(u).length, low = u.hp < u.hpMax * 0.6;
-    if (near && !rushed) { const n = ready('burst'); if (n) return n; }                  // off me
-    if (low && buds && !rushed) { const n = ready('mend'); if (n) return n; }            // come home
-    if (buds < budMax(u) && !rushed && !near) { const n = ready('summon'); if (n) return n; }   // grow another
-    if (low && !buds) { const n = ready('ward'); if (n && wardWanted(u, n)) return n; }
-    return S.bolt;
-  }
   // already inside your robes: the page that clears the room
   if (near && !rushed) { const n = ready('burst'); if (n) return n; }
   // something running at you: stop it where it stands
@@ -1584,12 +1562,10 @@ const foe = (u) => {
   if (world.demo) return null;
   if (U.length === 2) return U[1 - u.side];
   let best = u.tgt && u.tgt.state !== 'dead' && u.tgt.side !== u.side ? u.tgt : null;
-  const bias = (e) => (!u.mob && e.mob && MOB[e.mob].summoned ? 1.6 : 0);
-  let bd = best ? Math.hypot(best.b.x - u.b.x, best.b.y - u.b.y) - 1.5 + bias(best) : 1e9;
+  let bd = best ? Math.hypot(best.b.x - u.b.x, best.b.y - u.b.y) - 1.5 : 1e9;
   for (const e of U) {
     if (e.side === u.side || e.state === 'dead' || e === best) continue;
-    // a fighter would rather get to the caster than stop for its slimes, unless one is right in the way
-    const d = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y) + bias(e);
+    const d = Math.hypot(e.b.x - u.b.x, e.b.y - u.b.y);
     if (d < bd) { bd = d; best = e; }
   }
   if (best) return (u.tgt = best);
@@ -1790,10 +1766,6 @@ function tryAttack(u, e) {
   if (wp.range) {
     const dist = Math.hypot(dx, dy);
     if (u.hidden && dist < 3.5) return false;   // slip away first; the shot out of hiding is worth more from range
-    if (u.w === 'spellbook' && !e.ghost && !lying(e)) {   // a summons, a splash or a call home needs no line to them
-      const n = pickSpell(u);
-      if (!ATK[n].shot && n !== 'cast_bolt') { u.face = f; startAtk(u, n); return true; }
-    }
     if (!e.ghost && Math.abs(dx) < 1.25 && Math.abs(dy) < 1 && !lying(e)) { u.face = f; startAtk(u, 'kick'); return true; }
     if (dist < 1.8) return false;
     if (e.ghost && u.blind <= 0) return false;  // one hopeful shot at where the rival vanished, then hold fire
@@ -1912,7 +1884,6 @@ function rangedEngage(u, e) {
   if (e.w === 'puppet') danger = Math.max(danger, pupForm(e).reach + 0.5);   // the strings go a lot further than an arm does
   if (dist > danger + 1 || (u.react > 0 || ai.escT > world.t || dist > danger)) return backpedal(u, e, dist, danger);
   ai.escT = world.t + 8;
-  if (u.w === 'spellbook') return backpedal(u, e, dist, danger);   // no jumps and flips: it glides back, and melts when pinned
   if (cornerVault(u, e)) return true;
   const ex = e.b.x + e.b.vx * 0.35, cur = Math.hypot(b.x - ex, dy);
   let best = null, bs = -1e9;
@@ -2854,7 +2825,7 @@ function heal(u, amt) {
   const hd = u.gs && u.gs.flags.healDamage, f = hd && foeOf(u);
   if (f && f.state !== 'dead') hurt(f, amt * hd, 'hit', u.side, null, [['hits', 1]]);
 }
-const foeOf = (u) => (u.mob && u.side ? U[0] : foe(u));
+const foeOf = (u) => (u.mob ? U[0] : foe(u));
 // Triggers: a trinket's "when" and "what", fired from the fight at the matching moment.
 function fire(u, type, other) {
   const g = u.gs;
@@ -2985,7 +2956,6 @@ function applyHit(att, def, d, dirX, crit) {
     return;
   }
   att.hitLanded = true;
-  if (def.w === 'spellbook') (def.hitT ||= []).push(world.t);
   if (def.state === 'atk' && def.atkDef && def.atkDef.cast && def.phase === 'w' && def.shield <= 0) fizzle(def);
   const ag = att.gs, dg = def.gs;
   const critCh = (att.critCh || 0) + (ag && ag.flags.chillCrit ? ag.flags.chillCrit * def.st.chill : 0);
@@ -3063,7 +3033,6 @@ function applyHit(att, def, d, dirX, crit) {
   }
   const taken = dmg;
   hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap * armour / dmg], ['shock', zap * armour / dmg]] : [[kind, 1]]);
-  if (att.mob === 'bud') world.stats[att.side].budDmg = (world.stats[att.side].budDmg || 0) + taken;   // for the balance tables
   if (ag && ag.ls > 0 && att.state !== 'dead') heal(att, taken * ag.ls);
   const aSh = shiftOf(att);
   if (aSh && att.state !== 'dead') {   // the form's own bite
@@ -3298,7 +3267,7 @@ const MOB = {
       const b = u.b;
       if (u.size < 2) return;
       for (const s of [-1, 1]) {
-        const k = makeMob('slime', b.x + s * 0.25, u.size - 1, 0, broodTier(u), u.side);
+        const k = makeMob('slime', b.x + s * 0.25, u.size - 1, 0, broodTier(u));
         k.b.y = b.y; k.b.vx = s * 4.5; k.b.vy = -8; k.b.gr = false; k.iT = 24; k.react = 30; k.cd = 50; k.face = s; k.squash = 0.4;
         U.push(k);
       }
@@ -4651,57 +4620,6 @@ function makeMob(kind, x, size = 1, slot = 0, tier = 'easy', side = 1) {
   if (K.init) K.init(u);
   return u;
 }
-// A slime the tome poured out: a small goo blob with a sprout of your colour on top, so you can always
-// tell whose it is. It stays near the book, hops at anything of theirs that comes close, sticks what it
-// bites, and when its time is up it runs back into the book.
-MOB.bud = {
-  name: 'Slime', hp: 26, bw: 0.58, bh: 0.46, cd: 34, burst: 'goo', summoned: true,
-  think(u, e, dx, dy) {
-    const b = u.b, m = u.master;
-    if (!b.gr || u.spawnT > 0) return;
-    u.face = Math.sign(dx) || u.face;
-    if (u.cd <= 0 && u.react <= 0 && !e.hidden && Math.abs(dx) < 2.6 && dy > -2 && dy < 1.5 && e.state !== 'dead' && !(e.iT > 0)) { startMobAtk(u, 'budhop'); return; }
-    // a slime on a leash: it goes for anything near the book (or shooting at it), and drifts home if it has wandered off
-    let tx = e.b.x;
-    if (m && m.state !== 'dead') {
-      const eNear = Math.abs(e.b.x - m.b.x) < 5 || Math.abs(dx) < 3 || isRanged(e);   // something shooting from far off gets hunted down
-      if (!eNear) tx = m.b.x + Math.sign(e.b.x - m.b.x) * (1.2 + u.slot * 0.6);
-    }
-    const tdx = tx - b.x;
-    if (--u.hopT <= 0 && Math.abs(tdx) > 0.5) {
-      const dir = Math.sign(tdx), wall = boxSolid(b.x + dir * (u.bw / 2 + 0.3) - 0.05, b.y - 0.9, b.x + dir * (u.bw / 2 + 0.3) + 0.05, b.y - 0.1);
-      b.vx = dir * Math.min(5.2, 2 + Math.abs(tdx) * 1.2); b.vy = wall ? -17 : -8; b.gr = false; u.squash = -0.35; u.face = dir;
-      u.hopT = 14 + Math.floor(rng() * 12);
-    }
-  },
-  atk(u, d, e, ev) {
-    const b = u.b;
-    if (u.af === 1) u.bit = false;
-    if (u.phase === 'w') u.squash = -0.45 * Math.min(1, u.af / d.w);
-    if (u.af === d.w) {
-      u.phase = 'a';
-      const dx = e.b.x - b.x;
-      b.vx = clampV(dx * 2.6, 8); b.vy = -10; b.gr = false; u.squash = 0.35; u.face = Math.sign(dx) || u.face;
-    }
-    if (u.hitLanded && !u.bit) { u.bit = true; snareOn(e, 0.5); gooSplat(e.b.x, e.b.y, 5); }
-    if (u.phase === 'a' && ((ev & EV_LAND) || u.af >= d.w + d.a)) {
-      u.phase = 'r'; u.af = Math.max(u.af, d.w + d.a); u.squash = -0.5; dust(b.x, b.y, 3, u.bw);
-    }
-  },
-  step(u) {
-    if (u.state === 'free' && !u.b.gr) u.squash = approach(u.squash, 0.2, 0.04);
-    if (u.spawnT > 0) u.spawnT--;
-    if (u.state === 'dead' || world.over) return;
-    if (!u.master || u.master.state === 'dead') { hurt(u, 1, 'status', -1, 'goo'); return; }   // nothing to hold it together
-    if (--u.life <= 0) budHome(u, 4 * powerOf(u.master));
-    if (world.t % 9 === 0 && Math.random() < 0.5) parts.push({ k: 'p', x: u.b.x + (Math.random() - 0.5) * u.bw * 0.7, y: u.b.y - 0.05, vx: 0, vy: 0, life: 0, max: 40, c: 'goo' });
-  },
-  die(u) {
-    gooSplat(u.b.x, u.b.y, 10);
-    if (!world.stats[u.side].pops++) log(u.side ? 'You popped one of its slimes.' : 'One of your slimes popped.', 1 - u.side);
-  },
-  draw(u, pal, ink, flash) { drawBud(u, pal, flash); },
-};
 // Gravity and tile collisions for a creature's own box. Flyers ignore gravity (unless frozen).
 function mobPhys(u) {
   const K = MOB[u.mob], b = u.b, hw = u.bw / 2, h = u.bh, fly = !!(K.fly && K.fly(u));
@@ -4788,12 +4706,12 @@ function mobDie(u) {
   const b = u.b, cy = b.y - u.bh / 2;
   for (let i = 0; i < 14; i++) {
     const a = Math.random() * 6.283, sp = 3 + Math.random() * 7;
-    parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.2, y: cy + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 50 + Math.random() * 30, c: K.burst || 'ink' });
+    parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.2, y: cy + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 50 + Math.random() * 30, c: 'ink' });
   }
   for (let i = 0; i < (K.scraps || 0); i++) scrap(b.x + (Math.random() - 0.5) * u.bw, cy + (Math.random() - 0.5) * u.bh, (Math.random() - 0.5) * 9, -2 - Math.random() * 6);
   ring(b.x, cy, 1, 'spark'); sfxShake(4); world.hs = Math.max(world.hs, 5);
   if (K.die) K.die(u);
-  if (u.side === 0 || K.summoned) { if (!K.summoned) log('Your puppet came apart.', 1); return; }   // yours falling is a loss, not a win   // yours falling is a loss, not a win
+  if (u.side === 0) { log('Your puppet came apart.', 1); return; }   // yours falling is a loss, not a win
   if (world.hunt && !U.some((o) => o.side === 1 && o.state !== 'dead')) {
     world.over = true; world.winner = 0; world.overT = 0; world.ko = true; world.koAt = { x: b.x, y: cy };
     world.slowT = 60; world.impact = 3;
@@ -4865,8 +4783,6 @@ function atkStep(u) {
     if (d.splash) castSplash(u, d.splash);
     if (d.slick) castSlick(u, d.slick);
     if (d.regrow) castRegrow(u, d.regrow);
-    if (d.bud) summonBud(u, d.bud);
-    if (d.reabsorb) castReabsorb(u, d.reabsorb);
     if (d.sigil) castSigil(u, d.sigil);
     if (d.wall) castWall(u, d.wall);
     if (d.curse) castCurse(u, d.curse);
@@ -4937,7 +4853,6 @@ function act(u) {
     if (g.trig.length && world.intro <= 0) fire(u, 'every');
   }
   if (u.hidden > 0 && --u.hidden === 0) smoke(b.x, b.y, 6);
-  meltCheck(u);
   statusStep(u);
   if (u.state === 'dead') return;
   u.fade = approach(u.fade, u.hidden ? 1 : 0, u.hidden ? 0.12 : 0.2);
@@ -4987,7 +4902,6 @@ function act(u) {
       if (u.tumble && !u.st.frozen) u.rot += u.spin;
       if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; u.recover = true; }
       break;
-    case 'melt': fr = 0; meltStep(u); break;
     case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
     case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
   }
@@ -5321,132 +5235,6 @@ function castRegrow(u, rg) {
   for (let i = 0; i < 8; i++) streak(u.b.x + (Math.random() - 0.5) * 0.6, u.b.y - Math.random() * 0.4, -Math.PI / 2, 0.5, 'goo');
   u.hitDone = true;
 }
-// ---- the slime tome
-// Slimes poured out of the pages. They are creatures on your side: they hop at whatever of theirs is
-// nearest, glue it where they bite, and whatever is chasing the book has to go through them first.
-const BUD_MAX = 3;
-const budsOf = (u) => U.filter((k) => k.mob === 'bud' && k.master === u && k.state !== 'dead');
-const budMax = (u) => BUD_MAX + ((u.gs && u.gs.flags.budMax) || 0);
-function summonBud(u, sp) {
-  u.hitDone = true;
-  const b = u.b, f = u.face;
-  const x = boxSolid(b.x + f * 0.9 - 0.3, b.y - 0.5, b.x + f * 0.9 + 0.3, b.y - 0.05) ? b.x : b.x + f * 0.9;
-  gooSplat(x, b.y, 10); ring(x, b.y - 0.2, 0.7, 'goo');
-  if (world.demo || budsOf(u).length >= budMax(u)) return;
-  const k = makeMob('bud', x, 1, budsOf(u).length, 'easy', u.side), pw = powerOf(u);
-  k.master = u; k.variant = null; k.accent = null; k.sting = null;
-  k.hp = k.hpMax = k.hpShow = Math.round(sp.hp * pw * (1 + ((u.gs && u.gs.flags.budHp) || 0)));
-  k.dmgMul = pw; k.cdMul = 1; k.b.y = b.y; k.face = f;
-  k.spawnT = k.spawnMax = 24; k.iT = 24; k.react = 24; k.cd = 20; k.life = Math.round(sp.life * 60);
-  U.push(k);
-  if (!world.stats[u.side].buds++) log(u.side ? `${rivalName()} poured a slime out of its book.` : 'Your tome poured out a slime.', u.side);
-}
-// Calling them home: each one runs back into the book as a gob of gel, and heals you when it gets there.
-function castReabsorb(u, ra) {
-  u.hitDone = true;
-  const pw = powerOf(u);
-  for (const k of budsOf(u)) budHome(k, ra.per * pw + k.hp * ra.keep);
-  ring(u.b.x, u.b.y - H / 2, 1.1, 'goo');
-}
-function budHome(k, amt) {
-  const b = k.b;
-  k.state = 'dead'; k.absorbed = true;
-  world.globs.push({ x: b.x, y: b.y - k.bh / 2, vx: (Math.random() - 0.5) * 3, vy: -7 - Math.random() * 2, to: k.master, amt, t: 0, r: 0.13 + k.hp / k.hpMax * 0.07 });
-  gooSplat(b.x, b.y, 5);
-}
-// Gobs of gel on their way back to the book.
-function stepGlobs() {
-  const out = [];
-  for (const g of world.globs) {
-    const u = g.to;
-    if (!u || u.state === 'dead') continue;
-    const tx = u.b.x + u.face * 0.35, ty = u.b.y - 0.95, dx = tx - g.x, dy = ty - g.y, d = Math.hypot(dx, dy);
-    g.t++;
-    if (d < 0.35 || g.t > 100) {
-      heal(u, g.amt);
-      if (g.amt >= 1) popText(u.b.x, u.b.y - H - 0.35, `+${Math.round(g.amt)}`, 'goo', 0.42);
-      ring(tx, ty, 0.5, 'goo');
-      continue;
-    }
-    const pull = Math.min(1, g.t / 20) * 70;
-    g.vx += dx / d * pull * DT; g.vy += dy / d * pull * DT + (g.t < 15 ? 20 * DT : 0);
-    const v = Math.hypot(g.vx, g.vy), vm = 13;
-    if (v > vm) { g.vx *= vm / v; g.vy *= vm / v; }
-    g.x += g.vx * DT; g.y += g.vy * DT;
-    if (world.t % 3 === 0) parts.push({ k: 'p', x: g.x, y: g.y, vx: 0, vy: 0.5, life: 0, max: 18, c: 'goo' });
-    out.push(g);
-  }
-  world.globs = out;
-}
-
-// The melt. A slime caster that a blade has pinned — hit twice in a breath, or about to be hit again
-// while already hurting — is not there for the next swing: it slumps into a puddle nothing can touch,
-// slides out from under the blade (away if there is floor behind it, straight through the attacker if
-// not), leaves a slick where it was standing, and pulls itself back together a few tiles off.
-const MELT = { cd: 420, slide: 9.5, frames: 30, reform: 16, trail: 3, pop: 1.5 };
-const canMelt = (u) => u.w === 'spellbook' && schoolOf(u) === SCHOOL.slime && !world.demo && !(u.meltCd > world.t);
-const recentHits = (u, win) => { const h = u.hitT; if (!h) return 0; while (h.length && h[0] < world.t - 150) h.shift(); return h.filter((t) => t >= world.t - win).length; };
-function meltCheck(u) {
-  if (!canMelt(u) || u.st.frozen > 0 || u.state === 'melt' || u.state === 'down' || u.state === 'getup' || u.state === 'duel') return;
-  const e = foe(u);
-  if (!e || e.state === 'dead' || world.over || world.intro > 0) return;
-  // pinned: the second hit of a combo has just landed
-  const pinned = u.state === 'stun' && recentHits(u, 80) >= 2;
-  // or a blade is coming down on a caster that is already hurting
-  const t = u.state === 'free' || (u.state === 'atk' && u.phase === 'w') ? meleeThreat(u, e) : -1;
-  const coming = t >= 0 && t <= 7 && (recentHits(u, 150) >= 1 || u.hp < u.hpMax * 0.5);
-  if (pinned || coming) startMelt(u, e);
-}
-function meltRoom(u, dir) {
-  const b = u.b, r = Math.floor(b.y - 1e-3);
-  let d = 0;
-  for (let k = 0.6; k <= MELT.trail + 0.6; k += 0.5) {
-    const x = b.x + dir * k;
-    if (!standable(Math.floor(x), r) || inZone(x)) break;
-    d = k;
-  }
-  return d;
-}
-function startMelt(u, e) {
-  const b = u.b, away = -(Math.sign(e.b.x - b.x) || u.face);
-  const back = meltRoom(u, away), through = meltRoom(u, -away);
-  const dir = back >= 2 || back >= through ? away : -away;
-  u.state = 'melt';   // a page half read is simply dropped u.atkName = null; u.atkDef = null; u.stunT = 0; u.tumble = false; u.backflip = false;
-  u.melt = { t: 0, dir, max: MELT.frames + MELT.reform, x0: b.x };
-  u.iT = u.melt.max; u.juggle = 0; u.hitT = []; u.meltCd = world.t + MELT.cd; u.snareT = 0;
-  u.ai.macro = null; u.ai.path.length = 0; u.face = dir;
-  if (b.vy < 0) b.vy = 0;
-  const y = b.gr ? b.y : groundBelow(b.x, b.y);
-  world.fires.push({ kind: 'slick', x: b.x, y, span: 0.9, t: 180, max: 180, side: u.side, by: u, sl: { every: 30, dmg: 1 } });
-  gooSplat(b.x, b.y, 14); popText(b.x, b.y - H - 0.5, 'MELT', 'goo', 0.5);
-  world.hs = Math.max(world.hs, 4); sfxShake(3);
-  world.stats[u.side].melts++;
-  if (world.stats[u.side].melts === 1) log(u.side ? `${rivalName()} melted out from under the blade.` : 'Your caster melted out from under the blade.', u.side);
-}
-function meltStep(u) {
-  const m = u.melt, b = u.b;
-  m.t++;
-  if (m.t <= MELT.frames) {
-    const k = m.t / MELT.frames, ahead = b.x + m.dir * 0.7;
-    const sp = inZone(ahead) || !standable(Math.floor(ahead), Math.floor(b.y - 1e-3)) ? 0 : MELT.slide * (k < 0.2 ? k / 0.2 : 1 - (k - 0.2) * 0.8);
-    if (b.gr) b.vx = m.dir * sp;
-    if (b.gr && world.t % 2 === 0) parts.push({ k: 'p', x: b.x - m.dir * 0.3, y: b.y - 0.03, vx: 0, vy: 0, life: 0, max: 70, c: 'goo' });
-  } else b.vx *= 0.6;
-  if (m.t === MELT.frames + 1) { gooSplat(b.x, b.y, 8); }
-  if (m.t >= m.max) endMelt(u);
-}
-function endMelt(u) {
-  const b = u.b;
-  u.state = 'free'; u.melt = null; u.react = 3; u.iT = Math.max(u.iT, 6); u.cd = 0;
-  // pulling back together pushes off whatever is standing on the puddle, and leaves it stuck
-  ring(b.x, b.y - H / 2, MELT.pop, 'goo'); gooSplat(b.x, b.y, 10); sfxShake(2);
-  for (const e of U) {
-    if (e.side === u.side || e.state === 'dead') continue;
-    if (Math.abs(e.b.x - b.x) > MELT.pop || Math.abs(e.b.y - b.y) > 1.2) continue;
-    snareOn(e, 0.7);
-    if (!e.heavy) e.b.vx = (Math.sign(e.b.x - b.x) || 1) * 5;
-  }
-}
 // A line of fire on the floor. It stops nothing, but nobody crosses it for free.
 function castFireWall(u, fw) {
   const b = u.b, x = Math.max(1.2, Math.min(COLS - 1.2, b.x + u.face * fw.at));
@@ -5735,8 +5523,7 @@ function poseTarget(u) {
   // a book hand slides under the spine to cast; a staff is carried in one hand with the other held up
   if (w === 'spellbook') {
     T.draw = st === 'atk' ? 1 : 0;
-    if (st === 'atk' && !(u.gs && u.gs.flags.staff) && !slimeTome(u)) { T.fx += 0.14; T.fy += 0.07; }
-    if (slimeTome(u) && st !== 'atk') { T.fx = 0.4; T.fy = 0.06; T.bx = -0.04; T.by = 0.3; }   // one hand held over the floating tome
+    if (st === 'atk' && !(u.gs && u.gs.flags.staff)) { T.fx += 0.14; T.fy += 0.07; }
     if (u.gs && u.gs.flags.staff && st !== 'atk') { T.fx = 0.36; T.fy = 0.12; T.bx = 0.3; T.by = -0.22; }
   }
   // A warlock carries the book shut and low, hunched over it, and barely picks its feet up to move.
@@ -5771,15 +5558,6 @@ function poseTarget(u) {
   } else if (b.vy < 0) { T.ffx = 0.22; T.ffy = T.hipH * 0.5; T.bfx = -0.08; T.bfy = T.hipH * 0.62; }
   else { T.ffx = 0.2; T.ffy = T.hipH * 0.92; T.bfx = -0.24; T.bfy = T.hipH * 0.8; }
   if (atkPose) for (const k of LEGK) if (k in atkPose) T[k] = atkPose[k];
-  // A caster does not walk: it floats a hand's width off the floor, feet together under the robe, and
-  // leans into wherever it is gliding.
-  if (w === 'spellbook' && !b.gr && st === 'free') { T.ffx = 0.05; T.bfx = -0.07; T.ffy = T.hipH * 0.96; T.bfy = T.hipH * 0.92; T.lean = -0.04; }
-  if (w === 'spellbook' && b.gr && (st === 'free' || st === 'atk')) {
-    const lean = Math.max(-0.12, Math.min(0.14, fwd * 0.03));
-    T.hipH += 0.12 + Math.sin(t * 0.05) * 0.025; T.lean += lean;
-    T.ffx = 0.05 - lean * 0.8; T.bfx = -0.08 - lean * 0.8; T.ffy = T.hipH - 0.14; T.bfy = T.hipH - 0.12;
-    T.kl = 0.3; T.d = 0.5;
-  }
   // Acrobatics set the legs too, so they come last.
   if (st === 'roll' || (st === 'free' && u.flipT > 0)) {
     Object.assign(T, TUCK); T.drop = st === 'roll' ? 0.32 : 0;
@@ -5812,10 +5590,6 @@ const WALL_SLIDE = {
 };
 function poseStep(u) {
   if (u.state === 'dead' || u.st.frozen) return;
-  if (u.w === 'spellbook') {   // the tome swings open for a page and shuts itself after
-    const open = u.state === 'atk' && u.atkDef && u.atkDef.cast ? 1 : 0;
-    u.tomeOpen = approach(u.tomeOpen || 0, open, open ? 0.09 : 0.05);
-  }
   const T = poseTarget(u), p = u.pose.p, v = u.pose.v;
   for (const k of PK) {
     const g = LEGK.has(k) ? T.kl : ARMK.has(k) ? T.ka : T.kb;
@@ -5997,8 +5771,8 @@ function newWorld(seed) {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
-    sigils: [], walls: [], fires: [], globs: [], bolt: null,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0, melts: 0, buds: 0, pops: 0 })),
+    sigils: [], walls: [], fires: [], bolt: null,
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -6020,7 +5794,6 @@ function simStep() {
   resolveHits();
   stepSigils();
   stepFires();
-  stepGlobs();
   if (world.bolt && --world.bolt.t <= 0) world.bolt = null;
   world.walls = world.walls.filter((w) => { if (--w.t > 0) return true; wallGone(w); return false; });
   stepShots();
@@ -6071,7 +5844,8 @@ const RIVALS = [
   { name: 'Anvil', trinket: 'static', weapon: 'hammer', skill: 'hook', acro: 0, t: 3, tag: 'Built a staircase and wants you on it.', tip: 'Hooks you in from across the stairs. The swing is slow and armored: back off, let it miss, then hit.' },
   { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
-  { name: 'Folio', trinket: 'viper', weapon: 'spellbook', skill: 'blink', acro: 0, t: 5, tag: 'Grows its own army.', tip: 'A slime caster: its slimes hop at you and get between you and it. Pop them or walk past them, but get to the book — and when it melts out from under your blade, be ready to chase the puddle.' },
+  { name: 'Marrow', trinket: 'barb', weapon: 'puppet', skill: 'ghostwalk', acro: 2, t: 3, tag: 'Never gets its own hands dirty.', tip: 'Fights you with a marionette six tiles out, so its own body is never where the blades are. Get inside the strings and all it has left is a boot.' },
+  { name: 'Folio', trinket: 'frost', weapon: 'spellbook', skill: 'blink', acro: 1, t: 5, tag: 'Reads out loud.', tip: 'A frost caster, rooted while it casts: anything that closes fast beats it — but stand still at range and the spikes will find you.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
@@ -6101,7 +5875,7 @@ const HP_FLOOR = 0.3, HP_BREATH = { easy: 0.25, normal: 0.12, elite: 0.04 }, RES
 // The duel that ends a day patches you up, but only by so much: come out of the hunts ragged and you
 // fight it ragged. A new day always starts whole.
 const DUEL_HEAL = 0.5;
-const RUN_KEY = 'homeTurf.run.v3', GHOST_KEY = 'homeTurf.ghosts.v3';   // v3: runs saved before the books were shelved may hold shelved items
+const RUN_KEY = 'homeTurf.run.v2', GHOST_KEY = 'homeTurf.ghosts.v2';
 const dayOf = (round) => Math.ceil(round / RUNCFG.perDay);
 const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
 const isDuelRound = (round) => slotOf(round) === RUNCFG.perDay;
@@ -6204,8 +5978,8 @@ const ITEM = {
   linen_shirt: iA('Linen Shirt', null, 'core', { hp: 10 }),
   // gel: the slime's. Staying power.
   gel_blade: iW('Gel Blade', 'gel', 'sword', { stats: { hp: 10 } }),
-  slime_tome: iW('Slime Tome', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { school: 'slime' },
-    desc: 'Pours slimes out of its pages — up to three, hopping at the rival, gluing it where they bite and standing in the way of its blade — and calls them home again to heal you. Gobs that stick, a splash for anything that gets too close, and when you are pinned you melt into a puddle, slide out from under the swing and pull yourself back together somewhere else.', flavor: 'Something in it is always growing.' }),
+  gel_grimoire: iW('Gel Grimoire', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { spellSt: null, school: 'slime' },
+    desc: 'The slime school. It hardly hurts anybody: it sticks them. Gobs that snare what they hit, gel poured on a charger so it cannot move, a slick left on the floor, a splash that throws everything near you back and glues it where it lands, a skin that swallows three shots — and a regrowth that heals you a little every third of a second for six.', flavor: 'The ink never quite dries.' }),
   glob_maul: iW('Glob Maul', 'gel', 'hammer', { stats: { hp: 12 } }),
   jelly_stars: iW('Jelly Stars', 'gel', 'stars', { stats: { regen: 0.5 } }),
   gel_cap: iA('Gel Cap', 'gel', 'head', { hp: 16, regen: 0.6 }),
@@ -6793,11 +6567,6 @@ Object.assign(ITEM, {
 for (const id of ['ironblood_sigil', 'duelists_tally', 'whetted_edge', 'plague_ledger', 'fungal_crown', 'collectors_pin', 'bulwark_studs',
   'pack_whistle', 'shadow_tally', 'ember_lens', 'storm_tally', 'frost_lens', 'venom_tally', 'tidal_ledger',
   'alchemists_coil', 'compounding_engine', 'ouroboros_nib']) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
-// Shelved while the casters are rebuilt one book at a time: every other book, both staves and all the
-// puppets. Their code stays; versions/inkfall-v4-schools-puppets.html is the game with them in it.
-const SHELVED = ['spore_codex', 'rime_codex', 'ember_codex', 'storm_codex', 'blood_codex', 'rot_tome', 'ash_tome', 'mire_tome',
-  'wing_marionette', 'scale_scorpion', 'silk_marionette', 'silk_spool', 'iron_effigy', 'toxic_censer', 'scythe_puppet', 'venom_scorpion'];
-for (const id of SHELVED) delete ITEM[id];
 for (const id of Object.keys(ITEM)) { ITEM[id].id = id; ITEM[id].stats = ITEM[id].stats || {}; }
 // Every family's drop list, keystone and relic, rebuilt once all the items above are registered.
 for (const id of Object.keys(ITEM)) if (ITEM[id].keystone && ITEM[id].family) (KEYSTONE_OF[ITEM[id].family] ||= []).push(id);
@@ -7721,239 +7490,6 @@ function drawGearHead(S, pal, ink, mono) {
   }
   ctx.restore();
 }
-// ---- the slime caster, drawn
-// A robe: one ink shape from the collar to just above the feet, flaring at the hem, cut from the spine's own
-// angle so it tips and tumbles with the body, trailing behind whatever way it is gliding. Your colour runs
-// round the hem and holds the collar shut — no headband, no scarf.
-function drawRobe(S, ink, team, far) {
-  const hip = S.hip, neck = S.neck;
-  let ux = neck.x - hip.x, uy = neck.y - hip.y;
-  const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
-  const rx = -uy, ry = ux;
-  const P = (a, d) => ({ x: hip.x + rx * a + ux * d, y: hip.y + ry * a + uy * d });
-  const proj = (q) => ({ a: (q.x - hip.x) * rx + (q.y - hip.y) * ry, d: (q.x - hip.x) * ux + (q.y - hip.y) * uy });
-  const f1 = proj(S.ff), f2 = proj(S.bf), sw = S.sway || 0, t = world ? world.t : 0;
-  const hemD = Math.min(f1.d, f2.d) + 0.1;
-  const a0 = Math.min(f1.a, f2.a, -0.1) - 0.17 + sw, a1 = Math.max(f1.a, f2.a, 0.1) + 0.17 + sw;
-  const hem = [];
-  for (let i = 0; i <= 8; i++) {
-    const k = i / 8, a = a0 + (a1 - a0) * k;
-    hem.push(P(a, hemD + (i % 2 ? 0.03 : 0) + Math.sin(t * 0.12 + i * 1.3) * 0.012));
-  }
-  ctx.fillStyle = ink; ctx.beginPath();
-  const nl = P(-0.09, L - 0.03), nr = P(0.09, L - 0.03), wl = P(-0.15, 0.08), wr = P(0.15, 0.08);
-  ctx.moveTo(nl.x, nl.y);
-  ctx.quadraticCurveTo(wl.x, wl.y, hem[0].x, hem[0].y);
-  for (let i = 1; i < hem.length; i++) { const m = hem[i - 1]; ctx.quadraticCurveTo(m.x, m.y, (m.x + hem[i].x) / 2, (m.y + hem[i].y) / 2); }
-  ctx.lineTo(hem[hem.length - 1].x, hem[hem.length - 1].y);
-  ctx.quadraticCurveTo(wr.x, wr.y, nr.x, nr.y);
-  ctx.closePath(); ctx.fill();
-  // a fold down the front, and the trim
-  ctx.globalAlpha = 0.5; stroke([P(0.03 * Math.sign(sw || 1), 0.05), P(0.06 + sw * 0.6, hemD + 0.08)], far, 0.02); ctx.globalAlpha = 1;
-  const trim = hem.map((q, i) => { const k = i / 8, a = a0 + (a1 - a0) * k; const r = P(a * 0.97, hemD + 0.06); return { x: r.x + (q.x - P(a, hemD).x), y: r.y + (q.y - P(a, hemD).y) }; });
-  ctx.lineCap = 'round'; stroke(trim, team, 0.045);
-  const cl = P(0, L - 0.1);
-  ctx.fillStyle = team; ctx.beginPath(); ctx.arc(cl.x, cl.y, 0.042, 0, 6.283); ctx.fill();
-}
-// A wide sleeve: the arm inside a bell of cloth that opens toward the wrist.
-function drawSleeve(sh, el, hand, color, lw) {
-  const w2 = { x: el.x + (hand.x - el.x) * 0.55, y: el.y + (hand.y - el.y) * 0.55 };
-  const dx = w2.x - el.x, dy = w2.y - el.y, d = Math.hypot(dx, dy) || 1, px = -dy / d, py = dx / d;
-  stroke([sh, el], color, lw * 1.5);
-  ctx.fillStyle = color; ctx.beginPath();
-  ctx.moveTo(el.x + px * 0.05, el.y + py * 0.05); ctx.lineTo(w2.x + px * 0.1, w2.y + py * 0.1);
-  ctx.lineTo(w2.x - px * 0.1, w2.y - py * 0.1); ctx.lineTo(el.x - px * 0.05, el.y - py * 0.05); ctx.closePath(); ctx.fill();
-  stroke([w2, hand], color, lw * 0.9);
-}
-// The Slime Tome: a thick book that floats in front of its reader, bound in ink, cornered in pale metal,
-// with a drop of gel set into the cover and your strap round it. At rest it lies shut with light leaking
-// out of it; for a page the front cover swings over on the spine and the book lies open, pages up.
-function drawTome(S, pal, ink, team) {
-  const f = S.face || 1, c = S.tomeC, t = world ? world.t : 0, open = Math.max(0, Math.min(1, S.open || 0));
-  const th = 0.12 + 2.78 * open, ca = Math.cos(th), sa = Math.sin(th);
-  const W2 = 0.2, DZ = 0.22, PG = 0.065, CV = 0.022, IN = 0.015;
-  const tilt = Math.sin(t * 0.045 + (S.side || 0)) * 0.06, tc = Math.cos(tilt), ts = Math.sin(tilt);
-  // X runs away from the reader (the spine is on the reader's side), Y is up, Z comes toward the viewer
-  const pr = (X, Y, Z) => { const x = X * f, y = -Y * 0.95 + Z * 0.42; return { x: c.x + x * tc - y * ts, y: c.y + x * ts + y * tc }; };
-  const lid = (xr, yr, Z) => pr(-W2 + xr * ca - yr * sa, PG + xr * sa + yr * ca, Z);
-  const quad = (q, fill, line) => { ctx.beginPath(); ctx.moveTo(q[0].x, q[0].y); for (let i = 1; i < q.length; i++) ctx.lineTo(q[i].x, q[i].y); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (line) { ctx.strokeStyle = line; ctx.lineWidth = 0.018; ctx.stroke(); } };
-  const glow = S.castC || pal.goo;
-  const pageGlow = (q) => { if (open <= 0.02) return; ctx.globalAlpha = 0.18 + 0.55 * open; quad(q, glow); ctx.globalAlpha = 1; };
-  const lines = (P, x0, x1) => { ctx.globalAlpha = 0.55 * open; for (let i = 0; i < 4; i++) { const z = -DZ + 0.07 + i * 0.085; stroke([P(x0, z), P(x1 - (i === 3) * 0.08, z)], ink, 0.011); } ctx.globalAlpha = 1; };
-  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  const W = 2 * W2;
-  const bottom = () => {
-    // the back cover and the lower half of the pages; the end of the page block striped
-    quad([pr(-W2, -CV, DZ + 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(W2 + 0.012, 0, DZ + 0.012), pr(-W2, 0, DZ + 0.012)], ink);
-    quad([pr(-W2, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(-W2, -CV, DZ + 0.012)], ink);
-    quad([pr(-W2 + IN, 0, DZ), pr(W2 - IN, 0, DZ), pr(W2 - IN, PG, DZ), pr(-W2 + IN, PG, DZ)], pal.steel, ink);
-    ctx.globalAlpha = 0.7;
-    for (const y of [0.016, 0.032, 0.047]) stroke([pr(-W2 + IN + 0.015, y, DZ), pr(W2 - IN - 0.015, y, DZ)], pal.far, 0.008);
-    ctx.globalAlpha = 1;
-    const top = [pr(-W2 + IN, PG, -DZ), pr(W2 - IN, PG, -DZ), pr(W2 - IN, PG, DZ), pr(-W2 + IN, PG, DZ)];
-    quad(top, pal.steel, ink); pageGlow(top);
-    if (open > 0.3) lines((x, z) => pr(x, PG, z), -W2 + 0.05, W2 - 0.04);
-    // gel oozing out over the end of the pages and hanging off it in drops
-    ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.014;
-    for (let i = 0; i < 3; i++) {
-      const X = [-0.09, 0.03, 0.12][i], len = 0.05 + 0.09 * (0.5 + 0.5 * Math.sin(t * 0.05 + i * 2.1)) + open * 0.06;
-      const a = pr(X - 0.03, PG, DZ), b2 = pr(X + 0.03, PG, DZ), tip = pr(X, -CV - len, DZ + 0.014);
-      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(a.x, tip.y - 0.02, tip.x, tip.y);
-      ctx.quadraticCurveTo(b2.x, tip.y - 0.02, b2.x, b2.y); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.arc(tip.x, tip.y, 0.02 + 0.008 * i, 0, 6.283); ctx.fill(); ctx.stroke();
-    }
-  };
-  const top = () => {
-    // the front cover and the upper half of the pages, swinging over on the spine
-    const end = [lid(IN, 0, DZ), lid(W - IN, 0, DZ), lid(W - IN, PG, DZ), lid(IN, PG, DZ)];
-    const coverEnd = [lid(0, PG, DZ + 0.012), lid(W + 0.012, PG, DZ + 0.012), lid(W + 0.012, PG + CV, DZ + 0.012), lid(0, PG + CV, DZ + 0.012)];
-    if (th < Math.PI / 2) {
-      if (th < 0.4) { ctx.globalAlpha = 0.45 + 0.35 * Math.sin(t * 0.1); stroke([pr(-W2 + 0.05, PG + 0.006, DZ), pr(W2 - 0.02, PG + 0.012, DZ)], glow, 0.028); ctx.globalAlpha = 1; }
-      quad(end, pal.steel, ink); quad(coverEnd, ink);
-      const cov = [lid(0, PG + CV, -DZ - 0.012), lid(W + 0.012, PG + CV, -DZ - 0.012), lid(W + 0.012, PG + CV, DZ + 0.012), lid(0, PG + CV, DZ + 0.012)];
-      quad(cov, ink);
-      // pale metal on the corners, and a drop of gel set into the cover, watching
-      ctx.fillStyle = pal.steel;
-      for (const [x0, z0, sx, sz] of [[0.02, -DZ, 1, 1], [W, -DZ, -1, 1], [W, DZ, -1, -1], [0.02, DZ, 1, -1]]) {
-        const a = lid(x0, PG + CV, z0), b2 = lid(x0 + sx * 0.07, PG + CV, z0), d2 = lid(x0, PG + CV, z0 + sz * 0.08);
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); ctx.lineTo(d2.x, d2.y); ctx.closePath(); ctx.fill();
-      }
-      stroke([lid(0.03, PG + CV, -DZ), lid(0.03, PG + CV, DZ)], pal.far, 0.014);   // the ridge of the spine
-      const e = lid(W2 + 0.02, PG + CV, 0), r = 0.06;
-      ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.016;
-      ctx.beginPath(); ctx.moveTo(e.x, e.y - r * 1.4); ctx.quadraticCurveTo(e.x + r * 1.05, e.y - r * 0.1, e.x, e.y + r * 0.7);
-      ctx.quadraticCurveTo(e.x - r * 1.05, e.y - r * 0.1, e.x, e.y - r * 1.4); ctx.fill(); ctx.stroke();
-      const blink = (t + (S.side || 0) * 50) % 150 < 6;
-      ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(e.x + f * 0.01, e.y - 0.004, 0.016, blink ? 0.004 : 0.022, 0, 0, 6.283); ctx.fill();
-      // your strap, round the end of the book and buckled
-      if (th < 0.4) stroke([lid(W - 0.07, PG + CV, DZ - 0.07), lid(W - 0.07, PG + CV, DZ + 0.014), pr(W2 - 0.07, -CV, DZ + 0.014)], team, 0.032);
-      else stroke([lid(W - 0.07, PG + CV, DZ + 0.014), { x: lid(W - 0.07, PG + CV, DZ).x, y: lid(W - 0.07, PG + CV, DZ).y + 0.12 }], team, 0.03);
-    } else {
-      quad(coverEnd, ink);
-      quad(end, pal.steel, ink);
-      const page = [lid(IN, 0, -DZ), lid(W - IN, 0, -DZ), lid(W - IN, 0, DZ), lid(IN, 0, DZ)];
-      quad(page, pal.steel, ink); pageGlow(page);
-      if (open > 0.3) lines((x, z) => lid(x, 0, z), 0.04, W - 0.05);
-      const s0 = lid(W - 0.07, PG + CV, DZ + 0.012);
-      stroke([s0, { x: s0.x + Math.sin(t * 0.09) * 0.03, y: s0.y + 0.13 }], team, 0.03);   // the strap, undone
-    }
-    stroke([pr(-W2 - 0.005, PG * 0.5, DZ + 0.012), pr(-W2 - 0.005, PG * 0.5, -DZ - 0.012)], ink, 0.045);   // the spine, rounded
-  };
-  if (th < Math.PI / 2) { bottom(); top(); } else { top(); bottom(); }
-}
-// A shadow on the floor under a caster, so the float reads as a float.
-function drawHoverShadow(u, pal) {
-  const b = u.b;
-  if (!b.gr || u.state === 'dead') return;
-  ctx.globalAlpha = 0.14; ctx.fillStyle = pal.ink;
-  ctx.beginPath(); ctx.ellipse(b.x, b.y - 0.015, 0.36 + Math.sin(world.t * 0.05 + u.side * 37) * 0.03, 0.055, 0, 0, 6.283); ctx.fill();
-  ctx.globalAlpha = 1;
-}
-// A closed wobbling curve with a flat underside: the shape of every slime.
-function blobPath(cx, base, w, h, t, seed) {
-  const cy = base - h / 2, pts = [];
-  for (let i = 0; i < 24; i++) {
-    const a = i / 24 * 6.283, wob = 1 + 0.05 * Math.sin(3 * a + t * 0.18 + seed);
-    let y = cy + Math.sin(a) * h / 2 * wob;
-    if (Math.sin(a) > 0) y = Math.min(y, base);
-    if (Math.sin(a) < 0) y += Math.sin(a) * Math.abs(Math.cos(a)) * h * -0.12;
-    pts.push({ x: cx + Math.cos(a) * w / 2 * wob, y });
-  }
-  ctx.beginPath();
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i], n = pts[(i + 1) % pts.length];
-    if (!i) ctx.moveTo((p.x + pts[pts.length - 1].x) / 2, (p.y + pts[pts.length - 1].y) / 2);
-    ctx.quadraticCurveTo(p.x, p.y, (p.x + n.x) / 2, (p.y + n.y) / 2);
-  }
-  ctx.closePath();
-}
-// A slime out of the tome: see-through gel with a darker skin, a light caught inside it, bubbles rising
-// through it, two eyes, and a sprout of your colour on top. It swells up out of a puddle when it is poured,
-// and flickers when its time is nearly up.
-function drawBud(u, pal, flash) {
-  const b = u.b, t = world.t, sp = u.spawnT > 0 ? 1 - u.spawnT / u.spawnMax : 1;
-  const grow = sp < 1 ? 1 + 2.7 * Math.pow(sp - 1, 3) + 1.7 * Math.pow(sp - 1, 2) : 1;   // eases out past full, then settles
-  const q = Math.max(-0.5, Math.min(0.45, u.squash)), h = Math.max(0.04, u.bh * (1 + q) * grow), w = u.bw * (1 - q * 0.75) * (0.55 + 0.45 * grow);
-  const cx = b.x, base = b.y, cy = base - h / 2, seed = u.slot * 2.3;
-  if (u.life < 100 && u.life % 16 < 5) ctx.globalAlpha = 0.55;
-  if (sp < 1) { ctx.fillStyle = pal.goo; ctx.globalAlpha = 0.6 * (1 - sp); ctx.beginPath(); ctx.ellipse(cx, base - 0.02, 0.45, 0.07, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
-  blobPath(cx, base, w, h, t, seed);
-  ctx.fillStyle = flash ? pal.red : pal.goo; ctx.fill();
-  ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.035; ctx.stroke();
-  const ga = ctx.globalAlpha;
-  ctx.globalAlpha = ga * 0.45; ctx.fillStyle = pal.gooHi;
-  ctx.beginPath(); ctx.ellipse(cx - w * 0.05, cy + h * 0.14, w * 0.3, h * 0.24, 0, 0, 6.283); ctx.fill();
-  ctx.globalAlpha = ga * 0.8; ctx.strokeStyle = pal.gooHi; ctx.lineWidth = 0.02;
-  for (let i = 0; i < 2; i++) {
-    const ph = (t * 0.012 + i * 0.5 + seed) % 1;
-    ctx.beginPath(); ctx.arc(cx + (i ? 0.12 : -0.1) * w, base - h * (0.15 + ph * 0.6), 0.018 + 0.012 * i, 0, 6.283); ctx.stroke();
-  }
-  ctx.globalAlpha = ga;
-  ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.035;
-  ctx.beginPath(); ctx.arc(cx - w * 0.14, cy - h * 0.02, Math.min(w, h) * 0.3, Math.PI * 1.1, Math.PI * 1.45); ctx.stroke();
-  const ex = cx + u.face * w * 0.14, ey = cy - h * 0.04, blink = (t + u.slot * 37) % 120 < 5;
-  ctx.fillStyle = pal.ink;
-  for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.ellipse(ex + s2 * w * 0.12, ey, 0.028, blink ? 0.006 : 0.045, 0, 0, 6.283); ctx.fill(); }
-  // the sprout: a stem and two leaves in your colour, bent back by the hop
-  const team = pal[TEAM[u.side]], top = { x: cx, y: base - h * 1.02 }, lean = -clampV(u.b.vx * 0.03, 0.12);
-  const tip = { x: top.x + lean, y: top.y - 0.14 * grow };
-  ctx.strokeStyle = team; ctx.lineWidth = 0.03; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(top.x, top.y); ctx.quadraticCurveTo(top.x + lean * 0.3, top.y - 0.08, tip.x, tip.y); ctx.stroke();
-  ctx.fillStyle = team;
-  for (const s2 of [-1, 1]) {
-    ctx.beginPath(); ctx.ellipse(tip.x + s2 * 0.055, tip.y - 0.015 + Math.sin(t * 0.1 + s2) * 0.008, 0.06, 0.026, s2 * -0.5, 0, 6.283); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-// Melted: a puddle of gel sliding along the floor with the hat riding on top of it and the tome floating
-// along above, two eyes peering out of the front of it. It slumps down out of the figure first, and at
-// the end the figure pulls itself back up out of it.
-function drawMelt(u, pal) {
-  const m = u.melt, b = u.b, f = m.dir, t = world.t;
-  const sink = Math.min(1, m.t / 7), rise = m.t > MELT.frames ? Math.min(1, (m.t - MELT.frames) / MELT.reform) : 0;
-  const ink = pal.ink, team = pal[TEAM[u.side]], spd = Math.min(1, Math.abs(b.vx) / MELT.slide);
-  const figS = rise > 0 ? rise : 1 - sink;
-  const tomeC = { x: b.x + f * 0.38, y: b.y - 0.5 - figS * 0.5 + Math.sin(t * 0.08) * 0.04 };
-  if (figS > 0.03) {
-    const S = skel(u); S.face = u.face; S.slime = true; S.tomeC = null; S.side = u.side; S.sway = 0;
-    ctx.save(); ctx.translate(b.x, b.y); ctx.scale(1 + (1 - figS) * 0.6, figS); ctx.translate(-b.x, -b.y);
-    drawFig(S, u.side, pal, false); ctx.restore();
-  }
-  const amt = rise > 0 ? 1 - rise : sink;
-  if (amt > 0.02) {
-    const pw = (0.3 + 0.28 * amt) * (1 + spd * 0.35), ph = 0.07 + 0.13 * amt;
-    ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.035;
-    ctx.beginPath();
-    for (let i = 0; i <= 24; i++) {
-      const a = (i / 24) * Math.PI, cs = Math.cos(a), lead = cs * f > 0 ? 1 + spd * 0.35 : 1 - spd * 0.25;
-      const x = b.x + cs * pw, y = b.y - Math.sin(a) * ph * lead * (1 + 0.12 * Math.sin(3 * a + t * 0.35));
-      if (!i) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.03;
-    ctx.beginPath(); ctx.moveTo(b.x - f * pw * 0.45, b.y - ph * 0.55); ctx.lineTo(b.x - f * pw * 0.1, b.y - ph * 0.72); ctx.stroke();
-    const blink = t % 70 < 4;
-    ctx.fillStyle = ink;
-    for (const s2 of [0, 1]) { ctx.beginPath(); ctx.ellipse(b.x + f * (pw * 0.35 + s2 * 0.09), b.y - ph * 0.62, 0.022, blink ? 0.005 : 0.036, 0, 0, 6.283); ctx.fill(); }
-    if (figS < 0.5) {
-      // the hat, riding the puddle, bobbing and tipped back by the slide
-      const hx = b.x - f * pw * 0.2, hy = b.y - ph * 0.85 - Math.abs(Math.sin(t * 0.3)) * 0.03;
-      const ang = -f * (0.25 * spd + 0.08 * Math.sin(t * 0.2)), up = { x: Math.sin(ang), y: -Math.cos(ang) }, side = { x: Math.cos(ang), y: Math.sin(ang) };
-      drawWizardHat({ head: { x: hx - up.x * 0.08, y: hy - up.y * 0.08 }, face: f }, up, side, ink, team);
-    }
-  }
-  drawTome({ face: u.face, tomeC, open: 0, side: u.side }, pal, ink, team);
-}
-// Gobs of gel flying home to the book.
-function drawGlobs(pal) {
-  for (const g of world.globs) {
-    const sp = Math.hypot(g.vx, g.vy), st = 1 + Math.min(0.7, sp / 18), ang = Math.atan2(g.vy, g.vx);
-    ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.025;
-    ctx.beginPath(); ctx.ellipse(g.x, g.y, g.r * st, g.r / st, ang, 0, 6.283); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = pal.steel; ctx.lineWidth = 0.022;
-    ctx.beginPath(); ctx.arc(g.x - 0.03, g.y - 0.03, g.r * 0.5, Math.PI * 1.1, Math.PI * 1.5); ctx.stroke();
-  }
-}
 function drawFig(S, side, pal, flash, mono) {
   if (mono) pal = monoPal(mono);
   const ink = flash ? pal[TEAM[side]] : pal.ink, far = flash ? pal[TEAM[side]] : pal.far, team = pal[TEAM[side]];
@@ -7962,14 +7498,13 @@ function drawFig(S, side, pal, flash, mono) {
   drawGearBack(S, pal, ink, mono);
   drawBackWeapon(S, side, pal, far);
   stroke([S.hip, S.kb, S.bf], far, lw);
-  if (S.w === 'spellbook') drawSleeve(S.sh, S.eb, S.hb, far, lw); else stroke([S.sh, S.eb, S.hb], far, lw);
-  if (S.scarf && S.w !== 'spellbook') {
+  stroke([S.sh, S.eb, S.hb], far, lw);
+  if (S.scarf) {
     for (let i = 1; i < S.scarf.length; i++) stroke([S.scarf[i - 1], S.scarf[i]], team, 0.085 * (1 - i / S.scarf.length * 0.7));
   }
   stroke([S.hip, S.neck], ink, lw * 1.08);
   stroke([S.hip, S.kf, S.ff], ink, lw);
   drawGearFeet(S, pal, ink, far, mono);
-  if (S.w === 'spellbook') drawRobe(S, ink, team, far);
   drawGearTorso(S, pal, ink, mono);
   ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(S.head.x, S.head.y, 0.155, 0, Math.PI * 2); ctx.fill();
   drawGearHead(S, pal, ink, mono);
@@ -7978,9 +7513,9 @@ function drawFig(S, side, pal, flash, mono) {
   if (S.w === 'spellbook') drawWizardHat(S, { x: hx / hd, y: hy / hd }, { x: px, y: py }, ink, team);
   else stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
   drawWeapon(S, side, pal, ink);
-  if (S.w === 'spellbook') drawSleeve(S.sh, S.ef, S.hf, ink, lw); else stroke([S.sh, S.ef, S.hf], ink, lw);
+  stroke([S.sh, S.ef, S.hf], ink, lw);
 }
-// A wizard's hat: a wide soft brim and a cone that leans back off the head.
+// A wizard's hat: a wide soft brim and a cone that leans back off the head, with a band of your ink.
 function drawWizardHat(S, up, side, ink, team) {
   const h = S.head, f = S.face || 1;
   const at = (u2, s2) => ({ x: h.x + up.x * u2 + side.x * s2, y: h.y + up.y * u2 + side.y * s2 });
@@ -7997,7 +7532,10 @@ function drawWizardHat(S, up, side, ink, team) {
   ctx.quadraticCurveTo(lean.x - side.x * 0.1, lean.y - side.y * 0.1, tip.x, tip.y);
   ctx.quadraticCurveTo(lean.x + side.x * 0.12, lean.y + side.y * 0.12, at(0.1, 0.19).x, at(0.1, 0.19).y);
   ctx.closePath(); ctx.fill();
-  void team;   // no band: a caster wears nothing that reads as a ninja's headband
+  // the band
+  const b1 = at(0.13, -0.17), b2 = at(0.13, 0.17);
+  ctx.strokeStyle = team; ctx.lineWidth = 0.055;
+  ctx.beginPath(); ctx.moveTo(b1.x, b1.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
 }
 // The off-hand dagger or star sits behind the body, in the far-limb color.
 function drawBackWeapon(S, side, pal, far) {
@@ -8045,8 +7583,6 @@ function drawWeapon(S, side, pal, ink) {
     stroke([w.c1, w.c4], team, 0.05);
   } else if (S.w === 'stars') {
     if (S.held & 1) drawStar(w.s1.x, w.s1.y, 0.14, 0, ink, team);
-  } else if (S.w === 'spellbook' && S.slime) {
-    if (S.tomeC) drawTome(S, pal, ink, team);   // no tome here means it is being drawn somewhere else
   } else if (S.w === 'spellbook' && S.staff) {
     // a staff: a long shaft, a crook at the top and a stone caught in it
     stroke([w.sButt, w.sTop], ink, 0.065);
@@ -8242,31 +7778,6 @@ function drawCast(u, S, pal) {
       const dx = (i - 1) * 0.07, len = 0.1 + 0.22 * k * (0.6 + 0.4 * Math.sin(world.t * 0.3 + i));
       ctx.beginPath(); ctx.moveTo(hand.x + dx, hand.y + 0.04); ctx.lineTo(hand.x + dx, hand.y + 0.04 + len); ctx.stroke();
     }
-  } else if (slimeTome(u) && S.tomeC) {
-    // the open pages boil: bubbles come up off them and burst above the book
-    const tc = S.tomeC, f = u.face;
-    ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.025;
-    for (let i = 0; i < 8; i++) {
-      const ph = (world.t * 0.03 + i / 8) % 1, gx = tc.x + ((i % 4) - 1.5) * 0.1 + Math.sin(world.t * 0.07 + i * 2) * 0.04, gy = tc.y - 0.12 - ph * (0.3 + 0.45 * k);
-      ctx.globalAlpha = (1 - ph) * (0.3 + 0.65 * k);
-      ctx.beginPath(); ctx.arc(gx, gy, 0.02 + 0.035 * k * (1 - ph * 0.5), 0, 6.283); ctx.stroke();
-    }
-    if (u.atkName === 'cast_bud') {
-      // a rope of gel poured from the pages to the floor, pooling where the slime will stand up
-      const sx = tc.x + f * 0.12, sy = tc.y + 0.02, ex = u.b.x + f * 0.9, ey = u.b.y - 0.03, pour = Math.min(1, k * 1.4);
-      const my = sy + (ey - sy) * pour, mx = sx + (ex - sx) * pour;
-      ctx.globalAlpha = 0.9; ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.05 + 0.05 * k;
-      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + f * 0.35, sy + 0.05, mx, my); ctx.stroke();
-      ctx.fillStyle = pal.goo; ctx.globalAlpha = 0.85;
-      ctx.beginPath(); ctx.ellipse(ex, ey, 0.12 + 0.3 * k * pour, 0.04 + 0.05 * k * pour, 0, 0, 6.283); ctx.fill();
-      ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.02; ctx.stroke();
-    } else if (u.atkName === 'cast_reabsorb') {
-      // the call: rings drawn in toward the book
-      ctx.strokeStyle = pal.goo; ctx.lineWidth = 0.035;
-      for (let i = 0; i < 2; i++) { const r = 0.4 + (1 - ((k + i * 0.5) % 1)) * 1.4; ctx.globalAlpha = 0.25 + 0.45 * k; ctx.beginPath(); ctx.ellipse(tc.x, tc.y, r, r * 0.55, 0, 0, 6.283); ctx.stroke(); }
-    }
-    ctx.globalAlpha = 0.4 + 0.5 * k; ctx.fillStyle = pal.goo;
-    ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.04 + 0.07 * k, 0, 6.283); ctx.fill();
   } else {
     // the words lift off the open pages as they are read out, and drift up and away
     ctx.strokeStyle = c; ctx.lineWidth = 0.03; ctx.lineCap = 'round';
@@ -8613,21 +8124,10 @@ let flashCell = null;
 const DISPLAY_FONT = getComputedStyle(document.documentElement).getPropertyValue('--display');
 function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
-  if (u.state === 'dead') {
-    const R = ragSkel(u.rag); R.look = u.look; R.face = u.face;
-    if (slimeTome(u)) { R.slime = true; R.open = 0; R.side = u.side; R.tomeC = { x: R.hf.x, y: R.hf.y + 0.1 }; }
-    drawFig(R, u.side, pal, false); return;
-  }
+  if (u.state === 'dead') { const R = ragSkel(u.rag); R.look = u.look; R.face = u.face; drawFig(R, u.side, pal, false); return; }
   if (u.shift) { drawShifted(u, pal); return; }
   const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
-  if (u.state === 'melt') { drawMelt(u, pal); drawMarks(u, null, pal); return; }
   if (u.w === 'spellbook') {
-    drawHoverShadow(u, pal);
-    if (slimeTome(u)) {
-      const p = S.hip, bob = Math.sin(world.t * 0.06 + u.side * 2) * 0.035, o = u.tomeOpen || 0;
-      S.slime = true; S.open = o; S.side = u.side; S.sway = -clampV(u.b.vx * 0.03, 0.14);
-      S.tomeC = { x: p.x + u.face * 0.46, y: p.y - 0.2 - o * 0.16 + bob };
-    }
     const d = u.state === 'atk' && u.atkDef && u.atkDef.cast ? u.atkDef : null;
     S.castK = d ? (u.phase === 'w' ? Math.min(1, u.af / d.w) : 1) : 0;
     const sc = (u.gs && u.gs.flags.spellSt) || schoolOf(u).col;
@@ -8875,7 +8375,6 @@ function render() {
   for (const u of U) drawTrail(u, pal);
   const order = U.slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead')).reverse();
   for (const u of order) drawUnit(u, pal);
-  drawGlobs(pal);
   for (const u of U) if (u.w === 'puppet') drawPuppet(u, pal);
   for (const a of shots) if (!a.stuck) {
     const ux = Math.cos(a.ang), uy = Math.sin(a.ang);
@@ -9047,7 +8546,6 @@ const GEAR_ICON = {
   head: '<circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4.5 9.5 H17.5 M17.5 9.5 L20.5 7.5 M17.5 9.5 L20.5 12" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/>',
   core: '<path d="M11 3 V13 M11 13 L7 20 M11 13 L15 20 M11 6.5 L6 11 M11 6.5 L16 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M9 5.5 C 5 5 3 7 2 9" fill="none" stroke="#2358d6" stroke-width="2" stroke-linecap="round"/>',
   none: '<circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="2.4 2"/>',
-  spellbook: '<path d="M4 4 H16.5 Q18.5 4 18.5 6 V14.5 H6 Q4 14.5 4 12.5 Z" fill="currentColor"/><path d="M6 14.5 H18.5 V17.5 H6 Q4 17.5 4 15.5 V12.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M11.5 6.3 C 13.4 8.6 13.4 11 11.5 11 C 9.6 11 9.6 8.6 11.5 6.3 Z" fill="#2fa58a"/><path d="M8.5 17.5 V20 M14 17.5 V19" stroke="#2fa58a" stroke-width="1.7" stroke-linecap="round"/>',
   trinket: '<path d="M11 2.5 V7.5 M8 2.5 H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="11" cy="13.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="11" cy="13.5" r="2" fill="#2358d6"/>',
   relic: '<path d="M11 2.5 L18.5 9 L11 19.5 L3.5 9 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M3.5 9 H18.5 M8 9 L11 19.5 L14 9" fill="none" stroke="#c9961a" stroke-width="1.6" stroke-linejoin="round"/>',
 };
@@ -9133,13 +8631,11 @@ const ART_WEAPON = {
       + (v % 2 ? ln('M14 23.5 H22', a, 1.5) : ln('M15 9.5 H21', a, 1.5));
   },
   spellbook(v, a) {
-    // the Slime Tome: a thick dark book, pale corners, a drop of gel on the cover watching you, dripping
-    return pth('M6 5 H24 Q27 5 27 8 V21.5 H9 Q6 21.5 6 18.5 Z')
-      + paperP('M9 21.5 H27 V26 H9 Q6 26 6 23 V18.5 Q6 21.5 9 21.5 Z', 1.4) + ln('M10 23.8 H25', '#9aa3a8', 0.9)
-      + pth('M24.5 5 H27 V7.5 Z M6 7.5 V5 H8.5 Z', PAPER_C)
-      + pth('M16.5 8 C 19.8 11.8 19.8 16 16.5 16 C 13.2 16 13.2 11.8 16.5 8 Z', a, 'none')
-      + circ(17, 13, 1.1, 'currentColor')
-      + pth('M11.5 25.5 V28.5 M20 25.5 V27.5', 'none', a, 2.2) + circ(11.5, 29.3, 1.3, a) + ln('M22.5 21.5 V26', a, 2.2);
+    const shut = v % 3 === 2;
+    if (shut) return paperP('M7 5 H23 A2 2 0 0 1 25 7 V26 A2 2 0 0 1 23 28 H7 Z') + ln('M10 5 V28', 'currentColor', 2) + ln('M14 12 H21 M14 16 H21 M14 20 H19', a, 1.6) + circ(16, 9, 1.8, a);
+    const covers = v % 3 ? 'M16 9 C 11 6 7 6 3 8 V25 C 7 23 11 23 16 26 Z M16 9 C 21 6 25 6 29 8 V25 C 25 23 21 23 16 26 Z'
+                         : 'M16 10 C 12 7 7 7 4 9 V24 C 7 22 12 22 16 25 Z M16 10 C 20 7 25 7 28 9 V24 C 25 22 20 22 16 25 Z';
+    return paperP(covers) + ln('M16 9.5 V26', 'currentColor', 2) + ln('M7 13 H12 M7 16.5 H12 M20 13 H25 M20 16.5 H25', a, 1.4) + circ(16, 5.5, 2.2, a);
   },
   puppet(v, a) {
     const arms = v % 3 === 1 ? 'M16 15 L8 12 M16 15 L24 12' : 'M16 15 L8.5 18 M16 15 L24 11';
@@ -9290,7 +8786,7 @@ function itemArt(id) {
   const it = ITEM[id], a = (it.family && FAM_ACC[it.family]) || '#2358d6';
   let body = '';
   if (it.weapon) {
-    const names = { sword: ['Rusty', 'Gel Blade', 'Iron', 'Star'], daggers: ['Silk', 'Blood', 'Arc'], spear: ['Fang', 'Storm', 'Iron', 'Jelly'], hammer: ['Brute', 'Molten', 'Sludge'], bow: ['Wing', 'Icicle', 'Viper'], stars: ['Scale', 'Tide', 'Ember'], spellbook: ['Slime'], puppet: ['Wing', 'Iron'] };
+    const names = { sword: ['Rusty', 'Gel Blade', 'Iron', 'Star'], daggers: ['Silk', 'Blood', 'Arc'], spear: ['Fang', 'Storm', 'Iron', 'Jelly'], hammer: ['Brute', 'Molten', 'Sludge'], bow: ['Wing', 'Icicle', 'Viper'], stars: ['Scale', 'Tide', 'Ember'], spellbook: ['Gel', 'Spore'], puppet: ['Wing', 'Iron'] };
     // named variants first (0 for the plainest), then a stable pick for the rest
     const plain = names[it.weapon].some((w) => it.name.startsWith(w));
     const v = plain ? 0 : 1 + (artHash(id) % 2);
@@ -9445,7 +8941,7 @@ function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   // which book you are holding, only while you are holding one
   const bb = $('#bookBtn');
-  const vary = VARIANTS(builds[0].weapon).length > 2;   // only while there is more than one to choose from
+  const vary = builds[0].weapon === 'spellbook' || builds[0].weapon === 'puppet';
   bb.hidden = !(vary && gearSlot === 'weapon');
   bb.textContent = `${builds[0].weapon === 'puppet' ? 'Puppet' : 'Book'} · ${bookName(builds[0].book)}`;
   ui.hint.hidden = !bb.hidden;   // one line under the weapons, not two
@@ -9505,7 +9001,6 @@ function updateHud() {
     }
   }
   for (const u of U) {
-    if (u.mob) continue;
     const el = ui.sk[u.side], was = skShown[u.side];
     if (!u.skill) { el.hidden = true; continue; }
     el.hidden = false;
@@ -9610,9 +9105,9 @@ function demoUnit(side, bd) {
   return u;
 }
 const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'],
-  spellbook: ['cast_goo', 30, 'cast_bud', 50, 'cast_splash'], frost: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'],
+  spellbook: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'], frost: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'],
   flame: ['cast_fireball', 34, 'cast_pillar', 34, 'cast_immolate'], storm: ['cast_arc', 24, 'cast_rod', 34, 'cast_discharge'],
-  slime: ['cast_goo', 30, 'cast_bud', 50, 'cast_splash'], tome: ['cast_curse', 30, 'cast_fear', 34, 'cast_drain'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
+  slime: ['cast_goo', 30, 'cast_membrane', 34, 'cast_splash'], tome: ['cast_curse', 30, 'cast_fear', 34, 'cast_drain'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
 function demoSteps(u, what) {
   // a caster demonstrates the school it is actually holding, not the plain book's pages
   if (what === 'weapon') {
@@ -10423,7 +9918,6 @@ window.__inkfall = window.__homeTurf = {
   ATK, SHOT, SCHOOL, SPELL_CD,
   cam(o) { camOverride = o; cam.init = false; },
   shiftNow(u, kind, secs) { startShift(u, kind, secs); },
-  melt(u) { const e = foe(u); if (e) startMelt(u, e); },
   forceAtk(u, name) { u.state = 'free'; u.react = 0; u.cd = 0; startAtk(u, name); },
   get runState() { return run; }, showRun,
   run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES, PATHS }, validate, get world() { return world; }, get units() { return U; },

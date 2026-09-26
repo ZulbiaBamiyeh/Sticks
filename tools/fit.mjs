@@ -33,14 +33,13 @@ for (const [W, H] of SIZES) {
   // the weapon page with the book row open under it
   await p.click('#doll .slot[data-slot="weapon"]');
   await p.click('#weapons [data-w="spellbook"]'); await over('build-books');
-  await p.click('#bookBtn'); await over('build-booksheet');
-  await p.click('[data-sheet="close"]');
+  if (await p.isVisible('#bookBtn')) { await p.click('#bookBtn'); await over('build-booksheet'); await p.click('[data-sheet="close"]'); }
   await p.click('#weapons [data-w="sword"]');
   await p.click('.tabs [data-tab="turf"]'); await over('build-turf');
   await p.click('#scoutBtn');
   await p.click('#devHome'); await over('home-run');
   // a fresh run opens on the path pick
-  await p.evaluate(() => localStorage.removeItem('homeTurf.run.v2'));
+  await p.evaluate(() => localStorage.removeItem('homeTurf.run.v3'));
   await p.reload(); await p.evaluate(() => document.fonts.ready);
   await p.click('#runStart'); await over('run-path');
   // a run, mid-way, with a full bag and every screen reachable
@@ -51,7 +50,7 @@ for (const [W, H] of SIZES) {
     run.bag = ['gel_cap', 'iron_sword', 'frost_bell', 'web_boots', 'toad_vial', 'brute_maul'].map((i) => mk(i));
     run.takePath('rot');
     run.round = 8; run.next(); run.gold = 40; run.hp = 0.42;
-    localStorage.setItem('homeTurf.run.v2', JSON.stringify(run));
+    localStorage.setItem('homeTurf.run.v3', JSON.stringify(run));
   });
   await p.reload(); await p.evaluate(() => document.fonts.ready);
   await p.click('#runStart'); await over('run-pick');

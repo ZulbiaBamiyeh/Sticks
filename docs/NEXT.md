@@ -1,34 +1,45 @@
 # Where this left off
 
-Everything is committed on `claude/game-weapons-skills-prototype-sq26a7`. The game is the single file
+Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `claude/game-weapons-skills-prototype-sq26a7`). The game is the single file
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
-- Spellbooks: no shared spells. Each book is a school (`SCHOOL` in index.html): frost (plain book, Rime
-  Codex), flame (Ember Codex), storm (Storm Codex), slime (Gel Grimoire, Spore Codex). Tomes cast
-  fear / curse / drain / rupture; the Blood Codex is now the Tome of Blood (its Bleed ticks over time).
-- New states: snared (`snareT`), fear (`fearT`), heal over time (`hot`), retaliating shell (`retal`),
-  gel bubble (`bubble`), tether. Floor hazards live in `world.fires` (kinds: fire, slick, rod).
-- The open book is redrawn (`weaponGeom` spellbook branch + `drawWeapon`); pages glow and turn while casting.
-- Six puppet forms (`PUPFORM`); puppeteers never duel (this fixed a NaN freeze).
+- **Casters rebuilt from one book.** Every other book, both staves and all puppets are shelved
+  (`SHELVED` removes their items; `WEAP.puppet.shelved` drops the puppet from `WEAPONS`; the Marrow
+  rival is gone). Their engine code stays. `versions/inkfall-v4-schools-puppets.html` is the full game
+  from before.
+- **The Slime Tome** (`slime_tome`, and the default book) is the only caster. Its pages come from
+  `pickSpell`'s slime branch: `cast_bud` pours a slime (`MOB.bud`, a creature on your side, up to
+  `BUD_MAX`), `cast_reabsorb` calls them home as gobs (`world.globs`) that heal, plus `cast_goo`,
+  `cast_splash` and `cast_regrow`. The **melt** (`meltCheck`/`startMelt`/`meltStep`, state `'melt'`)
+  is the answer to stunlock.
+- Casters glide rather than walk (hover pose in `poseTarget`), wear a robe (`drawRobe`) and sleeves
+  with no scarf or hat band, and don't jump-kite (`rangedEngage` backpedals). The tome floats and
+  opens on its spine (`drawTome`, `u.tomeOpen`).
+- Fighters prefer the caster to its slimes by 1.6 tiles when picking a target (`foe`).
+- Save keys are now v3 (`homeTurf.run.v3`, `homeTurf.ghosts.v3`), because older saves may hold
+  shelved items.
 
-## Measured win rates (60 mixed loadouts × 7 weapons)
-frost 52, flame 55, storm 57, gel 48, spore 59, Tome of Rot 44, Tome of Blood 45.
-Whole game (`tools/sim.mjs`): every weapon 42–58%.
+## Measured win rates (`tools/sim.mjs --fights 1500`)
+Every weapon is between 46% and 57%, and the Tome is 53%. The Tome beats sword 73%, spear 69%,
+stars 72% and daggers 59%, and loses to hammer 36% and bow 20%. On the ladder, Folio (the slime
+caster) beats the default sword build every time.
 
 ## Next up
-1. **Edit your half of the map between fights in a run** (asked for, never started). Plan: `Run` keeps its
+1. **Next tome.** Pick a school and give it its own verbs and its own answer to melee, the way the
+   melt is slime's. The shelved schools are in the backup for reference.
+2. The Slime Tome is lopsided against the bow (20%). Slimes chasing archers helped; something that
+   eats or blocks arrows might be the fix.
+3. **Edit your half of the map between fights in a run** (asked for, never started). Plan: `Run` keeps its
    own `pieces`; add a "Your half" entry on the run gear screen that reuses the turf editor (`#turfTab`,
    `applyTool`, `#tools`, `#budget`) and returns to the run.
-2. Gel Grimoire swings hard by matchup (66% vs hammer, 23% vs bow): its membrane only eats two shots.
-3. The plain spellbook (frost) is 45% in the whole-game sim; could use a small lift.
 
 ## How to check work
 All need `CHROMIUM_PATH=/opt/pw-browsers/chromium`:
 - `node tools/fit.mjs` — nothing may scroll on any screen size (must print "Nothing scrolls.").
 - `node tools/sim.mjs -- --fights 900` — weapon/skill balance tables.
 - `node tools/runbot.mjs` — plays whole runs headless; must end "no errors".
-Headless API for custom tests: `window.__homeTurf` (`fight`, `play`, `step`, `forceAtk`, `ATK`, `SCHOOL`).
+Headless API for custom tests: `window.__homeTurf` (`fight`, `play`, `step`, `forceAtk`, `melt`, `ATK`, `SCHOOL`).
 
 ## Publishing
 Copy the `<!-- artifact:start -->`…`<!-- artifact:end -->` span of index.html (drop the `</head>` and
