@@ -4,6 +4,17 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **Battle animation.** Knockdowns use a ragdoll (`startKrag`, `stepKrag`, `spinRag`, `shownSkel`):
+  it's tied loosely to the body box, starts with a backwards turn, lies with some tone (knees and head
+  lifted), and gets up in three beats that blend out of the heap (`GETUP` frames, with a kip-up for
+  acro 3+). Down plus get-up still takes 42 frames, so the timing is unchanged. The knockout ragdoll
+  continues from it. Landings throw dust both ways and a skid mark.
+- **Blade exchanges:** someone wins the lock (grinding sparks, then a break), plus new `overhead` and
+  `sweep` strikes, `riposte` answers, and a `kick` ending that knocks the loser down.
+- Test hooks: `__homeTurf.knock(u, atkName)` lands a hit on u, and `__homeTurf.duel()` starts an
+  exchange. Both are for filming animations frame by frame.
+
+## Before that
 - **The run's choices got stakes.** Hunt, loot and duel screens were rows of names, so picking was a
   shrug. Now:
   - **Odds:** `simFight` runs a fight unseen (`setupFight` is the fight without its screen) and puts

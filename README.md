@@ -305,10 +305,17 @@ fights run themselves. **Start a run** is the front door, and everything else
 - **Blade exchanges:** when two blades meet, in the air or on the ground, or a
   blade fighter catches a swing, the fight goes into a short choreographed
   exchange of strikes and blocks, with sparks on every contact. Most exchanges
-  lock blades halfway through, crossed and pushing. The camera moves in, and an
-  exchange that starts mid-air drifts slowly down to the floor. Each weapon has
-  its own mix of strikes, including spinning cuts, feints and shoves. The
-  defender blocks, ducks, hops or leans away, so no two exchanges look alike.
+  lock blades halfway through, and someone wins the lock: one fighter bears
+  down and walks the other back, the sparks grind toward the loser's hilt, and
+  it breaks with the loser thrown off it. The camera moves in, and an exchange
+  that starts mid-air drifts slowly down to the floor. Each weapon has its own
+  mix of strikes: spinning cuts, feints, shoves, a jumping **overhead** that
+  drives a blocker down onto its knees (swords and hammers), and a low
+  **sweep** along the floor that has to be hopped (daggers and spears). The
+  defender blocks, ducks, hops, leans away, or **ripostes**, blocking and
+  cutting straight back in the same beat. An exchange ends in a finishing cut,
+  a vault over the top, a draw, a skill that breaks it, or a **kick** that
+  knocks the loser off its feet.
 - **No trading hits:** a fighter who lands a hit keeps the initiative, and combos
   only continue when the next hit will connect. A fighter just shaken off a hit
   swings back, backs off, or puts its guard up. A swing into a guard becomes an
@@ -420,8 +427,15 @@ example `60`) to sample both fighters' position and AI state every 60 frames.
   where the rival was last seen. Planning, aiming and hooks all go after the
   stand-in, so a hidden fighter really is lost.
 - **Animation:** a 12-joint skeleton posed with springs and two-bone inverse
-  kinematics, with freeze frames on big hits, weapon motion trails, verlet
-  scarves, and a ragdoll on KO.
+  kinematics, with freeze frames on big hits, weapon motion trails and verlet
+  scarves. **Knockdowns go limp:** a fighter sent flying becomes a ragdoll,
+  loosely tied to its physics body (which still decides where it lands and
+  when). It goes over backwards with its limbs trailing, hits the floor in a
+  burst of dust, skids, and lies with a knee drawn up. It gets up by blending
+  out of the heap: a push-up, a knee, then its feet. Acrobats (level 3+) kip up
+  instead. A knockout carries on from the same fall, so there's no snap. The
+  ragdoll is only drawn: fights run unseen skip it, and reduced motion turns it
+  off.
 - **Skill effects:** Blink leaves afterimages and a marching-ants selection box
   at both ends. Dark Sight draws the fighter as a transparency checkerboard.
   Parry and crits flash an inverted impact frame. Move names pop up over the

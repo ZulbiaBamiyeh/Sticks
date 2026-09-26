@@ -2740,19 +2740,23 @@ const DUEL_BLOCK = {
   high: { fx: 0.3, fy: -0.22, wa: -1.25, wb: -1.2, bx: 0.2, by: -0.1, lean: -0.16 },
   low: { fx: 0.32, fy: 0.26, wa: 1.05, wb: 1.1, bx: 0.2, by: 0.3, lean: -0.08 },
   thrust: { fx: 0.3, fy: 0.04, wa: -1.45, wb: -1.4, bx: 0.22, by: 0.05, lean: -0.22 },
+  // an overhead is taken on a crossed guard with the knees giving under it
+  overhead: { hipH: 0.46, fx: 0.24, fy: -0.4, wa: -1.55, wb: -1.5, bx: 0.26, by: -0.3, lean: -0.02, head: 0.12 },
+  sweep: { hipH: 0.52, fx: 0.3, fy: 0.42, wa: 1.6, wb: 1.5, bx: 0.2, by: 0.4, lean: 0.2 },
 };
-const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98, spin: 1.1, feint: 0.6, shove: 0.9 };
+const DUEL_Y = { high: 1.35, low: 0.6, thrust: 0.98, spin: 1.1, feint: 0.6, shove: 0.9, overhead: 1.55, sweep: 0.3 };
 // Each weapon has its own mix of strikes in an exchange.
 const DUEL_MIX = {
-  sword: ['high', 'low', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
-  daggers: ['thrust', 'thrust', 'high', 'low', 'spin', 'feint', 'shove'],
-  spear: ['thrust', 'thrust', 'thrust', 'high', 'low', 'shove'],
-  hammer: ['high', 'low', 'high', 'spin', 'shove'],
+  sword: ['high', 'low', 'thrust', 'high', 'low', 'spin', 'feint', 'shove', 'overhead'],
+  daggers: ['thrust', 'thrust', 'high', 'low', 'spin', 'feint', 'shove', 'sweep'],
+  spear: ['thrust', 'thrust', 'thrust', 'high', 'low', 'shove', 'sweep'],
+  hammer: ['high', 'low', 'high', 'spin', 'shove', 'overhead', 'overhead'],
 };
 // How the defender answers each strike: a block rings off the blade, a dodge just whistles past.
+// A riposte is a block that cuts straight back in the same beat.
 const DUEL_ANSWER = {
-  high: ['block', 'block', 'duck'], low: ['block', 'block', 'hop'], thrust: ['block', 'lean'],
-  spin: ['block', 'duck'], feint: ['block', 'hop'], shove: ['stagger'],
+  high: ['block', 'block', 'duck', 'riposte'], low: ['block', 'block', 'hop', 'riposte'], thrust: ['block', 'lean', 'riposte'],
+  spin: ['block', 'duck'], feint: ['block', 'hop'], shove: ['stagger'], overhead: ['block', 'block', 'lean'], sweep: ['hop', 'hop', 'block'],
 };
 const DUEL_DODGE = {
   duck: { hipH: 0.4, lean: 0.55, head: 0.35, fx: 0.2, fy: 0.3, wa: 0.6, wb: 0.8, bx: 0.1, by: 0.3 },
@@ -2764,6 +2768,10 @@ const DUEL_EXTRA = {
   spin: { w: { fx: -0.3, fy: 0.1, wa: 2.8, lean: 0.3 }, a: { fx: 0.5, fy: -0.05, wa: 0.0, lean: 0.35 } },
   feint: { w: { fx: -0.1, fy: -0.4, wa: -2.3, lean: -0.08 }, a: { fx: 0.46, fy: 0.24, wa: 0.45, lean: 0.4 } },
   shove: { w: { lean: -0.1, ffx: -0.05, ffy: 0.4, fx: 0.2, fy: 0.1, wa: -1.2 }, a: { lean: -0.3, ffx: 0.75, ffy: 0.15, fx: 0.15, fy: 0.05, wa: -1.3 } },
+  // up off the floor with the blade high behind the head, and down on them
+  overhead: { w: { hipH: 0.72, lean: -0.22, head: -0.12, fx: -0.04, fy: -0.56, wa: -2.7, wb: -2.5, bx: 0.04, by: -0.5 }, a: { hipH: 0.46, lean: 0.62, head: 0.22, fx: 0.52, fy: 0.3, wa: 0.55, wb: 0.45, bx: 0.3, by: 0.24 } },
+  // dropped low, the blade swung along the floor at their feet
+  sweep: { w: { hipH: 0.46, lean: 0.3, fx: -0.12, fy: 0.3, wa: 2.4, wb: 2.2, ffx: 0.34, bfx: -0.52 }, a: { hipH: 0.32, lean: 0.62, head: 0.2, fx: 0.52, fy: 0.5, wa: 0.25, wb: 0.2, ffx: 0.72, bfx: -0.42 } },
 };
 const jitter = (o, k) => { const r = {}; for (const key in o) r[key] = o[key] + (key === 'wa' || key === 'wb' ? (vr() - 0.5) * 0.5 : (vr() - 0.5) * 0.1) * k; return r; };
 const isBlade = (u) => !!WEAP[u.w] && !isRanged(u) && !WEAP[u.w].noDuel;
@@ -2777,7 +2785,7 @@ function startDuel(a, b) {
   for (let i = 0; i < n; i++) {
     const mix = DUEL_MIX[s.w] || types, type = mix[Math.floor(vr() * mix.length)];
     const answer = DUEL_ANSWER[type][Math.floor(vr() * DUEL_ANSWER[type].length)];
-    beats.push({ s, type, answer, len: Math.max(9, 15 - i) + (type === 'spin' || type === 'feint' ? 3 : 0) });
+    beats.push({ s, type, answer, len: Math.max(9, 15 - i) + (type === 'spin' || type === 'feint' ? 3 : type === 'overhead' ? 6 : type === 'sweep' ? 2 : 0) });
     // sometimes the same fighter presses two strikes in a row
     if (vr() > 0.25) s = s === a ? b : a;
   }
@@ -2793,7 +2801,8 @@ function startDuel(a, b) {
     else {
       const edge = (a.acro - b.acro) * 0.05;
       const w = rng() < 0.5 + edge ? a : b;
-      fin = { kind: w.acro >= 2 && rng() < 0.45 ? 'vault' : 'cut', u: w };
+      const r2 = rng();
+      fin = { kind: w.acro >= 2 && r2 < 0.4 ? 'vault' : r2 > 0.72 ? 'kick' : 'cut', u: w };
     }
   }
   world.duel = { a, b, beats, i: 0, f: 0, fin, mid: (a.b.x + b.b.x) / 2, gap: Math.max(duelGap(a), duelGap(b)) };
@@ -2822,35 +2831,60 @@ function stepDuel() {
     if (!u.b.gr) u.b.vy = Math.min(u.b.vy, 3.5);   // an exchange in the air drifts down slowly
   }
   if (bind) {
-    const shake = Math.sin(f * 1.7) * 0.03;
-    for (const u of [D.a, D.b]) {
-      u.dpose = { hipH: 0.56, lean: 0.38, head: 0.05, fx: 0.42 + shake, fy: -0.08, wa: -1.3, wb: -1.25, bx: 0.3, by: 0.0, ffx: 0.52, bfx: -0.52, ka: 0.5 };
-      u.duelSwing = false;
-    }
-    if (f % 5 === 0) {
-      const cx = D.mid, cy = s.b.y - 1.45;
-      sparks(cx, cy, 0, 3); if (f % 10 === 0) { ring(cx, cy, 0.35, 'spark'); sfxShake(1.5); }
-    }
+    // Locked. One of them is winning it: bearing down and walking the other back, blades grinding toward
+    // the loser's hilt, until it breaks and the loser is thrown off it.
+    const win = s, lose = d, p = Math.min(1, f / beat.len), shake = Math.sin(f * 1.7) * 0.03;
+    win.dpose = { hipH: 0.54 - 0.04 * p, lean: 0.48 + 0.14 * p, head: 0.1, fx: 0.44 + 0.08 * p + shake, fy: -0.14, wa: -1.2, wb: -1.15, bx: 0.36, by: -0.04, ffx: 0.62, bfx: -0.62, ka: 0.5 };
+    lose.dpose = { hipH: 0.6 - 0.08 * p, lean: 0.12 - 0.42 * p, head: -0.2 * p, fx: 0.34 - 0.1 * p - shake, fy: -0.2 - 0.08 * p, wa: -1.45 - 0.25 * p, wb: -1.4, bx: 0.26, by: -0.08, ffx: 0.34, bfx: -0.62, ka: 0.5 };
+    win.duelSwing = lose.duelSwing = false;
+    if (f < beat.len - 5) D.mid += win.face * 0.008;
+    const cx = D.mid + win.face * (0.05 + 0.18 * p), cy = s.b.y - 1.45 + 0.1 * p;
+    if (f % 4 === 0) { sparks(cx, cy, -win.face, 3); if (f % 12 === 0) sfxShake(1.5); }
     if (f === 2) { world.hs = Math.max(world.hs, 4); world.punch = 1; }
+    if (f === beat.len - 4) {   // it breaks
+      D.mid += win.face * 0.35; lose.dpose = { ...lose.dpose, lean: -0.5, head: -0.3, fx: 0.1, fy: -0.35, wa: -2.2 };
+      sparks(cx, cy, -win.face, 12); ring(cx, cy, 0.7, 'spark'); streak(cx, cy, win.face > 0 ? 0 : Math.PI, 1.2, 'spark');
+      dust(lose.b.x, lose.b.y, 4, 0.5); world.hs = Math.max(world.hs, 5); sfxShake(4);
+    }
     if (f >= beat.len) { D.f = 0; if (++D.i >= D.beats.length) finishDuel(); }
     return;
   }
-  const type = beat.type, st = DUEL_STRIKE[type] || DUEL_EXTRA[type], hitAt = hitF + (type === 'spin' || type === 'feint' ? 3 : 0);
-  if (f === 1) { beat.sj = jitter(st.a, 1); beat.dj = jitter(beat.answer === 'block' ? DUEL_BLOCK[DUEL_STRIKE[type] ? type : type === 'spin' ? 'high' : type === 'feint' ? 'low' : 'thrust'] : DUEL_DODGE[beat.answer], 1); }
+  const type = beat.type, st = DUEL_STRIKE[type] || DUEL_EXTRA[type], hitAt = hitF + (type === 'spin' || type === 'feint' ? 3 : type === 'overhead' ? 6 : 0);
+  const blocks = beat.answer === 'block' || beat.answer === 'riposte';
+  if (f === 1) {
+    beat.sj = jitter(st.a, 1);
+    beat.dj = jitter(blocks ? DUEL_BLOCK[DUEL_BLOCK[type] ? type : type === 'spin' ? 'high' : type === 'feint' ? 'low' : 'thrust'] : DUEL_DODGE[beat.answer], 1);
+    if (beat.answer === 'riposte') beat.len += 8;
+  }
+  if (type === 'overhead' && f === 2 && s.b.gr) { s.b.vy = -8; s.b.gr = false; }   // up off the floor for it
   // a feint shows high, then cuts low
   const windPose = type === 'feint' && f > 3 ? DUEL_STRIKE.low.w : st.w;
   s.dpose = Object.assign({ hipH: 0.6, ffx: 0.46, bfx: -0.4, ka: f < hitAt ? 0.35 : 0.7 }, f < hitAt ? windPose : beat.sj);
-  const dodging = beat.answer !== 'block' && f >= hitAt - 3;
-  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: dodging ? 0.6 : 0.5 }, beat.answer === 'block' || dodging ? beat.dj : DUEL_BLOCK.high);
+  const dodging = !blocks && f >= hitAt - 3;
+  d.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: dodging ? 0.6 : 0.5 }, blocks || dodging ? beat.dj : DUEL_BLOCK.high);
+  // the riposte: the block turns straight into a cut back, and the striker has to get its own guard up
+  const rip = beat.answer === 'riposte' ? f - (hitAt + 2) : -1;
+  if (rip >= 0) {
+    d.dpose = Object.assign({ hipH: 0.58, ffx: 0.5, bfx: -0.4, ka: rip < 3 ? 0.4 : 0.75 }, rip < 3 ? DUEL_STRIKE.low.w : DUEL_STRIKE.low.a);
+    s.dpose = Object.assign({ hipH: 0.6, ffx: 0.3, bfx: -0.46, ka: 0.6 }, DUEL_BLOCK.low);
+    d.duelSwing = rip >= 2 && rip <= 5;
+    if (rip === 4) {
+      const cx = (s.b.x + d.b.x) / 2 - s.face * 0.1, cy = s.b.y - 0.6;
+      sparks(cx, cy, s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, 0.9, 0.9, 'spark');
+      D.mid -= s.face * 0.2; world.hs = Math.max(world.hs, 3); sfxShake(2);
+    }
+  }
   s.spinT = type === 'spin' && f >= hitAt - 4 && f <= hitAt + 2 ? (f - (hitAt - 4)) / 6 : 0;
   s.duelSwing = f >= hitAt - 1 && f <= hitAt + 2;
-  d.duelSwing = false;
-  if (beat.answer === 'hop' && f === hitAt - 3 && d.b.gr) { d.b.vy = -9; d.b.gr = false; }
+  if (rip < 0) d.duelSwing = false;
+  if (beat.answer === 'hop' && f === hitAt - 3 && d.b.gr) { d.b.vy = type === 'sweep' ? -11 : -9; d.b.gr = false; }
+  if (type === 'sweep' && f === hitAt) dust(d.b.x, d.b.y, 4, 0.5);
   if (f === hitAt) {
     const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[type];
-    if (beat.answer === 'block') {
-      sparks(cx, cy, -s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, type === 'high' ? -0.9 : type === 'low' ? 0.9 : 0, 0.9, 'spark');
-      world.hs = Math.max(world.hs, 2); sfxShake(2);
+    if (blocks) {
+      sparks(cx, cy, -s.face, type === 'overhead' ? 16 : 9); ring(cx, cy, type === 'overhead' ? 0.9 : 0.55, 'spark'); streak(cx, cy, type === 'high' || type === 'overhead' ? -0.9 : type === 'low' || type === 'sweep' ? 0.9 : 0, 0.9, 'spark');
+      world.hs = Math.max(world.hs, type === 'overhead' ? 5 : 2); sfxShake(type === 'overhead' ? 5 : 2);
+      if (type === 'overhead') { dust(d.b.x, d.b.y, 6, 0.6); D.mid += s.face * 0.2; }   // it drives them into the floor
     } else if (beat.answer === 'stagger') {
       D.mid += s.face * 0.35; dust(d.b.x, d.b.y, 3, 0.4); sfxShake(2); world.hs = Math.max(world.hs, 2);
     } else {
@@ -2890,6 +2924,15 @@ function finishDuel() {
     w.b.vy = -15; w.b.vx = w.face * 7.5; w.b.gr = false; w.flipT = w.flipMax = 20; w.flipDir = 1;
     w.react = 0; streak(w.b.x, w.b.y - 1, -Math.PI / 2, 1, TEAM[w.side]);
     log(w.side ? `${rivalName()} vaulted over your guard.` : 'Your fighter vaulted over the rival\'s guard.', w.side);
+    return;
+  }
+  if (fin.kind === 'kick') {
+    // a boot in the middle, and the loser goes over backwards
+    w.face = Math.sign(l.b.x - w.b.x) || w.face; w.dpose = null;
+    applyHit(w, l, { dmg: 6, kb: [7.5, -9], stun: 30, hs: 7, tumble: 1, big: 1 }, w.face);
+    dust(l.b.x, l.b.y, 5, 0.6); streak(l.b.x, l.b.y - 0.9, w.face > 0 ? 0 : Math.PI, 1.2, 'spark');
+    w.react = 4;
+    log(w.side ? `${rivalName()} kicked you off your feet.` : 'Your fighter kicked the rival off its feet.', w.side);
     return;
   }
   // the winner's finisher gets through a guard that's out of position
@@ -3092,7 +3135,7 @@ function kill(u) {
   }
   u.state = 'dead';
   u.b.vx *= 1.3; u.b.vy = Math.min(u.b.vy, 0) - 4;
-  u.rag = makeRag(u); u.hidden = 0; u.skName = null;
+  u.rag = u.krag || spinRag(makeRag(u), u, Math.min(0.14, 0.04 + Math.hypot(u.b.vx, u.b.vy) * 0.008)); u.krag = null; u.hidden = 0; u.skName = null;
   if (world.duel) endDuel();
   world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true; world.koAt = null;
   if (!headless && u.side === 0) music.ko();   // the music only sinks when your fighter goes down
@@ -3178,6 +3221,7 @@ function applyHit(att, def, d, dirX, crit) {
     def.b.vx = dirX * d.kb[0] * kbm; def.b.vy = d.kb[1] * kbm; if (d.kb[1] < 0) def.b.gr = false; def.b.jumping = false;
     def.face = -dirX;
     if (d.tumble) { def.tumble = true; def.bounced = false; def.spin = -0.26; } else def.tumble = false;
+    if (def.krag) for (const q of def.krag.P) { q.px -= dirX * d.kb[0] * kbm * DT * (0.4 + Math.random() * 0.4); q.py -= d.kb[1] * kbm * DT * (0.4 + Math.random() * 0.4); }
     if (def.heavy) { def.b.vx *= 0.15; def.b.vy = 0; def.b.gr = true; def.stunT = Math.min(def.stunT, 8); def.tumble = false; }
     if (def.mob && MOB[def.mob].onHit) MOB[def.mob].onHit(def);
   } else def.b.vx += dirX * (def.heavy ? 0.2 : 1.5);
@@ -5162,7 +5206,7 @@ function act(u) {
       break;
     case 'melt': fr = 0; meltStep(u); break;
     case 'iceblock': fr = 4; b.vx *= 0.6; if (++u.iceb.t >= u.iceb.max) endIceBlock(u); break;
-    case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
+    case 'down': fr = 1.1; if (--u.downT <= 0) { u.state = 'getup'; u.downT = GETUP; } break;
     case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
   }
   const vyBefore = b.vy;
@@ -5212,7 +5256,9 @@ function act(u) {
     if (u.tumble) {
       if (b.landV > 12 && !u.bounced) { b.vy = -b.landV * 0.38; b.gr = false; u.bounced = true; sfxShake(3); dust(b.x, b.y, 6, 1); }
       else {
-        u.tumble = false; u.state = 'down'; u.downT = 28; u.iT = 28 + 14 + 16; b.vx *= 0.4; sfxShake(2);
+        u.tumble = false; u.state = 'down'; u.downT = 28 + 14 - GETUP; u.iT = 28 + 14 + 16; b.vx *= 0.55; sfxShake(2);
+        // the floor takes it: a burst of dust both ways and a skid mark along it
+        dust(b.x, b.y, 7, 1.1); for (const d of [-1, 1]) streak(b.x + d * 0.3, b.y - 0.04, d > 0 ? 0 : Math.PI, 0.5 + Math.abs(b.vx) * 0.08, 'ink');
         u.rot = wrap(u.rot); u.rotDriven = false;
       }
     }
@@ -6090,7 +6136,20 @@ function poseTarget(u) {
     Object.assign(T, { drop: 0.62, lean: 0, head: 0.1, fx: 0.25, fy: 0.3, bx: -0.1, by: 0.35, ffx: 0.3, ffy: 0.7, bfx: 0.1, bfy: 0.72 });
     T.kb = 0.2;
   } else if (st === 'getup') {
-    Object.assign(T, { drop: 0, hipH: 0.5, lean: 0.45 }); T.kb = 0.25;
+    // push up off the floor, onto a knee, then up
+    const g = 1 - u.downT / GETUP;
+    if (u.acro >= 3) {
+      // an acrobat kips up: knees to the chest, a kick, and it lands on its feet
+      if (g < 0.35) Object.assign(T, { drop: 0.55, hipH: 0.3, lean: -1.25, head: -0.2, fx: -0.3, fy: 0.1, bx: -0.35, by: 0.15, ffx: -0.05, ffy: -0.32, bfx: -0.15, bfy: -0.28 });
+      else if (g < 0.6) Object.assign(T, { drop: 0.1, hipH: 0.5, lean: -0.3, head: -0.1, fx: 0.25, fy: -0.2, bx: -0.2, by: -0.2, ffx: 0.3, bfx: -0.25 });
+      else Object.assign(T, { drop: 0, hipH: 0.58, lean: 0.3, head: 0.05 });
+      if (g >= 0.35 && g < 0.6 && !u.kipped) { u.kipped = true; dust(u.b.x, u.b.y, 4, 0.5); }
+      if (g < 0.2) u.kipped = false;
+      T.kb = 0.45; T.ka = 0.4; T.kl = 0.5;
+    } else if (g < 0.4) Object.assign(T, { drop: 0.42, hipH: 0.34, lean: 1.1, head: 0.35, fx: 0.42, fy: 0.62, bx: 0.22, by: 0.62, ffx: 0.26, bfx: -0.3 });
+    else if (g < 0.75) Object.assign(T, { drop: 0.14, hipH: 0.46, lean: 0.55, head: 0.18, fx: 0.34, fy: 0.42, bx: 0.08, by: 0.32, ffx: 0.3, bfx: -0.36 });
+    else Object.assign(T, { drop: 0, hipH: 0.62, lean: 0.22, head: 0.05 });
+    if (u.acro < 3) { T.kb = 0.32; T.ka = 0.32; T.kl = 0.35; }
   } else if (st === 'duel') {
     if (u.dpose) { Object.assign(T, u.dpose); T.ka = u.dpose.ka; T.kb = 0.4; T.d = 0.4; }
     T.ffy = T.hipH; T.bfy = T.hipH;
@@ -6315,6 +6374,52 @@ function heldStars(u) {
   return 3;
 }
 
+// ---- knockdowns
+// A fighter sent flying goes limp: its drawing becomes a ragdoll that is dragged along by the body's own
+// physics (which still decides where it lands, and when), so the limbs flop and trail, it hits the floor
+// however it happens to come down, skids, and lies there in whatever shape it fell. Getting up blends out
+// of that heap into a push-up, a knee, and then its feet. It is only ever the picture: the fight itself
+// is the same box it always was.
+const GETUP = 20;
+function startKrag(u) {
+  if (u.krag || u.mob || world.demo || REDUCED || headless) return;   // only ever the picture: fights run unseen skip it
+  u.krag = spinRag(makeRag(u), u, 0.11);
+}
+// it goes over backwards: a turn about the hip, head one way and feet the other
+function spinRag(r, u, amt) {
+  const h = r.P[2], w = -(Math.sign(u.b.vx) || -u.face) * amt;
+  for (const q of r.P) { const rx = q.x - h.x, ry = q.y - h.y; q.px += ry * w; q.py -= rx * w; }
+  return r;
+}
+function stepKrag(u) {
+  const r = u.krag, b = u.b, air = u.state === 'stun' && u.tumble;
+  if (!air && u.state !== 'down' && u.state !== 'getup') { u.krag = null; return; }
+  ragStep(r);
+  // the body leads and the limbs follow: the hip is pulled toward where the body really is
+  const P = r.P[2], k = air ? 0.07 : 0.1;
+  P.x += (b.x - P.x) * k;
+  if (air) P.y += (b.y - 0.75 - P.y) * k;
+  // on the floor a body still has some life in it: knees drawn up, an elbow propped, the head lifted
+  if (!air) {
+    const lift = (i, a) => { const q = r.P[i]; if (!solidAt(Math.floor(q.x), Math.floor(q.y - a - 0.02))) q.y -= a; };
+    lift(7, 0.012); lift(9, 0.009); lift(0, 0.004); lift(3, 0.004);
+  }
+  // skidding along the floor
+  if (!air && Math.abs(b.vx) > 1.5 && world.t % 3 === 0) dust(b.x - Math.sign(b.vx) * 0.3, b.y, 1, 0.3);
+}
+// the skeleton actually on screen: the heap, a blend out of it while getting up, or the animated one
+function shownSkel(u) {
+  const S = skel(u);
+  if (!u.krag) return S;
+  const R = ragSkel(u.krag);
+  if (u.state !== 'getup') return R;
+  const g = 1 - u.downT / GETUP, k = Math.min(1, g / (u.acro >= 3 ? 0.22 : 0.55)), e = k * k * (3 - 2 * k);
+  const L = (a, c) => (a && c ? { x: a.x + (c.x - a.x) * e, y: a.y + (c.y - a.y) * e } : c || a);
+  const out = { ...S, wp: {} };
+  for (const key of [...RAG_KEYS, 'knot']) out[key] = L(R[key], S[key]);
+  for (const key in S.wp) out.wp[key] = L(R.wp[key], S.wp[key]);
+  return out;
+}
 // Ragdoll: the skeleton's joints become verlet points when a fighter goes down for good.
 const RAG_KEYS = ['head', 'neck', 'hip', 'ef', 'hf', 'eb', 'hb', 'kf', 'ff', 'kb', 'bf', 'sh'];
 function makeRag(u) {
@@ -6415,7 +6520,9 @@ function simStep() {
     if (u.mob) continue;
     if (u.state === 'dead') { ragStep(u.rag); continue; }
     poseStep(u); fxStep(u);
-    const S = skel(u);
+    if (u.state === 'stun' && u.tumble) startKrag(u);
+    if (u.krag) stepKrag(u);
+    const S = shownSkel(u);
     scarfStep(u, S); trailStep(u, S);
   }
   for (let i = 0; i < A.padAnim.length; i++) if (A.padAnim[i] > 0.01) A.padAnim[i] *= 0.86;
@@ -9243,7 +9350,7 @@ function drawUnit(u, pal) {
     drawFig(R, u.side, pal, false); return;
   }
   if (u.shift) { drawShifted(u, pal); return; }
-  const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
+  const S = shownSkel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
   if (u.state === 'melt') { drawMelt(u, pal); drawMarks(u, null, pal); return; }
   if (u.w === 'spellbook') {
     if (!iceTome(u)) drawHoverShadow(u, pal);
@@ -11214,6 +11321,9 @@ window.__inkfall = window.__homeTurf = {
   ATK, SHOT, SCHOOL, SPELL_CD,
   cam(o) { camOverride = o; cam.init = false; },
   shiftNow(u, kind, secs) { startShift(u, kind, secs); },
+  // tests: land `name` on u from its rival, as if it had been swung (for filming hit reactions)
+  knock(u, name = 'slash3') { const e = foe(u); if (e) { e.face = Math.sign(u.b.x - e.b.x) || e.face; applyHit(e, u, ATK[name], e.face); } },
+  duel() { const [a, b] = U; world.duelCd = 0; startDuel(a, b); },
   melt(u) { const e = foe(u); if (e) { if (iceTome(u)) startIceBlock(u, e); else startMelt(u, e); } },
   forceAtk(u, name) { u.state = 'free'; u.react = 0; u.cd = 0; startAtk(u, name); },
   get runState() { return run; }, showRun,
