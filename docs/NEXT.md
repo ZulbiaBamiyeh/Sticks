@@ -4,6 +4,17 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **The goal in view.** `runHeader` has a goal row (`crownRow`: five crowns filled per duel won,
+  "N wins to the Crown", lives), the day shows "/7" and "Hunt 2 of 3" or "Duel tonight", the path screen
+  states the rules, and the result sheet has `#resGoal` saying what the fight did to the goal.
+- **Feeding** (the late-run ceiling): a drop can be fed to the worn piece in its slot for +1 level
+  (`inst.lvl`, +10% each via `instPower`, max `LVL_MAX` 5) and brought up to today's day power. Loot
+  sheet and bag sheet have feed buttons with the gain; `lootVerdict` says "Feed · +1 ▲n%" when it
+  isn't worth wearing. Ghost gear is sometimes levelled (`floor(day/2)`). Run bot feeds when nothing is
+  worth wearing: about 2.7 feeds a run, careful 16/30 crowns, random 1/30.
+- Music under menus is now a gentle dip (`MUSIC.under` 0.72, 2.2s glides).
+
+## Before that (schools)
 - **Schools instead of sets.** About 30 families, each with its own 2- and 4-piece set, were too many to
   build around, and a 4-piece set out of 7 slots hardly ever happened. Every family now belongs to one of
   7 schools (`SCHOOLS`, `SCHOOL_OF`, `SCHOOL_FAMS`) with a rule each at 2, 4 and 6 pieces, applied in

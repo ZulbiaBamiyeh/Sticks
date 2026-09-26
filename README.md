@@ -12,7 +12,18 @@ fights run themselves. **Start a run** is the front door, and everything else
 - **Roguelike run** (the run bar at the top of the rival page), built on
   ZereshkStory's structure with this game's fights:
   - Seven days, each three hunts and then a duel. Win five duels for the Crown;
-    lose three and the run is over.
+    lose three and the run is over. Hunts never cost a life. The goal is always
+    in view: under the day ("Day 2/7", "Hunt 2 of 3" or "Duel tonight") a row
+    of five crowns fills with each duel won, next to "3 wins to the Crown" and
+    your lives. After a duel the result says it plainly: "Duel 2 of 5 won. 3
+    more for the Crown." or "A life lost. 2 left."
+  - **Feeding.** A drop you don't want can be fed to the piece you wear in
+    that slot instead: the worn piece gains a level (+10% a level, up to +5,
+    shown as "+2" on the item and its slot) and is brought up to the day it
+    was fed on. So once every slot is full, every drop still does something:
+    replace, or feed. Loot cards say "Feed · +1 ▲18%" when feeding beats
+    wearing, and bag pieces can be fed too (`feedTargets`, `fedCopy`, `feed`,
+    `LVL_STEP`). Duel ghosts carry some levelled gear.
   - **Builds are schools.** Every item belongs to one of seven schools, shown
     by its mark wherever the item is: **Burn**, **Poison**, **Bleed**,
     **Chill** and **Shock** (a status you put on them), **Guard** (shields and

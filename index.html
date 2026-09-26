@@ -151,6 +151,20 @@
   .res-t { font: 900 40px/0.95 var(--display); letter-spacing: 0.02em; text-wrap: balance; }
   .res-t.b { color: var(--blue); }
   .res-t.r { color: var(--red); }
+  .res-goal { margin-top: 6px; font-size: 14px; font-weight: 800; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .res-goal .crowns svg { width: 18px; height: 18px; }
+  .res-goal.lost { color: var(--red); }
+  /* the run's goal, always in view: five crowns to fill, and the lives you have left */
+  .rgoal { display: flex; align-items: center; gap: 10px; margin-top: 5px; padding: 3px 8px; border: 1.5px solid var(--line); border-radius: 8px; font-size: 12px; color: var(--ink-2); }
+  .rgoal b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .crowns { display: inline-flex; gap: 2px; flex: none; }
+  .crowns svg { width: 17px; height: 17px; color: #b8b09a; }
+  .crowns svg.on { color: #d4a017; }
+  .crowns svg.on path { fill: #f2c94c; }
+  .rgoal .g-t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rgoal .g-lv { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+  @media (max-height: 600px) { .sbar { display: none; } }
+  .rday .stop { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
   /* damage breakdown: a donut per side of the ledger, Dealt or Taken */
   .why-top { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
   .seg { display: inline-flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
@@ -532,11 +546,16 @@
   .hc-fam svg { width: 14px; height: 14px; vertical-align: -2px; }
   .ihead .sch.mini { margin-left: 6px; vertical-align: 1px; }
   .lcard .sch.mini { margin: 1px 0; }
-  .sbar { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; margin-top: 6px; min-height: 20px; }
+  .sbar { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; margin-top: 5px; min-height: 20px; }
   .sbar .lbl { align-self: center; flex: none; }
   .evopt.crest { border-color: color-mix(in srgb, var(--sc) 55%, var(--line)); }
   .evopt.crest .cr-ic svg { width: 22px; height: 22px; }
   .evopt.crest .cr-up { color: #fff; background: var(--sc); border-radius: 4px; padding: 2px 6px; font-weight: 700; align-self: flex-start; }
+  .slot { position: relative; }
+  .slot .sl-lv { position: absolute; top: 2px; right: 3px; font-size: 10px; font-weight: 900; color: #fff; background: #8a5a00; border-radius: 3px; padding: 0 3px; line-height: 1.4; }
+  .vd.feed { background: #fdf0d2; color: #8a5a00; }
+  .actions .feed small { font-weight: 800; color: #1b8a3a; }
+  .lvl { font-size: .7em; font-weight: 900; color: #fff; background: #8a5a00; border-radius: 4px; padding: 1px 5px; vertical-align: 3px; margin-left: 4px; }
   .vd.brk { background: #f6dcd7; color: #b22d1b; }
   .scd { font-size: 12px; }
   .scd .tier { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
@@ -735,6 +754,7 @@
     <div id="result" hidden>
       <div class="res-k" id="resKicker">KO · 0:24</div>
       <div class="res-t" id="resTitle">You win</div>
+      <div class="res-goal" id="resGoal" hidden></div>
       <div id="resWhy"></div>
     </div>
   </div>
@@ -7976,7 +7996,11 @@ function rollRarity(card, day, r) {
 }
 // How strong an instance is: the day it dropped on times its rarity. Flat numbers grow with it in full,
 // percentages half as fast, so crit and haste stay in sensible ranges.
-const instPower = (inst) => dayPower(inst.day) * RARITY[inst.rarity].mult;
+// Feeding: a drop you don't want can be fed to the piece you wear in that slot. It brings that piece up
+// to the day it was fed on and adds a level: +10% a level, up to +5. So a full set of slots still has
+// somewhere to go, and the piece you built around stays worth keeping.
+const LVL_MAX = 5, LVL_STEP = 0.1;
+const instPower = (inst) => dayPower(inst.day) * RARITY[inst.rarity].mult * (1 + LVL_STEP * (inst.lvl || 0));
 const grow = (k, v, p) => v * (PCT_STATS.has(k) ? 1 + (p - 1) * 0.5 : p);
 // all: include the weapon type's signature and perks' stats (the fight wants them; an item card lists them apart)
 function instStats(inst, all = true) {
@@ -8138,6 +8162,7 @@ function makeGhost(seed, round) {
     if (!pool.length) continue;
     const ra = rollRarity(card, day, r), rb = rollRarity(card, day, r), rar = RARITY[ra].mult >= RARITY[rb].mult ? ra : rb;
     equip[s] = rollInstance(r.pick(pool), rar, Math.max(1, day - (r() < 0.6)), r);   // a real build's gear dropped over the last day or two
+    if (r() < 0.6) equip[s].lvl = Math.floor(day / 2);   // and some of it fed along the way, as yours is
   }
   if (!equip.weapon) equip.weapon = rollInstance('rusty_sword', 'common', day, r);
   const l = Math.floor(r() * Math.min(3, day));
@@ -8297,10 +8322,27 @@ class Run {
     this.bag = this.bag.filter((x) => x.uid !== inst.uid);
     if (old) { if (!this.bagFull()) this.bag.push(old); else this.gold += SELL[old.rarity]; }
   }
+  // the worn pieces a drop could be fed to: the same kind of piece, not already at the top level
+  feedTargets(inst) {
+    const k = ITEM[inst.item].slot, slots = k === 'trinket' ? ['trinket1', 'trinket2'] : [k];
+    return slots.filter((s) => this.equip[s] && (this.equip[s].lvl || 0) < LVL_MAX);
+  }
+  // what a worn piece would be after a feed, without changing it
+  fedCopy(slot, inst) {
+    const t = this.equip[slot];
+    return { ...t, lvl: Math.min(LVL_MAX, (t.lvl || 0) + 1), day: Math.max(t.day, inst.day, this.day) };
+  }
+  feed(inst, slot) {
+    const t = this.equip[slot];
+    if (!t || !this.feedTargets(inst).includes(slot)) return false;
+    this.equip[slot] = this.fedCopy(slot, inst);
+    return this.equip[slot];
+  }
   takeLoot(i, action) {
     const inst = this.loot && this.loot.items[i];
     if (!inst) return false;
-    if (action === 'wear' || action === 'trinket1' || action === 'trinket2') this.wear(inst, action);
+    if (action && action.startsWith('feed-')) { if (!this.feed(inst, action.slice(5))) return false; }
+    else if (action === 'wear' || action === 'trinket1' || action === 'trinket2') this.wear(inst, action);
     else if (action === 'bag') { if (this.bagFull()) return false; this.bag.push(inst); }
     this.loot = null;
     if (this.round >= RUNCFG.days * RUNCFG.perDay) this.over = true;
@@ -8369,7 +8411,7 @@ function planEvents(seed) {
   });
 }
 const upR = (rar) => RARITY[rar].next, downR = (rar) => (rar === 'epic' ? 'rare' : 'common');
-const instName = (inst) => `${RARITY[inst.rarity].name} ${ITEM[inst.item].name}`;
+const instName = (inst) => `${RARITY[inst.rarity].name} ${ITEM[inst.item].name}${inst.lvl ? ` +${inst.lvl}` : ''}`;
 const aName = (inst) => `${/^[AEIOU]/.test(instName(inst)) ? 'an' : 'a'} ${instName(inst)}`;
 const tradeable = (i) => !ITEM[i.item].relic && !ITEM[i.item].keystone && ITEM[i.item].family;
 const acroOf = (inst) => Math.min(4, (ITEM[inst.item].acro || 0) + (inst.acroUp || 0));
@@ -10792,7 +10834,7 @@ function renderDoll() {
     $(`#doll${side}`).innerHTML = Object.entries(SLOTS).filter(([, s]) => s.side === side).map(([k, s]) => {
       const [ic, name, rc] = slotFace(k), empty = run ? !run.equip[k] : (k === 'skill' && !builds[0].skill) || (k === 'trinket1' && !builds[0].trinket);
       const locked = s.locked && !run, on = run ? runSel && runSel.slot === k : k === gearSlot && buildTab === 'gear';
-      return `<button class="slot ${locked ? 'locked' : ''} ${empty ? 'empty' : ''} ${on ? 'on' : ''}" data-slot="${k}" aria-label="${s.label}: ${name}"${rc ? ` style="border-color:${rc}"` : ''}><span class="sl-k">${s.label}</span>${ic}<small>${name}</small></button>`;
+      return `<button class="slot ${locked ? 'locked' : ''} ${empty ? 'empty' : ''} ${on ? 'on' : ''}" data-slot="${k}" aria-label="${s.label}: ${name}"${rc ? ` style="border-color:${rc}"` : ''}><span class="sl-k">${s.label}</span>${ic}<small>${name}</small>${run && run.equip[k] && run.equip[k].lvl ? `<span class="sl-lv">+${run.equip[k].lvl}</span>` : ''}</button>`;
     }).join('');
   }
   sizeDoll();
@@ -10991,6 +11033,20 @@ function showResult() {
   if (world.hunt && w === 0) ui.resK.textContent = `Cleared · ${clockStr(world.t - world.overT)} · ${Math.round(U[0].hp)} HP left`;
   // in a run, the odds you took on: an upset reads as one
   if (run && runOddsAt !== null) ui.resK.textContent += ` · ${w === 0 ? 'won' : 'lost'} at ${Math.round(runOddsAt * 100)}% odds`;
+  // in a run, what this fight did to the goal: a crown filled, a life gone, or nothing at stake
+  const rg = $('#resGoal');
+  rg.hidden = !run;
+  if (run) {
+    if (run.isDuel && w === 0) {
+      const won = run.wins + 1, left = RUNCFG.winTarget - won;
+      rg.className = 'res-goal'; rg.innerHTML = `${crownRow(won)}<span>${left ? `Duel ${won} of ${RUNCFG.winTarget} won. ${left} more for the Crown.` : 'Five duels won. The Crown!'}</span>`;
+    } else if (run.isDuel) {
+      const lives = run.lives - 1;
+      rg.className = 'res-goal lost'; rg.innerHTML = `<span class="hearts">${Array.from({ length: RUNCFG.lives }, (_, i) => `<i class="${i < lives ? 'on' : ''}"></i>`).join('')}</span><span>${lives ? `A life lost. ${lives} left.` : 'The last life. The run is over.'}</span>`;
+    } else {
+      rg.className = 'res-goal'; rg.innerHTML = `<span style="color:var(--ink-2);font-weight:700">${w === 0 ? 'Pick your drop next.' : 'No drop this time.'} Hunts never cost a life${run.isDuel ? '' : `; the duel is ${4 - slotOf(run.round) === 1 ? 'next' : `after ${3 - slotOf(run.round)} more hunt${3 - slotOf(run.round) === 1 ? '' : 's'}`}`}.</span>`;
+    }
+  }
   renderWhy(ui.resS, world.dmg[0]);
   ui.result.hidden = false; ui.live.hidden = true; ui.end.hidden = false;
   for (const id of ['replayBtn', 'rematchBtn', 'edit2Btn', 'nextBtn']) $('#' + id).hidden = !!run;
@@ -11473,7 +11529,7 @@ function itemCard(inst, actions = '', compare = false) {
   const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   return `<div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
-    <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>${fam ? schoolChip(schoolOfItem(it), 0, true) : ''}</div></div>
+    <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}${inst.lvl ? `<span class="lvl">+${inst.lvl}</span>` : ''}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>${fam ? schoolChip(schoolOfItem(it), 0, true) : ''}</div></div>
     <div class="ilines">${itemLines(inst).map(([k, t]) => `<p class="il-${k}">${t}</p>`).join('')}</div>
     ${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}
     ${compare ? `<p class="icmp">${compareLine(inst)}</p>` : ''}
@@ -11482,6 +11538,8 @@ function itemCard(inst, actions = '', compare = false) {
 }
 // A family's set text: the 2-piece stats and the 4-piece rule
 const setText = (f) => `2: ${Object.entries(FAMILY[f].set2.stats).map(([k, v]) => statLine(k, v)).join(', ')} · 4: ${FAMILY[f].set4.desc}`;
+const CROWN_SVG = '<path d="M3 17 L4.3 7 L8.6 11.2 L11 4.5 L13.4 11.2 L17.7 7 L19 17 Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>';
+const crownRow = (won) => `<span class="crowns" aria-label="${won} of ${RUNCFG.winTarget} duels won">${Array.from({ length: RUNCFG.winTarget }, (_, i) => `<svg viewBox="0 0 22 22" class="${i < won ? 'on' : ''}" aria-hidden="true">${CROWN_SVG}</svg>`).join('')}</span>`;
 function runHeader() {
   const pips = [1, 2, 3, 4].map((k) => {
     const r = (run.day - 1) * RUNCFG.perDay + k, done = r < run.round || (r === run.round && run.over);
@@ -11489,8 +11547,11 @@ function runHeader() {
   }).join('');
   const hearts = Array.from({ length: RUNCFG.lives }, (_, i) => `<i class="${i < run.lives ? 'on' : ''}"></i>`).join('');
   const hp = Math.round(run.hp * 100);
-  return `<div class="rhead"><div class="rday"><b>Day ${run.day}</b><span class="rpips" aria-label="Today: three hunts and a duel">${pips}</span></div>
-    <div class="rstats"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span class="hpn ${hp <= 40 ? 'low' : ''}" title="Wounds carry from hunt to hunt. The duel patches you up.">HP <b>${hp}%</b></span><span>Duels <b>${run.wins}/${RUNCFG.winTarget}</b></span><span class="gld">Gold <b>${run.gold}</b></span></div></div>${runScreen !== 'path' && runScreen !== 'over' && runScreen !== 'gear' && Object.keys(mySchools()).length ? `<div class="sbar">${schoolBar()}</div>` : ''}`;
+  const stop = run.over ? '' : run.isDuel ? 'Duel tonight' : `Hunt ${slotOf(run.round)} of 3`;
+  const left = RUNCFG.winTarget - run.wins;
+  return `<div class="rhead"><div class="rday"><b>Day ${run.day}<small style="font-size:.6em;opacity:.55">/${RUNCFG.days}</small></b><span class="rpips" aria-label="Today: three hunts and a duel">${pips}</span><span class="stop">${stop}</span></div>
+    <div class="rstats"><span class="hpn ${hp <= 40 ? 'low' : ''}" title="Wounds carry from hunt to hunt. The duel patches you up.">HP <b>${hp}%</b></span><span class="gld">Gold <b>${run.gold}</b></span></div></div>
+    ${runScreen === 'path' || runScreen === 'gear' ? '' : `<div class="rgoal" title="Each day ends in a duel. Win ${RUNCFG.winTarget} for the Crown; lose ${RUNCFG.lives} and the run is over. Hunts never cost a life.">${crownRow(run.wins)}<span class="g-t">${run.crown ? '<b>The Crown is yours</b>' : `<b>${left}</b> win${left === 1 ? '' : 's'} to the Crown`}</span><span class="g-lv"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span><b>${run.lives}</b> ${run.lives === 1 ? 'life' : 'lives'}</span></span></div>`}${runScreen !== 'path' && runScreen !== 'over' && runScreen !== 'gear' && Object.keys(mySchools()).length ? `<div class="sbar">${schoolBar()}</div>` : ''}`;
 }
 function huntTitle(o) { const h = HUNTS[o.hunt]; return o.tier === 'elite' && h.eliteName ? h.eliteName : h.name; }   // the card's chip gives the risk
 // What this creature's gear is about, in a line you can read at a glance: the statuses it carries, the
@@ -11547,6 +11608,12 @@ function lootVerdict(inst) {
   if (set && set.dir < 0 && d < 0.1) return ['brk', `Breaks ${SCHOOLS[set.k].name} ${set.a}`];
   if (it.trig && it.trig.length && !(ITEM[cur.item].trig && ITEM[cur.item].trig.length)) return d > -0.03 ? ['rule', 'New trick'] : ['side', 'New trick'];
   if (d > 0.025) return ['up', `+${Math.round(d * 100)}% power`];
+  // not worth wearing: say what it would do fed to what you wear instead
+  const ft = run.feedTargets(inst);
+  if (ft.length) {
+    const sl = ft.includes(to) ? to : ft[0], nx = run.fedCopy(sl, inst);
+    return ['feed', `Feed · +${nx.lvl} ▲${Math.round((instPower(nx) / instPower(run.equip[sl]) - 1) * 100)}%`];
+  }
   if (d < -0.025) return ['dn', `${Math.round(d * 100)}% power`];
   return ['side', 'Sidegrade'];
 }
@@ -11638,7 +11705,7 @@ function renderRun() {
   const el = ui.runPanel;
   let body = '', actions = '';
   if (runScreen === 'path') {
-    body = `<div class="evhead"><span class="lbl">Before the first hunt</span><b>Choose your path</b><p>A school to build: its keystone now, and its creatures more often. Two, four and six pieces of a school each add a rule.</p></div>
+    body = `<div class="evhead"><span class="lbl">Before the first hunt</span><b>Choose your path</b><p>${RUNCFG.days} days, each three hunts and then a duel. Win ${RUNCFG.winTarget} duels for the Crown; lose ${RUNCFG.lives} and it's over. Your path is a school to build: its keystone now, its creatures more often.</p></div>
       <div class="evopts">${run.pathOffers().map((id) => {
         const P = PATHS[id], it = ITEM[P.key];
         return `<button class="evopt path" data-path="${id}"><span class="p-top">${itemIcon({ item: P.key })}<b>${P.name}</b><span class="lbl">${it.name}</span></span>
@@ -11648,7 +11715,7 @@ function renderRun() {
   } else if (runScreen === 'crest') {
     // A duel won: a crest, one more piece of a school for the rest of the run. The card says what it unlocks.
     const n = mySchools();
-    body = `<div class="evhead"><span class="lbl">Duel won</span><b>Take a crest</b><p>It counts as one more piece of its school, for the rest of the run.</p></div>
+    body = `<div class="evhead"><b>Duel won: take a crest</b><p>One more piece of its school, for the rest of the run.</p></div>
       <div class="evopts">${run.crestOffer.map((k) => {
         const S = SCHOOLS[k], a = n[k] || 0, b = a + 1, up = schoolTier(b) > schoolTier(a);
         const what = up ? `<small class="cr-up">${S.name} ${b}: ${S.tiers[schoolTier(b) - 1].desc}</small>` : `<small>${S.name} ${a} → ${b}${nextTierAt(b) ? ` · the next rule at ${nextTierAt(b)}: ${S.tiers[schoolTier(b)].desc}` : ''}</small>`;
@@ -11659,7 +11726,7 @@ function renderRun() {
     // Each hunt is a bet: your odds against it (fights run unseen with your build and your wounds), the
     // gold and loot it pays, and how much of what it drops would help you. Tap to look, tap again to go.
     const o = runSel && runSel.offer !== undefined ? run.offers[runSel.offer] : null;
-    body = `<div class="row-h"><span class="lbl">Choose your hunt</span><span class="lbl">Hunt ${slotOf(run.round)} of 3${run.hp < 1 ? ` · you are at ${Math.round(run.hp * 100)}%` : ''}</span></div>` + run.offers.map(huntCard).join('');
+    body = run.offers.map(huntCard).join('');   // the header says which hunt of the day this is
     actions = o ? `<button class="ghost" data-go="gear">Gear</button><button class="go" data-go="hunt">${huntTitle(o).length > 9 ? 'Hunt it' : `Hunt ${huntTitle(o)}`}</button>`
       : `<button class="ghost" data-go="gear">Gear</button><button class="ghost" data-go="leave">Home</button>`;
   } else if (runScreen === 'loot') {
@@ -11723,8 +11790,7 @@ function renderRun() {
     const g = run.ghost, red = ghostBuild(g), key = `d${run.seed}.${run.round}.${buildSig()}`;
     const od = wantOdds(key, runBlue(), red, `${run.seed}:${run.round}:duel`);
     const worn = SLOTS_RUN.map((k) => g.equip[k]).filter(Boolean);
-    body = `<div class="row-h"><span class="lbl">Tonight's duel</span><span class="lbl">Duels ${run.wins}/${RUNCFG.winTarget}</span></div>
-      <div class="dcard2">
+    body = `      <div class="dcard2">
         <div class="dtop"><span class="dic">${g.equip.weapon ? itemIcon(g.equip.weapon) : gearSvg(red.weapon)}</span><div><b class="dname">${g.name}</b>
           <small>${g.mine ? 'One of your past builds' : `Record ${g.record}`} · ${WEAP[red.weapon].name}${red.skill ? ` · ${SKILL[red.skill].name}` : ''}</small></div></div>
         <div class="dgear">${worn.map((i2) => `<button class="dg" data-theirs="${i2.uid}" style="--rc:${ITEM[i2.item].keystone ? KEY_COL : ITEM[i2.item].relic ? RELIC_COL : RAR_COL[i2.rarity]}" aria-label="${ITEM[i2.item].name}">${itemIcon(i2)}</button>`).join('')}</div>
@@ -11754,6 +11820,13 @@ function renderRun() {
 // attribute that carries the choice.
 // two of the same item at the same rarity merge into one a rarity up
 const mergeBtn = (inst) => (run.twinOf(inst) ? `<button class="go" data-bagact="merge">Merge → ${RARITY[upR(inst.rarity)].name}</button>` : '');
+// Feed buttons: one for each worn piece the drop could go into, with what it would come to
+function feedBtns(inst, attr) {
+  return run.feedTargets(inst).map((sl) => {
+    const cur = run.equip[sl], nx = run.fedCopy(sl, inst), gain = Math.round((instPower(nx) / instPower(cur) - 1) * 100);
+    return `<button class="ghost feed" ${attr}="${sl}" title="Feed it to your ${ITEM[cur.item].name}: +${nx.lvl}, and up to today">Feed ${ITEM[cur.item].name.split(' ').slice(-1)[0]} +${nx.lvl} <small>▲${gain}%</small></button>`;
+  }).join('');
+}
 function wearBtns(inst, attr) {
   if (ITEM[inst.item].slot === 'trinket' && run.equip.trinket1 && run.equip.trinket2) {
     return ['trinket1', 'trinket2'].map((t) => `<button class="go swap" ${attr}="${t}" aria-label="Wear, replacing ${ITEM[run.equip[t].item].name}">⇄ ${ITEM[run.equip[t].item].name.split(' ').slice(-1)[0]}</button>`).join('');
@@ -11836,7 +11909,7 @@ function runClick(ev) {
   if (t.dataset.pick !== undefined) {   // a drop: try it on, and read it
     const i = +t.dataset.pick, inst = run.loot.items[i], w = powerWith(inst);
     runSel = { loot: i, slot: w.to }; tryOn(inst, w.to); renderRun();
-    itemSheet(inst, `${wearBtns(inst, `data-loot="${i}" data-act`)}<button class="ghost" data-loot="${i}" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, WHY_LBL(inst.why), lootVerdict(inst)[1]);
+    itemSheet(inst, `${wearBtns(inst, `data-loot="${i}" data-act`)}${feedBtns(inst, `data-loot="${i}" data-act="feed-" data-fed`).replace(/data-act="feed-" data-fed="(\w+)"/g, 'data-act="feed-$1"')}<button class="ghost" data-loot="${i}" data-act="bag" ${run.bagFull() ? 'disabled' : ''}>Bag${run.bagFull() ? ' (full)' : ''}</button>`, WHY_LBL(inst.why), lootVerdict(inst)[1]);
     return;
   }
   if (t.dataset.theirs !== undefined) {
@@ -11884,6 +11957,7 @@ function runClick(ev) {
     if (a === 'wear') { run.wear(run.bag.find((x) => x.uid === runSel.uid), t.dataset.to); runSel = null; }
     else if (a === 'sell') { toast(`Sold for ${run.sell(runSel.uid)} gold.`); runSel = null; }
     else if (a === 'off') { run.unwear(runSel.slot); runSel = null; }
+    else if (a === 'feed') { const src = run.bag.find((x) => x.uid === runSel.uid), f = src && run.feed(src, t.dataset.to); if (f) { run.bag = run.bag.filter((x) => x !== src); toast(`${ITEM[f.item].name} is now +${f.lvl}.`); sfx.play('rare'); } runSel = null; }
     else if (a === 'merge') { const m = run.merge(runSel.uid || run.equip[runSel.slot].uid); if (m) toast(`Merged into ${aName(m)}.`); runSel = null; }
     closeSheet();
     run.save(); applyRunBuild(); U = [demoUnit(0, builds[0])]; renderDoll(); renderRun(); return;
@@ -11984,7 +12058,7 @@ function gearSheet() {
     return;
   }
   const acts = runSel.uid
-    ? `${wearBtns(inst, 'data-bagact="wear" data-to')}${mergeBtn(inst)}<button class="ghost" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`
+    ? `${wearBtns(inst, 'data-bagact="wear" data-to')}${feedBtns(inst, 'data-bagact="feed" data-to')}${mergeBtn(inst)}<button class="ghost" data-bagact="sell">Sell +${SELL[inst.rarity]}</button>`
     : `${mergeBtn(inst)}${runSel.slot !== 'weapon' ? `<button class="ghost" data-bagact="off" ${run.bagFull() ? 'disabled' : ''}>Take off</button>` : ''}`;
   itemSheet(inst, acts, runSel.uid ? 'In your bag' : slotName(runSel.slot));
 }

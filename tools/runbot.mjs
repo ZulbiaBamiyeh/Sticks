@@ -66,6 +66,14 @@ const out = await p.evaluate(([N, strat, loot]) => {
           // nothing worth wearing is worth a reroll: free when all three are for filled slots, else one of the day's two
           const wasFree = run.freeReroll();
           if (!pick && (wasFree || run.rerolls > 0) && run.rerollLoot()) { res.rerolls++; if (wasFree) res.free++; pick = best(); }
+          // nothing worth wearing: feed the one that helps most to what it would go into (random never feeds)
+          if (!pick && loot !== 'random' && run.hp >= 0.4) {
+            let bs = score(R.runBuild(run.equip, R.TEMPLATES[0], run.boons));
+            run.loot.items.forEach((inst, i) => {
+              for (const sl of run.feedTargets(inst)) { const s = score(R.runBuild({ ...run.equip, [sl]: run.fedCopy(sl, inst) }, R.TEMPLATES[0], run.boons)); if (s > bs) { bs = s; pick = { i, act: 'feed-' + sl }; } }
+            });
+            if (pick) res.feeds = (res.feeds || 0) + 1;
+          }
           // badly hurt with nothing worth wearing: walk away and rest instead
           if (!pick && (run.hp < 0.55 || run.bagFull())) { run.skipLoot(); res.rests++; }
           else if (pick) run.takeLoot(pick.i, pick.act);
@@ -84,7 +92,7 @@ const out = await p.evaluate(([N, strat, loot]) => {
 }, [+N, strat, loot]);
 const pct = ([a, b]) => (b ? `${Math.round(100 * a / b)}% of ${b}` : '-');
 console.log(`crowns ${out.crowns}/${N}  duel wins ${out.duelWins.join(',')}  ended on day ${out.endDay.join(',')}`);
-console.log(`${out.rerolls} rerolls (${out.free} free) · ${out.rests} rests · ${out.legends} legendaries found`);
+console.log(`${out.rerolls} rerolls (${out.free} free) · ${out.rests} rests · ${out.feeds || 0} feeds · ${out.legends} legendaries found`);
 console.log('paths', out.paths, '· biggest school at the end', out.topSchool.join(','));
 console.log('hunts', Object.fromEntries(Object.entries(out.huntWin).map(([k, v]) => [k, pct(v)])), 'duels', pct(out.duel));
 console.log(errs.slice(0, 3).join('\n') || 'no errors');
