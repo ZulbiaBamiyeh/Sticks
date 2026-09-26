@@ -1664,6 +1664,7 @@ function think(u) {
   if (u.recover) { u.recover = false; if (recoverChoice(u, e)) return; }
   if (u.guardT > 0 && guardStand(u, e)) return;
   if (e.ghost && searchLook(u, e)) return;
+  if (holdHome(u, e)) return;
   if (isRanged(u) ? rangedEngage(u, e) : meleeEngage(u, e)) return;
   stuckCheck(u);
   if (--ai.replan <= 0) plan(u, e);
@@ -1679,7 +1680,7 @@ function comboLogic(u, e) {
   if (u.phase === 'r' && u.hitLanded && d.chain && u.af >= d.w + d.a + (d.fast ? 1 : 3) && e.state !== 'dead' && !lying(e)) {
     const f = Math.sign(e.b.x - u.b.x) || u.face;
     const nx = ATK[d.chain];   // the next hit lunges, so it reaches a little further than its box
-    if (inBox(u.b.x, u.b.y, f, nx.box, e.b.x + e.b.vx * nx.w / 60, e.b.y, 0.2 + (nx.lunge || 0) * nx.w / 120)) { u.face = f; startAtk(u, d.chain); }
+    if (inBox(u.b.x, u.b.y, f, nx.box, e.b.x + e.b.vx * nx.w / 60, e.b.y, 0.2 + (nx.lunge || 0) * nx.w / 120) && atkSafe(u, d.chain, f)) { u.face = f; startAtk(u, d.chain); }
   }
 }
 
@@ -1700,12 +1701,82 @@ function tryAirAttack(u, e) {
   if (e.ghost) return false;
   // dive onto someone below
   if (dy > 0.7 && dy < 5 && b.vy > -6 && Math.abs(dx) < (u.w === 'hammer' ? 1.9 : 1.2) + dy * 0.12 && !(u.ai.macro && u.ai.ms.wj > 0)) {
-    u.face = f; startAtk(u, u.w === 'hammer' ? 'aslam' : 'plunge'); return true;
+    const pl = u.w === 'hammer' ? 'aslam' : 'plunge';
+    if (atkSafe(u, pl, f)) { u.face = f; startAtk(u, pl); return true; }
   }
-  if ((u.w === 'sword' || u.w === 'daggers') && inBox(b.x, b.y, f, ATK.aslash.box, e.b.x, e.b.y, 0)) { u.face = f; startAtk(u, 'aslash'); return true; }
+  if ((u.w === 'sword' || u.w === 'daggers') && inBox(b.x, b.y, f, ATK.aslash.box, e.b.x, e.b.y, 0) && atkSafe(u, 'aslash', f)) { u.face = f; startAtk(u, 'aslash'); return true; }
   return false;
 }
 
+// ---- the danger map
+// Where a fighter will not put its feet: spikes it knows about (its own, and the rival's it has found),
+// and the closing walls. The route planner already prices these in; everything that moves a fighter a
+// few inches at a time — lining up for a jump, braking, an attack that lunges or dives — checks here too,
+// so the only way onto a known spike is to be knocked there.
+function dangerAt(u, x, y) {
+  if (inZone(x)) return true;
+  if (!u.known.size) return false;
+  const r = Math.floor(y - 1e-3), c0 = Math.floor(x - W / 2 + 0.12), c1 = Math.floor(x + W / 2 - 0.12);
+  for (let c = c0; c <= c1; c++) { const i = r * COLS + c; if (A.spikes[i] >= 0 && u.known.has(i)) return true; }
+  return false;
+}
+// Filter a step: a fighter on the ground that is about to walk, or slide, into danger holds back instead.
+// Scripted jumps are trusted — every one was simulated before it was taken, spikes and all.
+function stepGuard(u, dir) {
+  const b = u.b;
+  if (u.ai.macro || world.demo || u.fearT > 0 || !u.known.size) return dir;
+  if (!b.gr) return airGuard(u, dir);
+  if (dangerAt(u, b.x, b.y)) {   // standing in it: walk off it the shorter way, or jump out
+    const open = (d, k) => !dangerAt(u, b.x + d * k, b.y) && !boxSolid(b.x + d * k - W / 2, b.y - H, b.x + d * k + W / 2, b.y - 0.05);
+    if (dir && open(dir, 0.7)) return dir;
+    for (const d of [-u.face, u.face]) if (open(d, 0.7)) return d;
+    for (const d of [-u.face, u.face]) if (open(d, 1.3)) { u.in.press = true; u.in.hold = true; return d; }   // a bed of them: jump clear
+    u.in.press = true; u.in.hold = true;
+    return dir || u.face;
+  }
+  const look = dir || Math.sign(b.vx);
+  if (!look) return dir;
+  const reach = Math.abs(b.vx) * 9 / 60 + (dir ? 0.1 : 0.02), x = b.x + look * reach;
+  // off the edge of a ledge, what matters is the floor it will come down on
+  const y = standable(Math.floor(x), Math.floor(b.y - 1e-3)) || boxSolid(x - W / 2, b.y - H, x + W / 2, b.y - 0.05) ? b.y : groundBelow(x, b.y);
+  if (!dangerAt(u, x, y)) return dir;
+  return Math.abs(b.vx) > 1 && Math.sign(b.vx) === look ? -look : 0;   // brake hard, or just stop
+}
+// Falling with nothing scripted (off a ledge, out of a hit, off a pad): steer the fall away from a known
+// spike, keeping whichever way the fighter wanted to go if that one lands safe.
+function lands(u, dir) {
+  const b = { ...stateOf(u.b), speed: u.b.speed, acro: u.acro, float: u.b.float, grip: u.b.grip };
+  for (let f = 0; f < 90 && !b.gr; f++) {
+    physStep(b, dir, false, false, u.side, true, 1);
+    if (b.spike >= 0 && u.known.has(b.spike)) return false;
+  }
+  return !inZone(b.x);
+}
+function airGuard(u, dir) {
+  if ((world.t + u.side) % 3) return u.airDir !== undefined && u.airT > world.t ? u.airDir : dir;
+  let pick = dir;
+  if (!lands(u, dir)) for (const d of [0, -dir || 1, dir || -1]) if (d !== dir && lands(u, d)) { pick = d; break; }
+  u.airDir = pick; u.airT = world.t + 3;
+  return pick;
+}
+// Where an attack that moves you will leave you: the lunge, the hop, the dive, run through the physics.
+function atkSafe(u, name, face = u.face) {
+  const d = ATK[name];
+  if (!d || world.demo || !(d.lunge || d.hop || d.plunge || d.air)) return true;
+  const b = { ...stateOf(u.b), speed: u.b.speed, acro: u.acro, float: u.b.float, grip: u.b.grip };
+  for (let f = 0; f < d.w + d.a + 24; f++) {
+    if (f === d.w) {
+      if (d.lunge) b.vx = face * d.lunge;
+      if (d.hop) { b.vy = d.hop; b.gr = false; }
+      if (d.plunge) { b.vy = 22; b.vx *= 0.3; }
+    }
+    if (d.plunge && f > d.w && !b.gr) b.vy = Math.max(b.vy, 20);
+    physStep(b, 0, false, false, u.side, false, f < d.w && b.gr ? 1 : 0.4);
+    if (b.spike >= 0 && u.known.has(b.spike)) return false;
+    if (b.gr && f > d.w + 2 && !d.plunge && Math.abs(b.vx) < 0.3) break;
+  }
+  return !inZone(b.x);
+}
 // Frames until the rival's melee swing lands on u, or -1 if it won't.
 function meleeThreat(u, e) {
   if (e.state !== 'atk' || e.phase !== 'w' || !e.atkDef.melee) return -1;
@@ -1743,7 +1814,7 @@ function tryDodge(u, e) {
   if (e.atkName === 'hammer') return false;   // too tall to jump; tryAttack walks back from it
   // Beat a slow swing to the punch, unless it's a hammer that will swing straight through the hit.
   if ((u.w === 'sword' || u.w === 'daggers') && remain > ATK[WEAP[u.w].atk].w + 1 && rng() < 0.5) {
-    u.face = toward; startAtk(u, WEAP[u.w].atk); return true;
+    if (atkSafe(u, WEAP[u.w].atk, toward)) { u.face = toward; startAtk(u, WEAP[u.w].atk); return true; }
   }
   const p = { bow: 0.6, stars: 0.6, daggers: 0.55, sword: 0.4, spear: 0.3, hammer: 0.2 }[u.w] + (remain > 10 ? 0.25 : 0);
   if (rng() < p) {
@@ -1805,6 +1876,7 @@ function pathClears(u, m, frames) {
 
 function tryAttack(u, e) {
   if (u.react > 0 || u.cd > 0 || e.state === 'dead') return false;
+  if (u.b.gr && u.known.size && dangerAt(u, u.b.x, u.b.y)) return false;   // off the spike first
   const b = u.b, eb = e.b, dx = eb.x - b.x, dy = eb.y - b.y, f = Math.sign(dx) || u.face, wp = WEAP[u.w];
   if (wp.range) {
     const dist = Math.hypot(dx, dy);
@@ -1836,14 +1908,16 @@ function tryAttack(u, e) {
   }
   const name = wp.atk, def = ATK[name], lead = def.w / 60 * 0.6;
   const box = u.w === 'puppet' ? [def.box[0], def.box[1], pupForm(u).reach, def.box[3]] : def.box;
-  if (inBox(b.x, b.y, f, box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1)) { u.face = f; startAtk(u, name); return true; }
+  if (inBox(b.x, b.y, f, box, eb.x + eb.vx * lead, eb.y + eb.vy * lead * 0.5, 0.1) && atkSafe(u, name, f)) { u.face = f; startAtk(u, name); return true; }
   // sword: a long dash slash from just out of reach
   if (u.w === 'sword' && !(u.ai.dashT > world.t) && eb.gr && Math.abs(dy) < 0.5 && Math.abs(dx) > 1.9 && Math.abs(dx) < 3 &&
       walkLine(b.x, eb.x, Math.floor(b.y - 1e-3), u) && !(e.state === 'atk' && e.atkName === 'hammer')) {
-    u.ai.dashT = world.t + 80; u.face = f; startAtk(u, 'dash'); return true;
+    if (atkSafe(u, 'dash', f)) { u.ai.dashT = world.t + 80; u.face = f; startAtk(u, 'dash'); return true; }
   }
   if ((u.w === 'sword' || u.w === 'daggers') && !eb.gr && dy < -0.8 && dy > -3.6 && Math.abs(dx) < 2.2) {   // a rival standing on a ledge gets climbed to instead
-    startMacro(u, { dir: Math.abs(dx) > 0.5 ? f : 0, hold: dy < -2 ? 18 : 10, delay: 0 });
+    const m = { dir: Math.abs(dx) > 0.5 ? f : 0, hold: dy < -2 ? 18 : 10, delay: 0 }, res = simMacro(stateOf(b), m, u.side, b.speed, u.acro);
+    if (!res || knownHit(u, res) || inZone(res.x)) return false;
+    startMacro(u, m);
     u.face = f; u.react = 10; u.ai.path.length = 0; return true;
   }
   return false;
@@ -1902,6 +1976,25 @@ function walkLine(x0, x1, r, u) {
     if (A.spikes[i] >= 0 && u.known.has(i)) return false;
     if (A.pads[i] === u.side) return false;
   }
+  return true;
+}
+// Home ground. A fighter with its own spikes on the floor between it and a blade coming in does not walk
+// out over them to meet it: it waits a step back, so the blade has to cross them — find them the hard
+// way, or jump them and come down in reach. It holds for a few seconds at a time, never against a
+// shooter (who would just shoot it), and not once the walls are closing.
+function holdHome(u, e) {
+  if (isRanged(e) || e.ghost || e.mob || !u.b.gr || world.zone > 1.5) return false;
+  if (u.holdUntil && world.t > u.holdUntil) { if (world.t < u.holdUntil + 240) return false; u.holdUntil = 0; }
+  const b = u.b, dx = e.b.x - b.x, dir = Math.sign(dx), r = Math.floor(b.y - 1e-3);
+  if (!dir || Math.abs(e.b.y - b.y) > 1.2 || Math.abs(dx) < 1.2) return false;
+  let trap = -1;
+  for (let x = b.x + dir * 0.6; (e.b.x - x) * dir > 0.4; x += dir * 0.5) { const c = Math.floor(x); if (A.spikes[r * COLS + c] === u.side) { trap = c; break; } }
+  if (trap < 0 || Math.abs(trap + 0.5 - b.x) > 5.5) return false;
+  if (!u.holdUntil) u.holdUntil = world.t + 240;
+  world.stats[u.side].held = (world.stats[u.side].held || 0) + 1;
+  u.face = dir;
+  const want = trap + 0.5 - dir * (isRanged(u) ? 3.2 : 2.6), d = want - b.x;
+  u.in.dir = Math.abs(d) > 0.2 ? Math.sign(d) : 0;
   return true;
 }
 function meleeEngage(u, e) {
@@ -2199,7 +2292,7 @@ function choosePadMacro(u, e) {
     const r = simMacro(s, m, u.side, u.b.speed, u.acro);
     if (!r) continue;
     let sc = g ? Math.abs(r.c - g.c) + Math.abs(r.r - g.r) * 1.5 : 0;
-    if (knownHit(u, r)) sc += 50;
+    if (knownHit(u, r)) sc += 400;   // no strike is worth landing on a spike you know is there
     if (A.pads[r.r * COLS + r.c] === u.side && !(target && r.c === target.c && r.r === target.r)) sc += 200;
     if (target && r.c === target.c && r.r === target.r) sc -= 100;
     // steer the flight to use it: over the rival for a blade, to a shot or high ground for a shooter
@@ -3027,7 +3120,7 @@ function applyHit(att, def, d, dirX, crit) {
   if (shattered) shatter(def);
   if (!armor) {
     if (def.hook && def.hook.phase === 'out') def.hook.phase = 'back';
-    def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null;
+    def.state = 'stun'; def.stunT = d.stun; def.ai.macro = null; def.ai.path.length = 0; def.backflip = false; def.skName = null; def.knocked = true;
     // knockback: more from gear that hits hard, less on gear that stands firm
     const steady = Math.min(0.85, (dg ? dg.flags.steady || 0 : 0) + ((dSh && dSh.steady) || 0) + (def.retal && def.retal.t > 0 && def.shield > 0 ? def.retal.steady : 0));
     const kbm = (ag ? 1 + (ag.flags.kb || 0) : 1) * (1 - steady);
@@ -4835,7 +4928,7 @@ function drawMob(u, pal) {
 }
 function spikeHit(u, i) {
   const owner = A.spikes[i], c = i % COLS, b = u.b;
-  world.trace.push(`${clockStr(world.t)} ${u.side ? 'R' : 'B'} hit ${owner ? 'R' : 'B'} spike c${c} known=${u.known.has(i)} st=${u.state} vx=${b.vx.toFixed(1)} vy=${b.vy.toFixed(1)} macro=${!!u.ai.macro}`);
+  world.trace.push(`${clockStr(world.t)} ${u.side ? 'R' : 'B'} hit ${owner ? 'R' : 'B'} spike c${c} known=${u.known.has(i)} st=${u.state} vx=${b.vx.toFixed(1)} vy=${b.vy.toFixed(1)} macro=${!!u.ai.macro} knocked=${!!u.knocked || u.state === 'duel'}`);
   u.spikeCd = 45; u.juggle++;
   // Throw the victim clear, preferably back the way it came, so spikes punish once instead of juggling.
   const r = Math.floor(i / COLS), back = -Math.sign(b.vx) || -u.face;
@@ -4989,11 +5082,11 @@ function act(u) {
   }
   let ctl = false, dir = 0, press = false, hold = false, fr = 1;
   switch (u.state) {
-    case 'free': ctl = true; dir = u.in.dir; press = u.in.press; hold = u.in.hold; break;
+    case 'free': ctl = true; dir = stepGuard(u, u.in.dir); press = u.in.press; hold = u.in.hold; break;
     case 'atk':
       atkStep(u); hasteStep(u);
       if (u.fearT > 0 && u.state === 'atk' && u.phase === 'w') u.state = 'free';
-      if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = u.in.dir; }
+      if (u.state === 'atk' && u.atkDef.air) { ctl = true; dir = stepGuard(u, u.in.dir); }
       else if (u.state === 'atk' && u.atkDef.cast && b.gr) { b.vx = 0; fr = 3; }   // planted for the incantation
       break;
     case 'skill':
@@ -5064,7 +5157,7 @@ function act(u) {
     if (vyBefore > 9) u.landT = 9;
     u.flipT = 0;
     // a parkour roll out of a big drop keeps the momentum going
-    if (u.state === 'free' && u.acro >= 1 && vyBefore > 17 && Math.abs(b.vx) > 4 && !u.ai.macro) startRoll(u, Math.sign(b.vx), 12);
+    if (u.state === 'free' && u.acro >= 1 && vyBefore > 17 && Math.abs(b.vx) > 4 && !u.ai.macro && rollSafe(u, Math.sign(b.vx))) startRoll(u, Math.sign(b.vx), 12);
     if (u.tumble) {
       if (b.landV > 12 && !u.bounced) { b.vy = -b.landV * 0.38; b.gr = false; u.bounced = true; sfxShake(3); dust(b.x, b.y, 6, 1); }
       else {
@@ -5082,6 +5175,7 @@ function act(u) {
     hurt(u, 3, 'wall', 1 - u.side);
   }
   if (u.state !== 'dead' && b.spike >= 0 && u.spikeCd <= 0 && u.state !== 'down' && u.state !== 'getup') spikeHit(u, b.spike);
+  if (b.gr && u.state === 'free') u.knocked = false;   // back on its feet: whatever happens now is its own doing
   if (u.state !== 'dead' && inZone(b.x)) {
     hurt(u, 0.3, 'zone', 1 - u.side);
     if (world.t % 6 === 0) sparks(b.x, b.y - 0.8, 0, 2, 'red');

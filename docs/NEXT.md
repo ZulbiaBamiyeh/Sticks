@@ -4,6 +4,31 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **Fighters play around what is on the floor.** Spikes were switched off because fighters kept walking
+  into them. The cause wasn't knowledge: about two-thirds of hits were on spikes the fighter already
+  knew about, including 95 walk-ins on its own. The route planner priced spikes in, but the small moves
+  never checked: lining up for a jump, braking, lunges and dives, falls, the ledge-climb jump, and the
+  roll after a big landing. There is now one danger check (`dangerAt`: known spikes and the closing
+  walls) used by a step guard on every free step (`stepGuard`, which also steers falls with `airGuard`
+  and gets a fighter off a spike it is standing on), and by every attack that moves you (`atkSafe`
+  simulates the lunge, hop or dive first). Pad launches won't land on a known spike for a strike.
+- **Owners use their half:** with its own spikes between it and a blade coming in, a fighter waits
+  2.6 tiles behind them instead of walking out over them (`holdHome`). It holds for 4 s at a time,
+  never against shooters, and not once the walls close.
+- `tools/traps.mjs` measures both: every spike hit sorted by why (first find, knocked on, walked on a
+  known spike, attacked onto one), and a placement test (the same fighter on three equal-cost halves).
+
+  | | before | after |
+  | --- | --- | --- |
+  | walked or attacked onto a known spike, per fight | 2.1 | 0.33 |
+  | owner wins, spikes across the way in / up on a ledge / none | 46 / 39 / 40% | 45 / 39 / 40% |
+  | trap damage a fight, spikes across the way in | 26 | 32 |
+
+- **Spikes are still off** (`SPIKES_ON = false`). With them on, blades fall to 33–44% and bows and
+  tomes rise to 57–65%, because the fighter who has to cross the floor pays for them. That needs a
+  balance pass before they come back.
+
+## Before that
 - **The Ice Tome** (`ice_tome`, `SCHOOL.ice`), built to feel unlike the Slime Tome: a fortress, not an
   army. Pages: `cast_rampart` (a real, solid, breakable ice wall: `world.ice`, `A.ice`, `rampartSpot`,
   `reNav`, `hitIce`, `iceGone`), `cast_glaze` (a slippery floor: `world.fires` kind `glaze`, `u.slipT`,
@@ -39,11 +64,14 @@ matchup (sword 77%, daggers 70%, bow 13%). The Ice Tome is flatter (daggers 65%,
 stars 42%).
 
 ## Next up
-1. **Next tome** (flame or storm). Give it its own verbs, its own way of moving, and its own answer to
+1. **Placed items for the run** (Brazier, Totem, Mirror block): each declares where it is dangerous to
+   the rival and where its owner wants to stand, so `dangerAt` and `holdHome` handle it. Pick 1 of 3 loot
+   first. Spikes back on needs a balance fix for blades first (see above).
+2. **Next tome** (flame or storm). Give it its own verbs, its own way of moving, and its own answer to
    melee: slime melts away, ice seals itself in. The shelved schools are in the backup for reference.
-2. The Slime Tome is lopsided against the bow (13%). Slimes chasing archers helped; something that
+3. The Slime Tome is lopsided against the bow (13%). Slimes chasing archers helped; something that
    eats or blocks arrows might be the fix.
-3. **Edit your half of the map between fights in a run** (asked for, never started). Plan: `Run` keeps its
+4. **Edit your half of the map between fights in a run** (asked for, never started). Plan: `Run` keeps its
    own `pieces`; add a "Your half" entry on the run gear screen that reuses the turf editor (`#turfTab`,
    `applyTool`, `#tools`, `#budget`) and returns to the run.
 
@@ -52,6 +80,7 @@ All need `CHROMIUM_PATH=/opt/pw-browsers/chromium`:
 - `node tools/fit.mjs` — nothing may scroll on any screen size (must print "Nothing scrolls.").
 - `node tools/sim.mjs -- --fights 900` — weapon/skill balance tables.
 - `node tools/runbot.mjs` — plays whole runs headless; must end "no errors".
+- `node tools/traps.mjs` — do fighters play around spikes; walked/attacked onto known spikes should stay near 0.
 Headless API for custom tests: `window.__homeTurf` (`fight`, `play`, `step`, `forceAtk`, `melt`, `ATK`, `SCHOOL`).
 
 ## Publishing

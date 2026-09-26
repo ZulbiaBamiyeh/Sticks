@@ -379,6 +379,11 @@ weapon-against-weapon table. Use `-- --fights 3000` for tighter numbers and
 `-- --seed 7` for a different sample. Set `CHROMIUM_PATH` to use an existing
 Chromium.
 
+`node tools/traps.mjs` checks that fighters play around what's on the floor:
+every spike hit is sorted by why it happened (found for the first time,
+knocked on, walked onto a known one, attacked onto a known one), and the same
+fighter fights on three halves of equal cost to show whether placement matters.
+
 In the browser console, `window.__homeTurf.fight(seed, blue, red)` runs one fight
 without rendering and returns the result and event log. A build looks like
 `{ weapon: 'spear', skill: 'hook', trinket: 'frost', acro: 3, pieces: [] }`. Pass a
