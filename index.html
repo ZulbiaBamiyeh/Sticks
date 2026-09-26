@@ -517,6 +517,33 @@
   .p-top .lbl { margin-left: auto; font-size: 10px; }
   .p-fam { color: var(--ink-2); font-weight: 700; }
   .rstats .hpn.low b { color: var(--red); }
+  /* schools: a chip each, with three notches for the 2 / 4 / 6 tiers */
+  .sch { display: inline-flex; align-items: center; gap: 4px; font: inherit; font-size: 11px; font-weight: 800; color: var(--sc); background: color-mix(in srgb, var(--sc) 9%, transparent); border: 1.5px solid color-mix(in srgb, var(--sc) 45%, transparent); border-radius: 999px; padding: 2px 8px 2px 4px; white-space: nowrap; cursor: pointer; line-height: 1.2; }
+  .sch svg { width: 15px; height: 15px; flex: none; }
+  .sch .sn { font-variant-numeric: tabular-nums; }
+  .sch .nt { display: inline-flex; gap: 2px; margin-left: 2px; }
+  .sch .nt i { width: 5px; height: 9px; border-radius: 1.5px; background: color-mix(in srgb, var(--sc) 22%, transparent); }
+  .sch .nt i.on { background: var(--sc); }
+  .sch.t1, .sch.t2, .sch.t3 { border-color: var(--sc); }
+  .sch.t3 { color: #fff; background: var(--sc); }
+  .sch.t3 .nt i.on { background: #fff; }
+  .sch.mini { padding: 1px 6px 1px 3px; font-size: 10px; cursor: inherit; }
+  .sch.mini svg { width: 12px; height: 12px; }
+  .hc-fam svg { width: 14px; height: 14px; vertical-align: -2px; }
+  .ihead .sch.mini { margin-left: 6px; vertical-align: 1px; }
+  .lcard .sch.mini { margin: 1px 0; }
+  .sbar { display: flex; gap: 6px; flex-wrap: nowrap; overflow: hidden; margin-top: 6px; min-height: 20px; }
+  .sbar .lbl { align-self: center; flex: none; }
+  .evopt.crest { border-color: color-mix(in srgb, var(--sc) 55%, var(--line)); }
+  .evopt.crest .cr-ic svg { width: 22px; height: 22px; }
+  .evopt.crest .cr-up { color: #fff; background: var(--sc); border-radius: 4px; padding: 2px 6px; font-weight: 700; align-self: flex-start; }
+  .vd.brk { background: #f6dcd7; color: #b22d1b; }
+  .scd { font-size: 12px; }
+  .scd .tier { display: flex; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); }
+  .scd .tier b { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; color: var(--sc); border: 1.5px solid var(--sc); }
+  .scd .tier.on b { background: var(--sc); color: #fff; }
+  .scd .tier.on span { color: var(--ink); font-weight: 700; }
+  .scd .tier span { color: var(--ink-2); }
   .evopt:disabled { opacity: 0.45; }
   .evpick { grid-template-columns: repeat(5, 1fr); }
   /* nine books read better as a block of pills than as a column of rows */
@@ -7112,7 +7139,7 @@ const slotOf = (round) => ((round - 1) % RUNCFG.perDay) + 1;
 const isDuelRound = (round) => slotOf(round) === RUNCFG.perDay;
 const dayPower = (day) => 1 + 0.28 * (day - 1);   // gear grows this much a day
 // Creatures grow faster than gear does, because gear multiplies: damage, crit, haste, HP and Def all stack.
-const mobPower = (day) => dayPower(day) * (1 + 0.42 * (day - 1));
+const mobPower = (day) => dayPower(day) * (1 + 0.5 * (day - 1));
 // a seeded random stream for any (seed, …tags)
 function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 function runRng(...tags) {
@@ -7654,6 +7681,60 @@ Object.assign(FAMILY, {
 for (const k of Object.keys(HUNTS)) if (!HUNT_KEYS.includes(k)) HUNT_KEYS.push(k);
 const NEW_FAMS = ['scythe', 'reaper', 'spectre', 'wisp', 'bog', 'mire', 'vampire', 'thunder', 'frostgel', 'venom', 'flame'];
 for (const k of NEW_FAMS) HUNT_FAMILY[FAMILY[k].hunt] = k;
+
+// ---- schools
+// Thirty families are too many to build around, and a four-piece set out of seven slots hardly ever
+// happened. So every family belongs to one of seven schools, and it's the school that counts: two, four
+// and six pieces of a school each switch on one plain rule, and the rules stack. Five schools are a status
+// you put on them; Guard is standing there and taking it; Edge is crits and never being where the hit lands.
+// A tier's shields and heals grow with the pieces that make it up.
+const SCHOOLS = {
+  burn: { name: 'Burn', col: '#eb6834', st: 'burn', gist: 'Set them alight and keep them burning.',
+    tiers: [{ n: 2, desc: 'Your hits Burn 20% of the time.', onHit: [{ chance: 0.2, apply: 'burn' }] },
+      { n: 4, desc: 'Your Burn ticks faster.', flags: { dotRate: true } },
+      { n: 6, desc: '+40% damage to Burning foes, and launching a foe sets it alight.', flags: { vs: { burn: 0.4 } }, trig: [{ type: 'onLaunch', effect: { apply: 'burn' } }] }] },
+  poison: { name: 'Poison', col: '#008300', st: 'poison', gist: 'Stack it up, then burst it.',
+    tiers: [{ n: 2, desc: 'Your hits Poison 25% of the time.', onHit: [{ chance: 0.25, apply: 'poison' }] },
+      { n: 4, desc: 'Your crits add 3 Poison.', trig: [{ type: 'onCrit', effect: { apply: 'poison', stacks: 3 } }] },
+      { n: 6, desc: 'Every 5th hit bursts all their Poison at once.', trig: [{ type: 'nth', n: 5, effect: { detonate: 'poison' } }] }] },
+  bleed: { name: 'Bleed', col: '#c0304a', st: 'bleed', gist: 'Open them up and drink what runs out.',
+    tiers: [{ n: 2, desc: 'Your hits Bleed 20% of the time.', onHit: [{ chance: 0.2, apply: 'bleed' }] },
+      { n: 4, desc: 'Their Bleed heals you for what it deals.', flags: { bleedHeal: true } },
+      { n: 6, desc: 'Every 3rd hit: Frenzy for 1.5s. +25% damage to Bleeding foes.', flags: { vs: { bleed: 0.25 } }, trig: [{ type: 'nth', n: 3, effect: { apply: 'frenzy', duration: 1.5 } }] }] },
+  chill: { name: 'Chill', col: '#3d9cc4', st: 'chill', gist: 'Slow them down, freeze them, break them.',
+    tiers: [{ n: 2, desc: 'Your hits Chill 20% of the time.', onHit: [{ chance: 0.2, apply: 'chill' }] },
+      { n: 4, desc: 'Your Chill freezes them at 2 stacks.', flags: { freezeAt: 2 } },
+      { n: 6, desc: 'Frozen foes shatter for triple, and every Chill stack is +10% Crit.', flags: { shatter: 2, chillCrit: 0.1 } }] },
+  shock: { name: 'Shock', col: '#d49000', st: 'shock', gist: 'Charge them up until the air gives out.',
+    tiers: [{ n: 2, desc: 'Your hits Shock 20% of the time.', onHit: [{ chance: 0.2, apply: 'shock' }] },
+      { n: 4, desc: '+8% damage for every Shock stack on them.', flags: { dmgPerShock: 0.08 } },
+      { n: 6, desc: 'Your Shock never fades, and at full Shock they take 6 a stack.', flags: { shockKeep: true, overload: 6 } }] },
+  guard: { name: 'Guard', col: '#5c6b7a', gist: 'Stand there. Let them break on you.',
+    tiers: [{ n: 2, desc: 'Battle start: 15 Shield. +2 Def.', stats: { def: 2 }, trig: [{ type: 'battleStart', effect: { shield: 15 } }] },
+      { n: 4, desc: 'Gain Atk equal to half your Def. Knockback taken −50%.', flags: { juggernaut: 0.5, steady: 0.5 } },
+      { n: 6, desc: 'Every 5s: 10 Shield. Your hits deal +50% of your Shield.', flags: { shieldBash: 0.5 }, trig: [{ type: 'every', s: 5, effect: { shield: 10 } }] }] },
+  edge: { name: 'Edge', col: '#7a4fd1', gist: 'Crit hard and never be where the hit lands.',
+    tiers: [{ n: 2, desc: '+8% Crit, +5% Evasion.', stats: { crit: 0.08, evasion: 0.05 } },
+      { n: 4, desc: 'When you dodge, your next hit crits.', trig: [{ type: 'onDodge', effect: { critNext: true } }] },
+      { n: 6, desc: 'Your crits heal 5 and bring your skill back 1s sooner.', trig: [{ type: 'onCrit', effect: { heal: 5, skillCd: 1 } }] }] },
+};
+const SCHOOL_IDS = Object.keys(SCHOOLS);
+// families without a status of their own: the sturdy ones stand guard, the quick ones are Edge
+const FAM_SCHOOL = { gel: 'guard', iron: 'guard', shell: 'guard', bog: 'guard', quill: 'edge', scythe: 'edge', spectre: 'edge' };
+const SCHOOL_OF = Object.fromEntries(Object.keys(FAMILY).map((f) => [f, FAM_SCHOOL[f] || (SCHOOLS[FAMILY[f].status] ? FAMILY[f].status : 'edge')]));
+const schoolOfItem = (it) => (it && it.family ? SCHOOL_OF[it.family] : null);
+const SCHOOL_FAMS = Object.fromEntries(SCHOOL_IDS.map((k) => [k, Object.keys(FAMILY).filter((f) => SCHOOL_OF[f] === k)]));
+// how many pieces of each school a set of equipment has on
+// crests (won in duels) count as a piece each
+function schoolCounts(equip, crests) {
+  const n = {};
+  for (const inst of Object.values(equip)) { const k = inst && schoolOfItem(ITEM[inst.item]); if (k) n[k] = (n[k] || 0) + 1; }
+  for (const [k, c] of Object.entries(crests || {})) if (c) n[k] = (n[k] || 0) + c;
+  return n;
+}
+const mySchools = (equip = run.equip) => schoolCounts(equip, run.boons && run.boons.crests);
+const schoolTier = (n) => (n >= 6 ? 3 : n >= 4 ? 2 : n >= 2 ? 1 : 0);
+const nextTierAt = (n) => (n < 2 ? 2 : n < 4 ? 4 : n < 6 ? 6 : 0);
 Object.assign(ITEM, {
   // scythe: the mantis's. Exchanges, parries, crits.
   mantis_blade: iW('Mantis Blade', 'scythe', 'sword', { min: 7, max: 11, stats: { crit: 0.04 }, trig: [{ type: 'onParry', effect: { critNext: true } }], desc: 'A parry: your next hit crits.', flavor: 'Folds away when it\'s not needed.' }),
@@ -7793,6 +7874,9 @@ Object.assign(ITEM, {
 });
 // Two keystones that multiply rather than add, and a legendary that does both.
 Object.assign(ITEM, {
+  // the path keys for Burn and Edge
+  cinder_heart: iT('Cinder Heart', 'ember', { keystone: true, stats: { atk: 1 }, onHit: [{ chance: 0.15, apply: 'burn' }], flags: { vs: { burn: 0.3 } }, desc: 'Your hits Burn 15% of the time. +30% damage to Burning foes.', flavor: 'Still warm. Always still warm.' }),
+  duelist_eye: iT('Duelist\'s Eye', 'quill', { keystone: true, stats: { crit: 0.06, evasion: 0.04 }, trig: [{ type: 'onDodge', effect: { critNext: true } }], desc: 'When you dodge, your next hit crits.', flavor: 'It never blinks first.' }),
   alchemists_coil: iT('Alchemist\'s Coil', 'toxic', { keystone: true, flags: { dotRate: true, dotMult: 1.3 }, desc: 'Your Burn and Poison tick faster and deal +30%.', flavor: 'Round and round, and hotter each time.' }),
   compounding_engine: iA('Compounding Engine', 'storm', 'core', { hp: 18, haste: 0.05 }, { keystone: true, flags: { statusCount: 0.1, critToDot: 0.6 }, desc: '+10% damage per different status on the foe, and your statuses deal +0.6% per 1% Crit.', flavor: 'Every part turns another part.' }),
   ouroboros_nib: iL('Ouroboros Nib', 'trinket', { flags: { dotMult: 1.6, dotRate: true, noHit: false, selfCost: 0.012 }, desc: 'Your statuses tick faster and deal +60%. Every swing costs 1.2% of your max HP.', flavor: 'It writes the ending first, then works backwards.' }),
@@ -7863,11 +7947,14 @@ function itemTags(it) {
   if (it.weapon) for (const o of WTYPE[it.weapon].onHit || []) tags.add(o.apply);
   return tags;
 }
+// a perk that says what the item already says is noise: same trigger doing the same thing, or the same rule
+const sameTrick = (it, P) => (P.trig || []).some((t) => (it.trig || []).some((u) => u.type === t.type && (u.effect.apply || '') === (t.effect.apply || '') && !!u.effect.shield === !!t.effect.shield && !!u.effect.heal === !!t.effect.heal))
+  || Object.keys(P.flags || {}).some((k) => it.flags && k in it.flags && k !== 'vs') || Object.keys(P.flags && P.flags.vs || {}).some((k) => it.flags && it.flags.vs && k in it.flags.vs);
 function rollPerks(it, rarity, r) {
   const out = [], tags = itemTags(it);
   for (const chance of PERK_ODDS[rarity]) {
     if (!r.chance(chance)) continue;
-    const free = Object.keys(PERKS).filter((p) => !out.includes(p));
+    const free = Object.keys(PERKS).filter((p) => !out.includes(p) && !sameTrick(it, PERKS[p]));
     const fitting = free.filter((p) => PERKS[p].tags.some((t) => tags.has(t))), general = free.filter((p) => !PERKS[p].tags.length);
     out.push(r.pick(fitting.length && r.chance(0.6) ? fitting : general));
   }
@@ -7919,7 +8006,7 @@ function mergeFlags(into, flags) {
 }
 // Equipment -> the build a fighter is made from
 function runBuild(equip, pieces = [], boons = null, gold = 0) {
-  const stats = { ...NO_STATS, crit: BASE_CRIT, onHit: [], trig: [], flags: {} }, fams = {};
+  const stats = { ...NO_STATS, crit: BASE_CRIT, onHit: [], trig: [], flags: {} }, fams = {}, schools = {}, spow = {};
   const addStats = (o) => { for (const [k, v] of Object.entries(o || {})) stats[k] += v; };
   for (const inst of Object.values(equip)) {
     if (!inst) continue;
@@ -7936,13 +8023,19 @@ function runBuild(equip, pieces = [], boons = null, gold = 0) {
       mergeFlags(stats.flags, PERKS[pk].flags);
     }
     if (it.family) fams[it.family] = (fams[it.family] || 0) + 1;
+    const sk = schoolOfItem(it);
+    if (sk) { schools[sk] = (schools[sk] || 0) + 1; spow[sk] = (spow[sk] || 0) + p; }
   }
-  for (const [f, n] of Object.entries(fams)) {
-    if (n >= 2) addStats(FAMILY[f].set2.stats);
-    if (n >= 4) {
-      const s4 = FAMILY[f].set4;
-      addStats(s4.stats); mergeFlags(stats.flags, s4.flags);
-      for (const t of s4.trig || []) stats.trig.push({ ...t, src: `${FAMILY[f].name} set` });
+  for (const [k, c] of Object.entries((boons && boons.crests) || {})) if (c) { schools[k] = (schools[k] || 0) + c; spow[k] = (spow[k] || 0) + c * dayPower(boons.crestDay || 1); }
+  // every school tier reached, each one's rule on top of the last
+  for (const [k, n] of Object.entries(schools)) {
+    const p = spow[k] / n;
+    for (const T of SCHOOLS[k].tiers) {
+      if (n < T.n) break;
+      addStats(T.stats);
+      mergeFlags(stats.flags, T.flags);
+      for (const o of T.onHit || []) stats.onHit.push({ ...o, name: `${SCHOOLS[k].name} ${T.n}` });
+      for (const t of T.trig || []) stats.trig.push({ ...t, effect: scaleEffect(t.effect, p), src: `${SCHOOLS[k].name} ${T.n}` });
     }
   }
   const w = equip.weapon;
@@ -7952,8 +8045,8 @@ function runBuild(equip, pieces = [], boons = null, gold = 0) {
   if (boons) { stats.hp += boons.hpFlat; stats.hpMult = boons.hpMult; stats.skillHaste += boons.skillHaste; }
   if (stats.flags.hpMul) stats.hpMult *= stats.flags.hpMul;                                 // Glass Quill
   if (stats.flags.goldAtk) stats.atk += Math.min(30, gold * stats.flags.goldAtk);           // Hoarder's Ledger
-  applySynergies(stats, fams);
-  return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: fams };
+  applySynergies(stats, schools);
+  return { weapon: get('weapon', 'weapon') || 'sword', skill: get('skill', 'skill'), trinket: null, acro: equip.feet ? acroOf(equip.feet) : 0, stats, pieces, sets: schools, fams };
 }
 
 // Synergies: pieces that turn one stat into another, read after everything else is counted. They are what
@@ -7967,7 +8060,7 @@ const SYNERGY = {
   critToDot: { label: 'Crit into status damage', line: (v, st) => `statuses ×${(1 + st.crit * v).toFixed(2)} from ${pctS(st.crit)} Crit` },
   hasteToDmg: { label: 'Haste into damage', line: (v, st) => `+${pctS(st.haste * v)} damage from ${pctS(st.haste)} Haste` },
   sourcesToAtk: { label: 'Atk per status you carry', line: (v, st) => `+${Math.round(v * statusSources(st))} Atk from ${statusSources(st)} status${statusSources(st) === 1 ? '' : 'es'}` },
-  setsToStats: { label: 'Every set pays', line: (v, st, n) => `+${pctS(n * v)} HP and Atk from ${n} set${n === 1 ? '' : 's'}` },
+  setsToStats: { label: 'Every school pays', line: (v, st, n) => `+${pctS(n * v)} HP and Atk from ${n} school${n === 1 ? '' : 's'} at 2 or more` },
   dmgPerChill: { label: 'Damage per Chill', line: (v) => `+${pctS(v)} a stack, on a chilled foe` },
   dmgPerShock: { label: 'Damage per Shock', line: (v) => `+${pctS(v)} a stack, on a shocked foe` },
   dmgPerPoison: { label: 'Damage per Poison', line: (v) => `+${pctS(v)} a stack, on a poisoned foe` },
@@ -8013,13 +8106,15 @@ const SELL = { common: 1, rare: 2, epic: 4, legend: 9 };
 // A run opens on a choice of three: a keystone you keep from the first hunt, and the families that will
 // turn up more often because of it. It is the one decision made before you know anything, and everything
 // after it is made with that rule already on your sheet.
+// A path is a school to build: its keystone to start on, and its creatures turning up more often.
 const PATHS = {
-  rot: { name: 'The Rot', line: 'Everything you touch goes bad, and stays bad.', key: 'alchemists_coil', fams: ['toxic', 'bog', 'mire', 'venom'] },
-  storm: { name: 'The Storm', line: 'Hit it until the air gives out.', key: 'tesla_coil', fams: ['storm', 'thunder', 'tide'] },
-  anvil: { name: 'The Anvil', line: 'Stand still. Let it break itself on you.', key: 'juggernaut_plate', fams: ['iron', 'shell', 'glacier'] },
-  blood: { name: 'The Blood', line: 'Open it up, and drink what runs out.', key: 'bloodletter', fams: ['blood', 'vampire', 'reaper', 'scythe'] },
-  frost: { name: 'The Frost', line: 'Cold things break along the lines.', key: 'frostbite_charm', fams: ['frost', 'frostgel', 'wisp', 'glacier'] },
-  wing: { name: 'The Wing', line: 'Nothing lands on what is never there.', key: 'dervish_slippers', fams: ['wing', 'spectre', 'silk', 'quill'] },
+  rot: { name: 'The Rot', school: 'poison', line: 'Everything you touch goes bad, and stays bad.', key: 'alchemists_coil', fams: ['toxic', 'rot', 'mire', 'venom'] },
+  storm: { name: 'The Storm', school: 'shock', line: 'Hit it until the air gives out.', key: 'tesla_coil', fams: ['storm', 'thunder', 'tide'] },
+  anvil: { name: 'The Anvil', school: 'guard', line: 'Stand still. Let it break itself on you.', key: 'juggernaut_plate', fams: ['iron', 'shell', 'bog', 'gel'] },
+  blood: { name: 'The Blood', school: 'bleed', line: 'Open it up, and drink what runs out.', key: 'bloodletter', fams: ['blood', 'vampire', 'reaper', 'pack'] },
+  frost: { name: 'The Frost', school: 'chill', line: 'Cold things break along the lines.', key: 'frostbite_charm', fams: ['frost', 'frostgel', 'wisp', 'glacier'] },
+  wing: { name: 'The Edge', school: 'edge', line: 'Nothing lands on what is never there.', key: 'duelist_eye', fams: ['spectre', 'quill', 'scythe'] },
+  pyre: { name: 'The Pyre', school: 'burn', line: 'Set it alight and keep it burning.', key: 'cinder_heart', fams: ['ember', 'molten', 'blaze', 'flame'] },
 };
 const PATH_IDS = Object.keys(PATHS), PATHS_OFFERED = 3;
 
@@ -8027,23 +8122,28 @@ const PATH_IDS = Object.keys(PATHS), PATHS_OFFERED = 3;
 // own builds saved from earlier runs, which turn up half the time when one exists for that round.
 const GHOST_NAMES = ['Quill', 'Lull', 'Pike', 'Gaff', 'Moth', 'Anvil', 'Pinwheel', 'Tack', 'Wick', 'Hatch', 'Smudge', 'Nib', 'Vellum', 'Ferrule', 'Stipple', 'Loop'];
 function makeGhost(seed, round) {
-  const r = runRng(seed, round, 'ghost'), day = dayOf(round), fams = r.shuffle(Object.keys(FAMILY)).slice(0, 2), equip = {};
+  // a ghost builds a school too, as a player would: most of its gear from one, the rest from a second
+  const r = runRng(seed, round, 'ghost'), day = dayOf(round), [main, side] = r.shuffle(SCHOOL_IDS), equip = {};
+  const fams = [...SCHOOL_FAMS[main], ...SCHOOL_FAMS[side]];
   const card = day >= 6 ? 'elite' : day >= 3 ? 'normal' : 'easy';
   // A little less geared than a player can be by that day, filled in this order. Their gear keeps pace
   // with a real build: one drop a hunt, minus the hunts that go wrong, so about a slot a day.
   // players pick the best of three drops, so a ghost is geared like one: a slot ahead, and the better of two rarities
-  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 2 + day));
+  const slots = ['weapon', 'feet', 'core', 'head', 'trinket1', 'skill', 'trinket2'].slice(0, Math.min(7, 3 + day));
   // from day 4 their families' keystones can turn up, from day 6 their relics
   const extra = fams.flatMap((f) => [...(day >= 4 ? KEYSTONE_OF[f] || [] : []), day >= 6 && RELIC_OF[f]]).filter(Boolean);
   for (const s of slots) {
-    const pool = [...fams.flatMap((f) => FAMILY_ITEMS[f]), ...extra].filter((id) => ITEM[id].slot === slotKind(s) && !Object.values(equip).some((x) => x.item === id));
+    const all = [...fams.flatMap((f) => FAMILY_ITEMS[f]), ...extra].filter((id) => ITEM[id].slot === slotKind(s) && !Object.values(equip).some((x) => x.item === id));
+    const mainPool = all.filter((id) => SCHOOL_OF[ITEM[id].family] === main), pool = mainPool.length && r() < 0.7 ? mainPool : all;
     if (!pool.length) continue;
     const ra = rollRarity(card, day, r), rb = rollRarity(card, day, r), rar = RARITY[ra].mult >= RARITY[rb].mult ? ra : rb;
     equip[s] = rollInstance(r.pick(pool), rar, Math.max(1, day - (r() < 0.6)), r);   // a real build's gear dropped over the last day or two
   }
   if (!equip.weapon) equip.weapon = rollInstance('rusty_sword', 'common', day, r);
   const l = Math.floor(r() * Math.min(3, day));
-  return { name: r.pick(GHOST_NAMES), record: `${Math.max(0, day - 1 - l)}-${l}`, round, equip, t: Math.floor(r() * TEMPLATES.length) };
+  // and the crests its wins would have paid, in its own school
+  const boons = { hpFlat: 0, hpMult: 1, skillHaste: 0, crests: { [main]: Math.max(0, day - l) }, crestDay: day };
+  return { name: r.pick(GHOST_NAMES), record: `${Math.max(0, day - 1 - l)}-${l}`, round, equip, boons, t: Math.floor(r() * TEMPLATES.length) };
 }
 function loadGhosts() { try { return JSON.parse(localStorage.getItem(GHOST_KEY)) || []; } catch { return []; } }
 function saveGhost(g) { try { const all = loadGhosts().filter((x) => x.id !== g.id); all.push(g); localStorage.setItem(GHOST_KEY, JSON.stringify(all.slice(-60))); } catch { /* storage may be unavailable */ } }
@@ -8098,7 +8198,7 @@ class Run {
     const out = { won, duel: this.isDuel, lifeLost: false, gold: 0 };
     if (!this.isDuel) this.hp = Math.max(HP_FLOOR, Math.min(1, hpLeft + (HP_BREATH[offer && offer.card] || 0.12)));   // you carry the wounds on
     if (this.isDuel) {
-      if (won) { this.wins++; out.gold = CARD_GOLD.duel; if (this.wins >= RUNCFG.winTarget) this.crown = true; }
+      if (won) { this.wins++; out.gold = CARD_GOLD.duel; if (this.wins >= RUNCFG.winTarget) this.crown = true; else this.crestOffer = this.crestChoices(); }
       else { this.lives--; this.duelLosses++; out.lifeLost = true; out.gold = CARD_GOLD.duelLoss; }
       this.loot = null;
     } else if (won) {
@@ -8110,6 +8210,20 @@ class Run {
     this.earned = (this.earned || 0) + out.gold;
     if (this.crown || this.lives <= 0 || (this.round >= RUNCFG.days * RUNCFG.perDay && !this.loot)) this.over = true;
     return out;
+  }
+  // A duel won pays a crest: one more piece of a school, for good. Three to choose from: the school you
+  // have most of, the one after it, and one you have none of.
+  crestChoices() {
+    const n = schoolCounts(this.equip, this.boons.crests), r = runRng(this.seed, this.round, 'crest');
+    const open = (k) => (n[k] || 0) < 6;   // a school at six has every rule already
+    const mine = Object.keys(n).filter(open).sort((a, b) => n[b] - n[a]), none = r.shuffle(SCHOOL_IDS.filter((k) => !n[k]));
+    return [...new Set([...mine.slice(0, 2), ...none, ...r.shuffle(SCHOOL_IDS.filter(open))])].slice(0, 3);
+  }
+  takeCrest(k) {
+    if (!this.crestOffer || !this.crestOffer.includes(k)) return false;
+    (this.boons.crests ||= {})[k] = (this.boons.crests[k] || 0) + 1; this.boons.crestDay = this.day;
+    this.crestOffer = null;
+    return true;
   }
   // A creature drops one thing. Elites can turn up a legendary instead: the only place they come from.
   // Three to choose from, each for a different reason: one of the creature's own, one that fits what you
@@ -8130,12 +8244,13 @@ class Run {
     const make = (id, rar, why) => { if (!id) return null; taken.add(id); slots.add(ITEM[id].slot); const inst = rollInstance(id, rar, this.day, r); inst.why = why; return inst; };
     const items = [];
     items.push(legends.length && r.chance(odds) ? make(r.pick(legends), 'legend', 'hunt') : make(pickFrom(this.drops(offer)), rollRarity(offer.card, this.day, r), 'hunt'));
-    // what you are building: the families you wear most, and your path's
-    const worn = {};
-    for (const i of Object.values(this.equip)) { const f = i && ITEM[i.item].family; if (f && FAMILY[f]) worn[f] = (worn[f] || 0) + 1; }
-    const P = PATHS[this.path];
-    const fams = [...Object.keys(worn).sort((a, b) => worn[b] - worn[a]), ...(P ? P.fams : [])].filter((f) => f !== offer.family && FAMILY_ITEMS[f] && FAMILY_ITEMS[f].length);
-    const bf = fams.length ? (r.chance(0.7) ? fams[0] : r.pick(fams)) : r.pick(Object.keys(FAMILY));
+    // what you are building: a piece of the school you wear most (your path's, before you wear any),
+    // from any of its families, so a school fills up from more than one creature
+    const worn = schoolCounts(this.equip, this.boons.crests), P = PATHS[this.path];
+    const top = Object.keys(worn).sort((a, b) => worn[b] - worn[a] || (P && b === P.school) - (P && a === P.school));
+    const sk = top.length ? (r.chance(0.75) ? top[0] : r.pick(top)) : P ? P.school : r.pick(SCHOOL_IDS);
+    const fams = SCHOOL_FAMS[sk].filter((f) => f !== offer.family && FAMILY_ITEMS[f] && FAMILY_ITEMS[f].length);
+    const bf = fams.length ? r.pick(fams) : r.pick(Object.keys(FAMILY));
     items.push(make(pickFrom(FAMILY_ITEMS[bf]), rollRarity(offer.card, this.day, r), 'build'));
     const wild = r.pick(Object.keys(FAMILY).filter((f) => f !== offer.family && f !== bf && FAMILY_ITEMS[f].length));
     let wr = rollRarity(offer.card, this.day, r);
@@ -11280,17 +11395,25 @@ function itemCmpNums(inst) {
   for (const k of STAT_ORDER) if (st[k]) o[k] = st[k];
   return o;
 }
-// How wearing `inst` in slot `to` moves its family's set along: the bonus it completes, or the count.
 const famCount = (equip, f) => Object.values(equip).filter((i) => i && ITEM[i.item].family === f).length;
+// What wearing `inst` in slot `to` does to your schools: the tier it reaches, how far to the next, and any
+// tier the piece it replaces was holding up.
+function schoolShift(inst, to) {
+  const now = mySchools(), next = mySchools({ ...run.equip, [to]: inst }), out = [];
+  for (const k of new Set([...Object.keys(now), ...Object.keys(next)])) {
+    const a = now[k] || 0, b = next[k] || 0;
+    if (a === b) continue;
+    out.push({ k, a, b, up: schoolTier(b) > schoolTier(a), down: schoolTier(b) < schoolTier(a) });
+  }
+  return out;
+}
 function setProgress(inst, to) {
-  const f = ITEM[inst.item].family;
-  if (!f || !FAMILY[f].set4) return [];
-  const cur = run.equip[to], before = famCount(run.equip, f), after = before + 1 - (cur && ITEM[cur.item].family === f ? 1 : 0);
-  if (after <= before) return [];
-  if (after > 4) return [];
-  if (after === 2) return [`<span class="set-up">Completes ${FAMILY[f].name} 2-piece: ${Object.entries(FAMILY[f].set2.stats).map(([k, v]) => statLine(k, v)).join(', ')}</span>`];
-  if (after === 4) return [`<span class="set-up">Completes ${FAMILY[f].name} 4-piece: ${FAMILY[f].set4.desc}</span>`];
-  return [`<span class="set-up">${FAMILY[f].name} ${Math.min(after, 4)}/4</span>`];
+  return schoolShift(inst, to).map(({ k, a, b, up, down }) => {
+    const S = SCHOOLS[k];
+    if (up) return `<span class="set-up">${S.name} ${b}: ${S.tiers[schoolTier(b) - 1].desc}</span>`;
+    if (down) return `<span class="dn">Loses ${S.name} ${a}: ${S.tiers[schoolTier(a) - 1].desc}</span>`;
+    return b > a ? `<span>${S.name} ${a} → ${b}${nextTierAt(b) ? ` (${nextTierAt(b)} for the next rule)` : ''}</span>` : '';
+  }).filter(Boolean);
 }
 // the slot a piece would go into: a trinket fills an empty trinket slot first
 function targetSlot(inst) {
@@ -11318,7 +11441,7 @@ function compareLine(inst, to = targetSlot(inst)) {
 function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs = '', cls = '' } = {}) {
   const it = ITEM[inst.item], kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
-  const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${FAMILY[it.family].name}` : ''}`;
+  const sub = compare && run ? compareLine(inst) : `${RARITY[inst.rarity].name} ${kind.toLowerCase()}${it.family ? ` · ${SCHOOLS[schoolOfItem(it)].name}` : ''}`;
   return `<button class="irow ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''} ${cls}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}" ${attrs}>
     <span class="iic">${itemIcon(inst)}</span>
     <span class="wn"><b>${it.name}</b>${compare ? `<small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small><span class="dt">${sub}</span>` : `<small>${sub}</small>`}</span>
@@ -11341,7 +11464,7 @@ function itemCard(inst, actions = '', compare = false) {
   const kind = it.keystone ? 'Keystone' : it.relic ? 'Relic' : slotName(it.slot);
   const rim = it.legend ? LEGEND_COL : it.keystone ? KEY_COL : it.relic ? RELIC_COL : RAR_COL[inst.rarity];
   return `<div class="icard ${it.legend ? 'legend' : it.keystone ? 'key' : it.relic ? 'relic' : ''}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]}">
-    <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}${fam ? ` · ${fam.name}` : ''}</small></div></div>
+    <div class="ihead"><span class="iic">${itemIcon(inst)}</span><div><b class="nm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>${fam ? schoolChip(schoolOfItem(it), 0, true) : ''}</div></div>
     <div class="ilines">${itemLines(inst).map(([k, t]) => `<p class="il-${k}">${t}</p>`).join('')}</div>
     ${it.flavor ? `<p class="iflav">${it.flavor}</p>` : ''}
     ${compare ? `<p class="icmp">${compareLine(inst)}</p>` : ''}
@@ -11358,7 +11481,7 @@ function runHeader() {
   const hearts = Array.from({ length: RUNCFG.lives }, (_, i) => `<i class="${i < run.lives ? 'on' : ''}"></i>`).join('');
   const hp = Math.round(run.hp * 100);
   return `<div class="rhead"><div class="rday"><b>Day ${run.day}</b><span class="rpips" aria-label="Today: three hunts and a duel">${pips}</span></div>
-    <div class="rstats"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span class="hpn ${hp <= 40 ? 'low' : ''}" title="Wounds carry from hunt to hunt. The duel patches you up.">HP <b>${hp}%</b></span><span>Duels <b>${run.wins}/${RUNCFG.winTarget}</b></span><span class="gld">Gold <b>${run.gold}</b></span></div></div>`;
+    <div class="rstats"><span class="hearts" aria-label="${run.lives} lives">${hearts}</span><span class="hpn ${hp <= 40 ? 'low' : ''}" title="Wounds carry from hunt to hunt. The duel patches you up.">HP <b>${hp}%</b></span><span>Duels <b>${run.wins}/${RUNCFG.winTarget}</b></span><span class="gld">Gold <b>${run.gold}</b></span></div></div>${runScreen !== 'path' && runScreen !== 'over' && runScreen !== 'gear' && Object.keys(mySchools()).length ? `<div class="sbar">${schoolBar()}</div>` : ''}`;
 }
 function huntTitle(o) { const h = HUNTS[o.hunt]; return o.tier === 'elite' && h.eliteName ? h.eliteName : h.name; }   // the card's chip gives the risk
 // What this creature's gear is about, in a line you can read at a glance: the statuses it carries, the
@@ -11396,23 +11519,23 @@ function powerWith(inst) {
   }
   return best;
 }
-// the set tier wearing it would reach, if it reaches one
+// the school tier wearing it would reach, or break, if any
 function setJump(inst, to) {
-  const f = ITEM[inst.item].family;
-  if (!f || !FAMILY[f] || !FAMILY[f].set4) return 0;
-  const cur = run.equip[to], before = famCount(run.equip, f), after = before + 1 - (cur && ITEM[cur.item].family === f ? 1 : 0);
-  return after > before && (after === 2 || after === 4) ? after : 0;
+  const sh = schoolShift(inst, to);
+  const up = sh.find((x) => x.up), down = sh.find((x) => x.down);
+  return up ? { ...up, dir: 1 } : down ? { ...down, dir: -1 } : null;
 }
 // A drop's verdict in two words, the way you would say it looking at it
 function lootVerdict(inst) {
   const it = ITEM[inst.item], w = powerWith(inst), to = w.to, cur = run.equip[to], d = w.ratio - 1;
   if (it.legend) return ['rule', 'Legendary'];
   if (it.keystone || it.relic) return ['rule', it.keystone ? 'Keystone' : 'Relic'];
+  const set = setJump(inst, to);
+  if (set && set.dir > 0) return ['set', `${SCHOOLS[set.k].name} ${set.b}!`];
   if (!cur) return ['new', 'Empty slot'];
   // a different kind of weapon is a different way of fighting, not a bigger number
   if (it.weapon && ITEM[cur.item].weapon !== it.weapon) return ['new', `→ ${it.weapon === 'spellbook' ? 'Tome' : WEAP[it.weapon].name}`];
-  const set = setJump(inst, to);
-  if (set) return ['set', `Set ${set}/4`];
+  if (set && set.dir < 0 && d < 0.1) return ['brk', `Breaks ${SCHOOLS[set.k].name} ${set.a}`];
   if (it.trig && it.trig.length && !(ITEM[cur.item].trig && ITEM[cur.item].trig.length)) return d > -0.03 ? ['rule', 'New trick'] : ['side', 'New trick'];
   if (d > 0.025) return ['up', `+${Math.round(d * 100)}% power`];
   if (d < -0.025) return ['dn', `${Math.round(d * 100)}% power`];
@@ -11441,9 +11564,9 @@ const rarBar = (card) => { const [c, r, e] = rarityOdds(card, run.day); return `
 function huntCard(o, i) {
   const sel = runSel && runSel.offer === i, key = `h${run.seed}.${run.round}.${i}.${buildSig()}`;
   const od = wantOdds(key, runBlue(), `${o.hunt}:${o.tier}:${mobPower(run.day)}`, `${run.seed}:${run.round}:${i}`);
-  const up = upgradesIn(o), fc = famCount(run.equip, o.family);
+  const up = upgradesIn(o), sk = SCHOOL_OF[o.family], fc = mySchools()[sk] || 0;
   return `<button class="hcard t-${o.card} ${sel ? 'sel' : ''}" data-offer="${i}" style="--d:${i * 70}ms" aria-pressed="${sel}">
-    <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam">${FAMILY[o.family].name}${fc ? ` <em>${Math.min(fc, 4)}/4</em>` : ''}</span></span>
+    <span class="hc-top"><b>${huntTitle(o)}</b><span class="tchip">${CARD_LBL[o.card]}</span><span class="hc-fam" style="color:${SCHOOLS[sk].col}">${schSvg(sk)} ${SCHOOLS[sk].name}${fc ? ` <em style="background:${SCHOOLS[sk].col}">you ${fc}</em>` : ''}</span></span>
     ${oddsHtml(key, od)}
     <span class="hc-rw"><span class="gold">+${CARD_GOLD[o.card]}g</span>${rarBar(o.card)}<span class="ups ${up.best > 1.03 ? 'on' : ''}">${up.best > 1.03 ? `▲ up to +${Math.round((up.best - 1) * 100)}%` : 'Little for you'}</span><span class="drops">${dropGist(o)}</span>${up.rule && o.card !== 'easy' ? '<span class="krule" title="Its keystone can drop">★</span>' : ''}</span>
   </button>`;
@@ -11456,6 +11579,7 @@ function lootCard(inst, i) {
   return `<button class="lcard ${inst.rarity} ${it.legend ? 'legend' : ''} ${sel ? 'sel' : ''}" data-pick="${i}" style="--rc:${rim};--nc:${inst.rarity === 'common' ? 'var(--ink)' : RAR_COL[inst.rarity]};--d:${i * 120}ms">
     <span class="lwhy">${WHY_LBL(inst.why)}</span><span class="lic">${itemIcon(inst)}</span>
     <b class="lnm">${it.name}</b><small>${RARITY[inst.rarity].name} ${kind.toLowerCase()}</small>
+    ${schoolOfItem(it) ? schoolChip(schoolOfItem(it), 0, true) : ''}
     <span class="vd ${vc}">${vt}</span></button>`;
 }
 // what a duel rival is about, and the one thing that tends to beat it
@@ -11505,11 +11629,21 @@ function renderRun() {
   const el = ui.runPanel;
   let body = '', actions = '';
   if (runScreen === 'path') {
-    body = `<div class="evhead"><span class="lbl">Before the first hunt</span><b>Choose your path</b><p>It sets the rule you build on, and draws its own creatures out of the ink.</p></div>
+    body = `<div class="evhead"><span class="lbl">Before the first hunt</span><b>Choose your path</b><p>A school to build: its keystone now, and its creatures more often. Two, four and six pieces of a school each add a rule.</p></div>
       <div class="evopts">${run.pathOffers().map((id) => {
         const P = PATHS[id], it = ITEM[P.key];
         return `<button class="evopt path" data-path="${id}"><span class="p-top">${itemIcon({ item: P.key })}<b>${P.name}</b><span class="lbl">${it.name}</span></span>
-          <small>${it.desc}</small><small class="p-fam">Draws out ${P.fams.map((f) => FAMILY[f].name).join(', ')}</small></button>`;
+          <small>${it.desc}</small><small class="p-fam">${schoolChip(P.school, 0, true)} ${SCHOOLS[P.school].gist} Its creatures turn up more.</small></button>`;
+      }).join('')}</div>`;
+    actions = '';
+  } else if (runScreen === 'crest') {
+    // A duel won: a crest, one more piece of a school for the rest of the run. The card says what it unlocks.
+    const n = mySchools();
+    body = `<div class="evhead"><span class="lbl">Duel won</span><b>Take a crest</b><p>It counts as one more piece of its school, for the rest of the run.</p></div>
+      <div class="evopts">${run.crestOffer.map((k) => {
+        const S = SCHOOLS[k], a = n[k] || 0, b = a + 1, up = schoolTier(b) > schoolTier(a);
+        const what = up ? `<small class="cr-up">${S.name} ${b}: ${S.tiers[schoolTier(b) - 1].desc}</small>` : `<small>${S.name} ${a} → ${b}${nextTierAt(b) ? ` · the next rule at ${nextTierAt(b)}: ${S.tiers[schoolTier(b)].desc}` : ''}</small>`;
+        return `<button class="evopt crest" data-crest="${k}" style="--sc:${S.col}"><span class="p-top"><span class="cr-ic">${schSvg(k)}</span><b>${S.name} crest</b><span class="lbl">${a ? `you ${a}` : 'new'}</span></span>${what}</button>`;
       }).join('')}</div>`;
     actions = '';
   } else if (runScreen === 'pick') {
@@ -11538,7 +11672,7 @@ function renderRun() {
     const rules = Object.values(run.equip).filter(Boolean).map((i) => ITEM[i.item]).filter((it) => it.keystone || it.relic)
       .map((it) => `<button class="${it.legend ? 'legend' : it.keystone ? 'key' : 'relic'}" data-rule="${it.id}" title="${it.name} — ${it.desc}">${it.name}</button>`).join('');
     const syn = synergyLines(b);
-    const sets = Object.entries(b.sets || {}).map(([f, n]) => `<button class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" data-set="${f}" title="${FAMILY[f].name} ${Math.min(n, 4)}/4 — ${setText(f)}">${FAMILY[f].name} ${Math.min(n, 4)}/4</button>`).join('');
+    const sets = schoolBar(run.equip, 7);
     const bag = Array.from({ length: RUNCFG.bag }, (_, i) => {
       const inst = run.bag[i];
       return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''} ${run.twinOf(inst) ? 'twin' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}" ${run.twinOf(inst) ? 'title="Has a twin: tap to merge"' : ''}>${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
@@ -11585,6 +11719,7 @@ function renderRun() {
         <div class="dtop"><span class="dic">${g.equip.weapon ? itemIcon(g.equip.weapon) : gearSvg(red.weapon)}</span><div><b class="dname">${g.name}</b>
           <small>${g.mine ? 'One of your past builds' : `Record ${g.record}`} · ${WEAP[red.weapon].name}${red.skill ? ` · ${SKILL[red.skill].name}` : ''}</small></div></div>
         <div class="dgear">${worn.map((i2) => `<button class="dg" data-theirs="${i2.uid}" style="--rc:${ITEM[i2.item].keystone ? KEY_COL : ITEM[i2.item].relic ? RELIC_COL : RAR_COL[i2.rarity]}" aria-label="${ITEM[i2.item].name}">${itemIcon(i2)}</button>`).join('')}</div>
+        ${schoolBar(g.equip) ? `<div class="sbar">${schoolBar(g.equip, 3).replace(/<button/g, '<span').replace(/<\/button>/g, '</span>')}</div>` : ''}
         ${oddsHtml(key, od)}
         <p class="dtip">${duelTip(red)}</p>
         <div class="dstake"><span class="w">Win: +${CARD_GOLD.duel}g, duel ${run.wins + 1}/${RUNCFG.winTarget}</span><span class="l">Lose: a heart, +${CARD_GOLD.duelLoss}g</span></div>
@@ -11594,7 +11729,7 @@ function renderRun() {
     const hist = run.history.map((h) => `<i class="${h.result === 'W' ? 'w' : 'l'} ${h.duel ? 'duel' : ''}" title="${h.label}"></i>`).join('');
     const hunts = run.history.filter((h) => !h.duel), won = hunts.filter((h) => h.result === 'W'), elites = won.filter((h) => h.card === 'elite').length;
     const worn = SLOTS_RUN.map((k) => run.equip[k]).filter(Boolean);
-    const sets = Object.entries(runBuild(run.equip).sets).filter(([, n]) => n >= 2).map(([f, n]) => `<span class="set ${n >= 4 ? 'full' : 'on'}">${FAMILY[f].name} ${Math.min(n, 4)}/4</span>`).join('');
+    const sets = schoolBar(run.equip, 4);
     body = `<div class="over ${run.crown ? 'crown' : ''}"><b>${run.crown ? 'The Crown' : 'Run over'}</b>
       <p>${run.crown ? `Five duels won by day ${run.day}.` : `${run.wins} duel${run.wins === 1 ? '' : 's'} won, out on day ${run.day}.`}</p>
       <div class="hist">${hist}</div>
@@ -11638,7 +11773,7 @@ function showRun(screen) {
   renderRun();
   if (run.over) Run.clear(); else run.save();
 }
-const runHome = () => (run.over ? 'over' : !run.pathDone ? 'path' : run.loot ? 'loot' : run.shop ? 'shop' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
+const runHome = () => (run.over ? 'over' : !run.pathDone ? 'path' : run.crestOffer ? 'crest' : run.loot ? 'loot' : run.shop ? 'shop' : run.event ? 'event' : run.isDuel ? 'duel' : 'pick');
 function startRun(r) {
   if (!freeBuild) freeBuild = builds[0];
   run = r;
@@ -11679,6 +11814,8 @@ function runClick(ev) {
   const t = ev.target.closest('button'); if (!t || t.disabled) return;
   if (t.dataset.sheet === 'close') { closeSheet(); return; }
   if (t.dataset.set) { setSheet(t.dataset.set); return; }
+  if (t.dataset.school) { schoolSheet(t.dataset.school); return; }
+  if (t.dataset.crest) { if (run.takeCrest(t.dataset.crest)) { sfx.play('rare'); run.save(); applyRunBuild(); toast(`${SCHOOLS[t.dataset.crest].name} crest taken.`); showRun(runHome()); } return; }
   if (t.dataset.rule) { ruleSheet(t.dataset.rule); return; }
   if (t.dataset.status) { statusSheet(t.dataset.status); return; }
   if (t.dataset.path) { run.takePath(t.dataset.path); toast(`${PATHS[t.dataset.path].name}. ${ITEM[PATHS[t.dataset.path].key].name} is yours.`); applyRunBuild(); showRun(runHome()); return; }
@@ -11755,6 +11892,38 @@ function runClick(ev) {
   else if (go === 'skip') { run.skipLoot(); if (run.round >= RUNCFG.days * RUNCFG.perDay) run.over = true; if (!run.over) run.next(); showRun(run.over ? 'over' : runHome()); }
 }
 // Traits explain themselves: tap a set, a keystone or a status and it says what it does for you.
+// A school's mark: its status's for the five status schools, a shield for Guard, a cut diamond for Edge.
+const SCH_ICON = {
+  guard: '<path d="M11 2.5 L18 5 V10.5 C18 15 15 18 11 19.5 C7 18 4 15 4 10.5 V5 Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  edge: '<path d="M11 2.5 L18.5 11 L11 19.5 L3.5 11 Z M11 2.5 V19.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>',
+};
+const schSvg = (k) => `<svg viewBox="0 0 22 22" aria-hidden="true" style="color:${SCHOOLS[k].col}">${SCHOOLS[k].st ? ST_ICON[SCHOOLS[k].st] : SCH_ICON[k]}</svg>`;
+// the chip: icon, name, count, and a notch lit for each tier reached
+function schoolChip(k, n, mini = false) {
+  const S = SCHOOLS[k], t = schoolTier(n), next = nextTierAt(n);
+  const notches = [2, 4, 6].map((m) => `<i class="${n >= m ? 'on' : ''}"></i>`).join('');
+  const title = `${S.name} ${n}${next ? ` · next at ${next}: ${S.tiers[t].desc}` : ' · every tier'}`;
+  return mini ? `<span class="sch mini t${t}" style="--sc:${S.col}">${schSvg(k)}${S.name}</span>`
+    : `<button class="sch t${t}" data-school="${k}" style="--sc:${S.col}" title="${title}">${schSvg(k)}<span>${S.name}</span><span class="sn">${n}</span><span class="nt">${notches}</span></button>`;
+}
+// what you're building, at a glance: every school you wear, most first
+function schoolBar(equip = run.equip, max = 4, crests = equip === run.equip && run.boons ? run.boons.crests : null) {
+  const n = schoolCounts(equip, crests), ks = Object.keys(n).sort((a, b) => n[b] - n[a]).slice(0, max);
+  return ks.length ? ks.map((k) => schoolChip(k, n[k])).join('') : '';
+}
+function schoolSheet(k) {
+  const S = SCHOOLS[k], n = (run ? mySchools() : {})[k] || 0, t = schoolTier(n), cr = (run && run.boons.crests && run.boons.crests[k]) || 0;
+  const worn = run ? Object.values(run.equip).filter((i) => i && schoolOfItem(ITEM[i.item]) === k) : [];
+  const hunts = [...new Set(SCHOOL_FAMS[k].map((f) => HUNTS[FAMILY[f].hunt] && HUNTS[FAMILY[f].hunt].name).filter(Boolean))];
+  openSheet(`<div class="sh-head" style="--rc:${S.col}"><span class="sh-t"><span class="sh-ic">${schSvg(k)}</span><b>${S.name}</b></span><span class="lbl">${n} worn</span></div>
+    <div class="icard scd" style="--rc:${S.col};--nc:var(--ink);--sc:${S.col}">
+      <p class="iflav" style="margin:0 0 4px">${S.gist}</p>
+      ${S.tiers.map((T, i) => `<div class="tier ${t > i ? 'on' : ''}"><b>${T.n}</b><span>${T.desc}</span></div>`).join('')}
+      <p class="il-stat" style="margin-top:6px">${worn.length ? `You wear: ${worn.map((i) => ITEM[i.item].name).join(', ')}` : 'You wear none of it yet.'}${cr ? ` · ${cr} crest${cr > 1 ? 's' : ''}` : ''}</p>
+      <p class="il-sig">Every piece in this school counts, whichever creature it came from. Dropped by ${hunts.map((h) => h.toLowerCase()).join(', ')}.</p>
+    </div>
+    <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
+}
 const stMark = (k) => (ST_ICON[k] ? `<i class="gm" title="${stName(k)}">${stSvg(k)}</i>` : '');
 const pips4 = (n) => `<span class="pips4">${[1, 2, 3, 4].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
 function setSheet(f) {

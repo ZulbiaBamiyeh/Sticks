@@ -4,6 +4,21 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **Schools instead of sets.** About 30 families, each with its own 2- and 4-piece set, were too many to
+  build around, and a 4-piece set out of 7 slots hardly ever happened. Every family now belongs to one of
+  7 schools (`SCHOOLS`, `SCHOOL_OF`, `SCHOOL_FAMS`) with a rule each at 2, 4 and 6 pieces, applied in
+  `runBuild` (shields and heals scale with the school's pieces). UI: `schoolChip`, `schoolBar` under the
+  day, `schoolSheet`, `schoolShift` for "Shock 4!" and "Breaks Shock 4" on loot, school on hunt, path and
+  item cards. The build loot card now comes from your top school.
+- **Crests**: each duel won deals 3 (`crestChoices`, `takeCrest`, screen `crest`), counting as a piece of
+  a school (`boons.crests`). Ghosts build a main school and carry crests too.
+- Paths are schools; new keystones `cinder_heart` (The Pyre, Burn) and `duelist_eye` (The Edge).
+  Perks never repeat their item's own trick (`sameTrick`).
+- Tuning: `mobPower` growth 0.42 → 0.5, ghosts one more slot. Run bot (`tools/runbot.mjs N careful
+  score|focus|random`): careful 16/30 crowns with either score or focus loot picking, random picks 1/20.
+  So picking well matters a lot.
+
+## Before that (combat)
 - **More moves, less repetition.** An audit of attack counts showed the spear and hammer each had
   essentially one move and blade exchanges started about twice a fight. Now:
   - Spear **javelin** (`tryJavelin`, `SHOT.javelin`): thrown to finish or at a far shooter. A kill

@@ -64,6 +64,7 @@ for (const [W, H] of SIZES) {
   for (const [name, setup] of [
     ['run-event', () => { const R = window.__homeTurf.run; const r = R.Run.load(); r.event = { id: 'gremlin', result: null }; r.save(); }],
     ['run-duel', () => { const R = window.__homeTurf.run; const r = R.Run.load(); r.event = null; r.round = 8; r.rollRound(); r.save(); }],
+    ['run-crest', () => { const R = window.__homeTurf.run; const r = R.Run.load(); r.crestOffer = r.crestChoices(); r.save(); }],
   ]) {
     await p.evaluate(setup);
     await p.reload(); await p.evaluate(() => document.fonts.ready);
@@ -80,7 +81,7 @@ for (const [W, H] of SIZES) {
   // loot, straight after a won hunt
   await p.evaluate(() => {
     const R = window.__homeTurf.run, r = R.Run.load() || new R.Run(3);
-    r.over = false; r.crown = false; r.event = null; r.shop = null; r.pathDone = true; r.round = 9; r.rollRound();
+    r.over = false; r.crown = false; r.event = null; r.shop = null; r.crestOffer = null; r.pathDone = true; r.round = 9; r.rollRound();
     r.lootFor({ ...r.offers[2] }, 0); r.save();
   });
   await p.reload(); await p.evaluate(() => document.fonts.ready);

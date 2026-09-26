@@ -13,12 +13,30 @@ fights run themselves. **Start a run** is the front door, and everything else
   ZereshkStory's structure with this game's fights:
   - Seven days, each three hunts and then a duel. Win five duels for the Crown;
     lose three and the run is over.
-  - **A run opens on a path.** Three of six, each a keystone you keep from the
-    first hunt and the families it draws out of the ink: The Rot (Alchemist's
-    Coil), The Storm (Tesla Coil), The Anvil (Juggernaut Plate), The Blood
-    (Bloodletter), The Frost (Frostbite Charm), The Wing (Dervish Slippers).
-    From then on one of the three hunts on offer leans your way whenever the
-    day has a creature of yours in it.
+  - **Builds are schools.** Every item belongs to one of seven schools, shown
+    by its mark wherever the item is: **Burn**, **Poison**, **Bleed**,
+    **Chill** and **Shock** (a status you put on them), **Guard** (shields and
+    Def) and **Edge** (crits and dodging). Two, four and six pieces of a
+    school each switch on one plain rule, and the rules stack. For example
+    Chill: 2, your hits Chill 20% of the time; 4, your Chill freezes at 2
+    stacks; 6, frozen foes shatter for triple and every Chill stack is +10%
+    Crit. Every piece counts, whichever creature it came from, so a school
+    fills up from several hunts. A bar under the day shows the schools you
+    wear with a notch per tier; tap one to read all three rules (`SCHOOLS`,
+    `SCHOOL_OF`, `schoolCounts`, tiers applied in `runBuild`). The thirty
+    families are still there for drops and flavour, but their old 2- and
+    4-piece sets are gone.
+  - **Crests.** Each duel won deals three crests: the school you have most
+    of, the next, and one you have none of. A crest counts as one more piece
+    of its school for the rest of the run, and the card says which rule it
+    unlocks. Duel ghosts carry crests from their own wins.
+  - **A run opens on a path.** Three of seven, each a school to build: its
+    keystone now, and its creatures more often. The Rot (Poison, Alchemist's
+    Coil), The Storm (Shock, Tesla Coil), The Anvil (Guard, Juggernaut Plate),
+    The Blood (Bleed, Bloodletter), The Frost (Chill, Frostbite Charm), The
+    Edge (Edge, Duelist's Eye) and The Pyre (Burn, Cinder Heart). From then on
+    one of the three hunts on offer leans your way whenever the day has a
+    creature of yours in it.
   - **Wounds carry from hunt to hunt.** You start each day whole. What a hunt
     takes out of you, you take into the next one: you get some of it back
     afterwards depending on how hard the hunt was (Easy +25%, Normal +12%,
@@ -57,7 +75,8 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Pick one of three drops.** Every win deals three cards: one of the
     creature's own, one from a family you're already building, and a wildcard
     that's a little more likely to be rare. Each card says in two words what it
-    would do for you: "+11% power", "Set 2/4", "Keystone", "Empty slot",
+    would do for you: "+11% power", "Shock 4!" when it reaches a tier,
+    "Breaks Shock 4" when it would take one away, "Keystone", "Empty slot",
     "→ Stars" for a different weapon, or "−8% power". Tap one to try it on: your
     fighter wears it on the stage and its slot lights up, with the full card to
     read. Two rerolls a day, plus a free one when all three are for slots you've
@@ -78,13 +97,12 @@ fights run themselves. **Start a run** is the front door, and everything else
     wraith (you drift, most things miss, every hit drains). The creature is drawn
     in your own ink, and you keep your weapon and skills underneath.
   - **Builds compound.** Engine pieces turn one stat into another — HP into
-    Atk, Def into Crit, Crit into status damage, every completed set into
-    both — and payoff pieces multiply per status stack on the foe. The gear
+    Atk, Def into Crit, Crit into status damage, every school at 2 or more
+    into both — and payoff pieces multiply per status stack on the foe. The gear
     screen lists every synergy you have working, with its live value.
   - Items are Common, Rare, Epic or Legendary. Rarer items are stronger, roll affixes, and
     roll perks such as "On crit: 2 Shock", "+25% damage vs Poisoned" or "When
-    you dodge: 10 Shield". Two pieces of a family give its set stats. Four
-    bend a rule, often the one a keystone bends, so the two can double down.
+    you dodge: 10 Shield". A perk never repeats what its item already does.
     A six-slot bag holds spares, and they sell for gold.
   - Duels are against another build for that day. Entering a duel saves yours,
     so later runs can meet your old builds. The run saves as you go, and the
@@ -106,10 +124,10 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **The shop is off for now** (`SHOP_ON`), so a day opens straight on the
     hunts. Gold still buys the gremlin's junk, the smith's hone, the well's
     toss and the sensei's lesson.
-  - **Tap a trait to read it.** Set chips, keystones, relics, legendaries and
+  - **Tap a trait to read it.** School chips, keystones, relics, legendaries and
     the status icons on the gear screen all open a card explaining what they
     do for this build and where they came from.
-  - Hunt cards show how many pieces of that family you wear. The end of a run shows your
+  - Hunt cards show the school the creature drops and how many of it you wear. The end of a run shows your
     final build, hunts won, Elites felled and gold earned.
   - 314 items: 98 weapons, 96 head, core and feet pieces, 103 trinkets and 17
     skill items; 12 of them are keystones, 21 relics and 20 legendaries, in 29 families,
