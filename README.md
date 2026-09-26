@@ -100,7 +100,9 @@ fights run themselves. **Start a run** is the front door, and everything else
     the Crimson Bargain, the Ghostly Tailor, the Dwarf Smith, a Suspicious
     Chest, the Echo Shrine, the Fortune Well, and an Old Sensei who trains
     your shoes' acrobatics. Each character is drawn beside your fighter.
-    Two of the same item at the same rarity merge into one a rarity up.
+    Two of the same item at the same rarity merge into one a rarity up, and
+    two epics make a Legendary grade of an ordinary item. A bag item with a
+    twin wears a pulsing ⇈; tap it to merge.
   - **The shop is off for now** (`SHOP_ON`), so a day opens straight on the
     hunts. Gold still buys the gremlin's junk, the smith's hone, the well's
     toss and the sensei's lesson.
@@ -211,9 +213,12 @@ fights run themselves. **Start a run** is the front door, and everything else
     bounce back, and attackers are left stunned and open.
   - **Hook:** a chain that drags the rival across the arena to your feet.
   - **Ghost Walk:** for three quarters of a second nothing on the page is
-    solid. You drift through blocks, through the floor and through the walls
-    at the edge, nothing can touch you, and you cannot attack. You come out
-    wherever you stopped — pushed clear if that happens to be inside a wall.
+    solid, nothing can touch you, and you cannot attack. You drift through
+    blocks and floors, and the page wraps: out through one side wall and in
+    at the other, or down through the floor and in from the top, where you
+    let go and drop on them. The bot picks the shortest way round
+    (`ghostRoute`), escapes a blade out through the wall at its back, and
+    comes out pushed clear if it stops inside something.
 - **Trinkets and statuses:** a trinket puts a status on the rival when a hit
   lands, more often on heavier hits. **Statuses scale with the fighter that
   applied them**, so a burn from a day-seven maul is not the same burn as a
@@ -370,8 +375,8 @@ every screen at six sizes and fails if anything overflows.
 `index.html` is the whole game, with no build step and no dependencies. The one
 extra files are the fight music in `Music/`. Open `index.html` in a browser, or
 serve the folder (`npx serve .`) and open it on your phone. Serving it gives
-the smooth fade-out under a KO's slow motion. Opened straight from disk, the
-music still plays, it just cuts rather than fades.
+the smooth fades and the muffling. Opened straight from disk, the music still
+plays, it just changes volume without the filter.
 
 Fights are deterministic from a seed, so **Replay** runs the same fight again.
 
@@ -380,11 +385,21 @@ Fights are deterministic from a seed, so **Replay** runs the same fight again.
 Each fight plays a random track from five picked from the Wildfrost soundtrack
 (Spirit Call, Winter's Wrath, Tundra Heart, March of the Pengoons and Luminice
 Dance), never the same one twice in a row. The tracks are in `Music/` and listed in `MUSIC.tracks` in
-`index.html`. A track carries on into a rematch if it's still playing. When your
-fighter is KO'd it muffles and fades out through the slow motion; beating the
-rival or clearing a hunt lets it play on, and it fades out on the
-build and rival screens. The speaker button in the header mutes it, and that
-choice is remembered. The soundtrack isn't ours, so swap it for something
+`index.html`. The music never stops between fights. When your fighter is KO'd it sinks
+through the slow motion; after any fight it settles quiet and muffled
+(`MUSIC.under`, `MUSIC.underHz`) under the result, the loot, the next pick and
+the build screens (`music.duck`), then swells back up when the next fight
+starts. The speaker button in the header mutes it (and the sound effects), and
+that choice is remembered.
+
+### Sound effects
+
+Small synthesized sounds (`SFX`, played through `sfx.play`), made with Web Audio
+rather than files: swings, hits and crits, clangs and blade-lock scrapes,
+landings, shots, spells, spikes, a KO, and a few UI ticks (a button tap, the loot
+deal, a win or loss). They're quiet on purpose: a master level of `SFX_VOL`
+(0.2) through a limiter, each sound throttled so a flurry doesn't stack up.
+They follow the speaker button, and demo fighters on menus stay silent. The soundtrack isn't ours, so swap it for something
 licensed before shipping the game publicly.
 
 ### Testing the AI and balance

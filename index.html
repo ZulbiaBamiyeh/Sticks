@@ -534,6 +534,10 @@
   .bslot svg { width: 26px; height: 26px; }
   .bslot small { font-size: 8px; font-weight: 800; line-height: 1; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .bslot.on { box-shadow: 0 0 0 2px var(--ink); }
+  .bslot { position: relative; }
+  .bslot.twin::after { content: '⇈'; position: absolute; top: 1px; right: 2px; font-size: 11px; font-weight: 900; line-height: 1; color: #fff; background: var(--rc); border-radius: 3px; padding: 1px 2px; animation: twinPulse 1.6s ease-in-out infinite; }
+  @keyframes twinPulse { 50% { transform: scale(1.18); } }
+  @media (prefers-reduced-motion: reduce) { .bslot.twin::after { animation: none; } }
   .dcard { display: flex; gap: 14px; align-items: center; border: 2px solid var(--ink); border-radius: 8px; padding: 12px; }
   .dq { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font: 900 30px/1 var(--display); }
   .dname { display: block; font: 900 26px/1 var(--display); color: var(--red); letter-spacing: 0.02em; }
@@ -822,7 +826,7 @@ const BUDGET = 10, COST = { block: 1, spikes: 2, pad: 2 };
 const SPIKES_ON = false;
 const SPAWN_C = 2, SPAWN_R = 10, BMIN = 1, BMAX = 8;   // local build columns; 9 and 10 are no-man's-land
 const SQ_START = 20, SQ_SPEED = 0.42, SQ_MAX = 7.5, TIME_CAP = 75;
-const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16, EV_WJ = 32, EV_DJ = 64, EV_WR = 128, EV_MANTLE = 256;
+const EV_LAND = 1, EV_WALL = 2, EV_PAD = 8, EV_JUMP = 16, EV_WJ = 32, EV_DJ = 64, EV_WR = 128, EV_MANTLE = 256, EV_WRAP = 512;
 // range > 0 marks a ranged weapon and is the distance its fighter likes to keep; stop is where melee fighters plant their feet.
 const WEAP = {
   sword: { name: 'Sword', speed: 7.2, atk: 'slash1', stop: 0.8, stat: '7f · combo', desc: 'Three-hit combo. Knocks arrows and stars out of the air.' },
@@ -842,7 +846,7 @@ const SKILL = {
   darksight: { name: 'Dark Sight', cd: 480, dur: 210, stat: '8s', desc: 'Invisible for three and a half seconds. The rival loses track, and the first hit out of it crits.' },
   parry: { name: 'Parry', cd: 390, stat: '6.5s', desc: 'Catches a hit, a shot or a hook. The attacker is left wide open.' },
   hook: { name: 'Hook', cd: 300, stat: '5s', desc: 'Throws a chain across the arena and drags the rival in.' },
-  ghostwalk: { name: 'Ghost Walk', cd: 400, dur: 44, stat: '7s', desc: 'For a second nothing on the page is solid: you drift through blocks, floors and the walls at the edge, and nothing can touch you. You cannot attack while you are through, and you come out wherever you stopped.' },
+  ghostwalk: { name: 'Ghost Walk', cd: 400, dur: 44, stat: '7s', desc: 'For a second nothing on the page is solid and nothing can touch you. Drift through blocks and floors, out through one side wall and in at the other, or down through the floor and in from the top to drop on them. You cannot attack while you are through.' },
 };
 const SKILLS = Object.keys(SKILL);
 // Statuses change the fight, never how anyone runs or jumps, and each reads from one mark on the figure.
@@ -968,12 +972,17 @@ const touchingWall = (b, s) => (s > 0 ? boxSolid(b.x + W / 2, b.y - H + 0.25, b.
 function physStep(b, dir, press, hold, side, ctl, fr) {
   let ev = 0;
   const acro = b.acro || 0;
-  // Ghost walking: nothing is solid, and nothing pulls. You swim through the page under your own steam.
+  // Ghost walking: nothing is solid, and nothing pulls. You swim through the page under your own steam,
+  // and the page has no edges: halfway through a side wall you are halfway into the other one, and sinking
+  // through the floor lets you down through the top of the page.
   if (b.noClip) {
-    b.vx = approach(b.vx, (ctl ? dir : 0) * b.speed * 1.2, P.accA * DT);
-    b.vy = approach(b.vy, b.gy || 0, 70 * DT);
-    b.x = Math.max(0.4, Math.min(COLS - 0.4, b.x + b.vx * DT));
-    b.y = Math.max(1.2, Math.min(ROWS - 0.15, b.y + b.vy * DT));
+    b.vx = approach(b.vx, (ctl ? dir : 0) * b.speed * 1.5, P.accA * 1.6 * DT);
+    b.vy = approach(b.vy, b.gy || 0, 90 * DT);
+    b.x += b.vx * DT; b.y += b.vy * DT;
+    b.wrapX = b.x < 0.5 ? COLS - 1 : b.x > COLS - 0.5 ? 1 - COLS : 0;
+    b.wrapY = b.y - H > ROWS - 0.5 ? 1 - ROWS : b.y < 0.5 ? ROWS - 1 : 0;
+    b.x += b.wrapX; b.y += b.wrapY;
+    if (b.wrapX || b.wrapY) ev |= EV_WRAP;
     b.gr = false; b.onWall = 0; b.wr = 0; b.jumping = false;
     return ev;
   }
@@ -2412,17 +2421,31 @@ function skillStep(u) {
     if ((f > 8 && !u.hook) || f > 150) endSkill(u, 3);
   } else if (u.skName === 'ghostwalk') {
     if (f === 1) startGhost(u, !!u.ghostIn);
-    if (f >= SKILL.ghostwalk.dur) endSkill(u, 4);
+    if (f >= SKILL.ghostwalk.dur || (f > 2 && !u.ghostT)) endSkill(u, 4);
   }
 }
 // ---- Ghost Walk: the page stops being solid for a moment.
+// The page wraps while you are through it, so the way to someone can be straight at them, out through the
+// side wall and in behind them, or down through the floor and in over their head. This picks the shortest,
+// in unwrapped page coordinates: the goal can sit off the page, and it moves with you when you wrap.
+function ghostRoute(u, e) {
+  const b = u.b;
+  let best = null;
+  for (const ox of [0, COLS - 1, 1 - COLS]) for (const oy of [0, ROWS - 1]) {
+    const tx = e.b.x + ox, ty = e.b.y + oy - (oy ? 2.5 : 0);   // over the top: come in above them and drop
+    const d = Math.hypot(tx - b.x, (ty - b.y) * 1.4);
+    if (!best || d < best.d) best = { x: tx - Math.sign(tx - b.x) * (oy ? 0 : 1.1), y: ty, d, wrap: !!(ox || oy), drop: !!oy };
+  }
+  return best;
+}
 function startGhost(u, toward) {
   const b = u.b, e = foe(u);
   u.ghostT = SKILL.ghostwalk.dur;
-  // where you are swimming to: straight at them, or straight through whatever is behind you
+  // where you are swimming to: at them by the shortest way round, or straight through whatever is behind
+  // you, which near the edge of the page means out through the wall and in at the far side
   const f = e ? Math.sign(e.b.x - b.x) || u.face : u.face;
-  u.ghostGoal = e && toward ? { x: e.b.x - f * 1.1, y: e.b.y }
-    : { x: Math.max(1.5, Math.min(COLS - 1.5, b.x - f * 5.5)), y: b.y - (e && e.b.y < b.y - 1 ? 0 : 1.2) };
+  u.ghostGoal = e && toward ? ghostRoute(u, e)
+    : { x: b.x - f * 6, y: b.y - (e && e.b.y < b.y - 1 ? 0 : 1.2) };
   b.noClip = true; b.gy = 0; b.vy *= 0.3;
   u.iT = Math.max(u.iT, SKILL.ghostwalk.dur + 4);
   u.ghosts.push({ S: skel(u), age: 0, max: 24 });
@@ -2431,7 +2454,8 @@ function startGhost(u, toward) {
 // Coming back: if the fighter stopped inside something, it is nudged out to the nearest clear spot.
 function endGhost(u) {
   const b = u.b;
-  b.noClip = false; u.ghostT = 0;
+  b.noClip = false; u.ghostT = 0; u.ghostGoal = null;
+  u.iT = Math.min(u.iT, 8);
   if (boxSolid(b.x - W / 2, b.y - H, b.x + W / 2, b.y)) {
     let best = null, bd = 1e9;
     for (let dy = 0; dy <= 5; dy += 0.25) for (const sy of [-1, 1]) for (let dx = 0; dx <= 5; dx += 0.25) for (const sx of [-1, 1]) {
@@ -2455,6 +2479,11 @@ function aiGhostwalk(u, e) {
   // a wall or a floor in the way, and them on the other side of it
   const blocked = Math.abs(dx) > 1.6 && Math.abs(dx) < 8 && !walkLine(b.x, e.b.x, Math.floor(b.y - 1e-3), u);
   if (!ranged && (blocked || (Math.abs(dy) > 1.5 && Math.abs(dx) < 4))) { u.ghostIn = 1; return startSkill(u, 'ghostwalk'); }
+  // the long way round is the short way: they are across the page, or up where only a drop reaches them
+  if (!ranged && !u.ai.macro) { const r = ghostRoute(u, e); if (r.wrap && r.d < Math.hypot(dx, dy * 1.4) - 5) { u.ghostIn = 1; return startSkill(u, 'ghostwalk'); } }
+  // cornered by a blade: out through the wall at your back and in at the far side
+  const wallBack = e.b.x > b.x ? b.x - 1 : COLS - 1 - b.x;
+  if (ranged && !isRanged(e) && wallBack < 3 && Math.hypot(dx, dy) < 4.5) { u.ghostIn = 0; return startSkill(u, 'ghostwalk'); }
   if (ranged && Math.hypot(dx, dy) < 2.8) { u.ghostIn = 0; return startSkill(u, 'ghostwalk'); }
   return false;
 }
@@ -2720,6 +2749,7 @@ function fireShot(u) {
   if (!s) return;
   const ang = Math.atan2(s.vy, s.vx) + (rng() - 0.5) * (kind === 'star' ? 0.07 : 0.05), sp = Math.hypot(s.vx, s.vy);
   const o = shotOrigin(u, u.face, kind);
+  sfx.play(kind === 'arrow' ? 'twang' : kind === 'star' || kind === 'glob' ? 'whirr' : kind === 'goo' ? 'goo' : kind === 'lance' ? 'ice' : 'cast', 0.2);
   shots.push({ kind, x: o.x + Math.cos(ang) * 0.4, y: o.y + Math.sin(ang) * 0.4, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp, owner: u.side, stuck: 0, ttl: 0, rolled: [0, 0], ang, spin: 0, dead: false, crit: u.ambush });
   u.ambush = false;
 }
@@ -2812,7 +2842,7 @@ function startDuel(a, b) {
     u.ai.macro = null; u.ai.path.length = 0; u.backflip = false; u.flipT = 0; u.dpose = null;
   }
   const mx = world.duel.mid, my = a.b.y - 1.05;
-  sparks(mx, my, 0, 16); ring(mx, my, 1.1, 'spark');
+  sparks(mx, my, 0, 16); ring(mx, my, 1.1, 'spark'); sfx.play('clang', 0.8);
   world.hs = Math.max(world.hs, 6); world.punch = 1; sfxShake(5);
   world.stats[0].clash++;
   if (world.stats[0].clash === 1) log('Blades locked.', -1);
@@ -2839,12 +2869,12 @@ function stepDuel() {
     win.duelSwing = lose.duelSwing = false;
     if (f < beat.len - 5) D.mid += win.face * 0.008;
     const cx = D.mid + win.face * (0.05 + 0.18 * p), cy = s.b.y - 1.45 + 0.1 * p;
-    if (f % 4 === 0) { sparks(cx, cy, -win.face, 3); if (f % 12 === 0) sfxShake(1.5); }
+    if (f % 4 === 0) { sparks(cx, cy, -win.face, 3); if (f % 12 === 0) { sfxShake(1.5); sfx.play('scrape'); } }
     if (f === 2) { world.hs = Math.max(world.hs, 4); world.punch = 1; }
     if (f === beat.len - 4) {   // it breaks
       D.mid += win.face * 0.35; lose.dpose = { ...lose.dpose, lean: -0.5, head: -0.3, fx: 0.1, fy: -0.35, wa: -2.2 };
       sparks(cx, cy, -win.face, 12); ring(cx, cy, 0.7, 'spark'); streak(cx, cy, win.face > 0 ? 0 : Math.PI, 1.2, 'spark');
-      dust(lose.b.x, lose.b.y, 4, 0.5); world.hs = Math.max(world.hs, 5); sfxShake(4);
+      dust(lose.b.x, lose.b.y, 4, 0.5); world.hs = Math.max(world.hs, 5); sfxShake(4); sfx.play('clang', 0.9);
     }
     if (f >= beat.len) { D.f = 0; if (++D.i >= D.beats.length) finishDuel(); }
     return;
@@ -2870,18 +2900,20 @@ function stepDuel() {
     d.duelSwing = rip >= 2 && rip <= 5;
     if (rip === 4) {
       const cx = (s.b.x + d.b.x) / 2 - s.face * 0.1, cy = s.b.y - 0.6;
-      sparks(cx, cy, s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, 0.9, 0.9, 'spark');
+      sparks(cx, cy, s.face, 9); ring(cx, cy, 0.55, 'spark'); streak(cx, cy, 0.9, 0.9, 'spark'); sfx.play('clang', 0.5);
       D.mid -= s.face * 0.2; world.hs = Math.max(world.hs, 3); sfxShake(2);
     }
   }
   s.spinT = type === 'spin' && f >= hitAt - 4 && f <= hitAt + 2 ? (f - (hitAt - 4)) / 6 : 0;
   s.duelSwing = f >= hitAt - 1 && f <= hitAt + 2;
+  if (f === hitAt - 2) sfx.play('swing', type === 'overhead' || type === 'spin' ? 0.8 : 0.3);
   if (rip < 0) d.duelSwing = false;
   if (beat.answer === 'hop' && f === hitAt - 3 && d.b.gr) { d.b.vy = type === 'sweep' ? -11 : -9; d.b.gr = false; }
   if (type === 'sweep' && f === hitAt) dust(d.b.x, d.b.y, 4, 0.5);
   if (f === hitAt) {
     const cx = (s.b.x + d.b.x) / 2 + s.face * 0.1, cy = s.b.y - DUEL_Y[type];
     if (blocks) {
+      sfx.play('clang', type === 'overhead' ? 1 : 0.35);
       sparks(cx, cy, -s.face, type === 'overhead' ? 16 : 9); ring(cx, cy, type === 'overhead' ? 0.9 : 0.55, 'spark'); streak(cx, cy, type === 'high' || type === 'overhead' ? -0.9 : type === 'low' || type === 'sweep' ? 0.9 : 0, 0.9, 'spark');
       world.hs = Math.max(world.hs, type === 'overhead' ? 5 : 2); sfxShake(type === 'overhead' ? 5 : 2);
       if (type === 'overhead') { dust(d.b.x, d.b.y, 6, 0.6); D.mid += s.face * 0.2; }   // it drives them into the floor
@@ -2965,6 +2997,82 @@ function breakDuel(u) {
   log(u.side ? `${rivalName()} broke the exchange with ${SKILL[u.skill].name}.` : `Your fighter broke the exchange with ${SKILL[u.skill].name}.`, u.side);
 }
 
+// ---- sound effects
+// Every sound is made on the spot with Web Audio — short bursts of filtered noise and quick pitched
+// tones, no files — and all of it sits well under the music: one quiet master level with a limiter on
+// it, and each kind of sound can only fire so often, so a flurry of hits is a patter, not a wall. The
+// speaker button turns it off with the music. Fights run unseen make no sound, and neither does the
+// dress-up screen's demo fighter.
+const SFX_VOL = 0.2;
+const sfx = {
+  ctx: null, out: null, noise: null, last: {},
+  wake() {
+    if (!this.ctx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      try {
+        const ctx = this.ctx = new Ctx();
+        const lim = ctx.createDynamicsCompressor();
+        lim.threshold.value = -18; lim.knee.value = 10; lim.ratio.value = 8; lim.attack.value = 0.002; lim.release.value = 0.12;
+        this.out = ctx.createGain(); this.out.gain.value = SFX_VOL; this.out.connect(lim).connect(ctx.destination);
+        const n = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = n.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+        this.noise = n;
+      } catch { this.ctx = null; return; }
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+  },
+  tone(f0, f1, dur, vol, type = 'sine', at = 0) {
+    const c = this.ctx, t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(this.out); o.start(t); o.stop(t + dur + 0.02);
+  },
+  hiss(dur, vol, type, f0, f1 = f0, q = 1, at = 0) {
+    const c = this.ctx, t = c.currentTime + at, src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = this.noise; src.loop = true; f.type = type; f.Q.value = q;
+    f.frequency.setValueAtTime(f0, t); if (f1 !== f0) f.frequency.exponentialRampToValueAtTime(f1, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.02, dur * 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(this.out); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
+  },
+  play(name, k = 0.5) {
+    const S = SFX[name];
+    if (!S || !music.on || headless || !this.ctx || this.ctx.state !== 'running') return;
+    if (!S.ui && (!world || world.demo)) return;
+    const t = this.ctx.currentTime;
+    if (this.last[name] && t - this.last[name] < S.gap) return;
+    this.last[name] = t;
+    try { S.fn(this, Math.max(0, Math.min(1, k))); } catch { /* sound is only ever extra */ }
+  },
+};
+const jit = (v, a = 0.08) => v * (1 + (Math.random() - 0.5) * a * 2);
+const SFX = {
+  swing: { gap: 0.05, fn: (s, k) => s.hiss(0.1 + 0.07 * k, 0.08 + 0.07 * k, 'bandpass', jit(1500), 450, 1.3) },
+  hit: { gap: 0.03, fn: (s, k) => { s.tone(jit(170), 55, 0.09 + 0.06 * k, 0.3 + 0.25 * k); s.hiss(0.05, 0.2 + 0.12 * k, 'highpass', 1800); } },
+  crit: { gap: 0.06, fn: (s) => { s.tone(jit(1300), 1300, 0.2, 0.1, 'triangle'); s.tone(jit(1950), 1950, 0.15, 0.05, 'triangle', 0.03); } },
+  clang: { gap: 0.04, fn: (s, k) => { const f = jit(1700, 0.12); s.tone(f, f * 0.97, 0.15 + 0.1 * k, 0.06 + 0.05 * k, 'square'); s.tone(f * 1.51, f * 1.48, 0.12, 0.04, 'triangle'); s.hiss(0.05, 0.12, 'highpass', 3000); } },
+  scrape: { gap: 0.12, fn: (s) => s.hiss(0.14, 0.05, 'bandpass', jit(2600), 3300, 6) },
+  thud: { gap: 0.06, fn: (s, k) => { s.tone(jit(110), 40, 0.14 + 0.1 * k, 0.3 + 0.25 * k); s.hiss(0.12, 0.1 + 0.1 * k, 'lowpass', 500, 200); } },
+  step: { gap: 0.09, fn: (s) => s.hiss(0.05, 0.06, 'lowpass', 650) },
+  twang: { gap: 0.06, fn: (s) => { s.tone(jit(260), 190, 0.22, 0.1, 'triangle'); s.hiss(0.03, 0.08, 'highpass', 2500); } },
+  whirr: { gap: 0.05, fn: (s) => s.hiss(0.08, 0.07, 'bandpass', jit(2600), 1400, 2) },
+  cast: { gap: 0.06, fn: (s) => { s.tone(jit(320), 820, 0.14, 0.07); s.tone(jit(480), 1230, 0.12, 0.035, 'triangle', 0.03); } },
+  goo: { gap: 0.05, fn: (s) => { s.tone(jit(180), 440, 0.08, 0.13); s.tone(jit(260), 110, 0.1, 0.09, 'sine', 0.06); } },
+  ice: { gap: 0.05, fn: (s, k) => { s.tone(jit(2400), 2100, 0.2, 0.05, 'triangle'); s.hiss(0.1 + 0.12 * k, 0.08 + 0.08 * k, 'highpass', 3500, 2000); } },
+  shatter: { gap: 0.08, fn: (s) => { for (let i = 0; i < 4; i++) s.tone(jit(2000 + i * 600, 0.2), 1600, 0.08, 0.035, 'triangle', i * 0.025); s.hiss(0.22, 0.14, 'highpass', 2500, 1200); } },
+  spike: { gap: 0.08, fn: (s) => { s.tone(jit(900), 700, 0.08, 0.08, 'square'); s.hiss(0.06, 0.15, 'highpass', 2000); } },
+  pop: { gap: 0.04, fn: (s) => { s.tone(jit(420), 160, 0.09, 0.14); s.hiss(0.05, 0.08, 'bandpass', 900, 500, 2); } },
+  ko: { gap: 1, fn: (s) => { s.tone(90, 32, 0.9, 0.45); s.hiss(0.6, 0.18, 'lowpass', 900, 120); } },
+  win: { gap: 1, ui: true, fn: (s) => [523, 659, 784].forEach((f, i) => s.tone(f, f, 0.24, 0.07, 'triangle', i * 0.09)) },
+  lose: { gap: 1, ui: true, fn: (s) => [392, 311].forEach((f, i) => s.tone(f, f * 0.98, 0.32, 0.06, 'triangle', i * 0.14)) },
+  tap: { gap: 0.03, ui: true, fn: (s) => s.tone(jit(900, 0.03), 700, 0.04, 0.04, 'triangle') },
+  deal: { gap: 0.3, ui: true, fn: (s) => [0, 0.12, 0.24].forEach((at) => s.hiss(0.08, 0.05, 'bandpass', 1800, 3200, 1.2, at)) },
+  rare: { gap: 0.3, ui: true, fn: (s) => [880, 1175, 1568].forEach((f, i) => s.tone(f, f, 0.2, 0.04, 'triangle', 0.3 + i * 0.07)) },
+};
+// the browser only lets sound start from a tap: wake it on every one, and give buttons a soft tick
+addEventListener('pointerdown', () => sfx.wake(), { capture: true });
+addEventListener('click', (ev) => { if (ev.target.closest && ev.target.closest('button')) sfx.play('tap'); }, { capture: true });
 // ---------------------------------------------------------------- effects
 const sfxShake = (n) => { world.shake = Math.max(world.shake, n); };
 function sparks(x, y, dir, n, c) {
@@ -3006,6 +3114,7 @@ function stepParts() {
     else if (p.k === 'd') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.93; p.r += 0.006; }
     else if (p.k === 't') { p.y += p.vy * DT; p.vy *= 0.9; }
     else if (p.k === 'q') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.86; p.vy *= 0.86; }
+    else if (p.k === 'x') { p.x += p.vx * DT; p.y += p.vy * DT; p.vy += 22 * DT; p.vx *= 0.95; p.ang += p.va; }
     else if (p.k === 'o') { p.x += p.vx * DT; p.y += p.vy * DT; p.vx *= 0.92; p.vy *= 0.92; p.r += 0.012; }
     else if (p.k === 'e') { p.x += (p.vx + Math.sin(p.ph + p.life * 0.35) * 0.9) * DT; p.y += p.vy * DT; }
     else if (p.k === 'sc') { p.vy = Math.min(p.vy + 18 * DT, 2.2); p.vx *= 0.95; p.x += (p.vx + Math.sin(p.life * 0.2 + p.a) * 0.8) * DT; p.y += p.vy * DT; p.a += p.va; }
@@ -3032,7 +3141,12 @@ function hurt(u, d, src, by, c, split) {
   if (u.shield > 0 && src !== 'zone') {   // a shield soaks damage before HP does
     const a = Math.min(u.shield, d);
     u.shield -= a; d -= a;
-    if (a >= 1) ring(u.b.x, u.b.y - (u.bh || H) / 2, 0.8, 'steel');
+    if (a >= 1) {
+      // the barrier lights up where it was struck, and bursts into shards if that was the last of it
+      const cy = u.b.y - (u.bh || H) / 2;
+      u.shHitT = 12; u.shHitA = by && by.b ? Math.atan2(by.b.y - H / 2 - cy, by.b.x - u.b.x) : -Math.PI / 2;
+      if (u.shield < 0.5) shieldBreak(u);
+    }
     if (d <= 0) return;
   }
   const before = u.hp;
@@ -3079,7 +3193,7 @@ function triggerEffect(u, t, target) {
   const e = t.effect;
   if (e.apply === 'frenzy') { u.frenzyT = Math.round(e.duration * 60); callout(u, 'FRENZY'); }
   else if (e.apply && target) applyStatus(u, target, e.apply, e.stacks || 1, { name: t.src, duration: e.duration });
-  if (e.shield) { u.shield += e.shield; ring(u.b.x, u.b.y - H / 2, 1, 'steel'); }
+  if (e.shield) { u.shield += e.shield; u.shUpT = 16; }
   if (e.shift) startShift(u, e.shift, e.duration);
   if (e.critNext) { u.critNext = true; }
   if (e.halveHp) { u.hpMax = Math.max(20, Math.round(u.hpMax / 2)); u.hp = Math.min(u.hp, u.hpMax); callout(u, 'LAST PAGE'); }
@@ -3139,14 +3253,14 @@ function kill(u) {
   if (world.duel) endDuel();
   world.over = true; world.winner = 1 - u.side; world.overT = 0; world.ko = true; world.koAt = null;
   if (!headless && u.side === 0) music.ko();   // the music only sinks when your fighter goes down
-  world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11);
+  world.slowT = 80; world.impact = 3; world.hs = Math.max(world.hs, 10); sfxShake(11); sfx.play('ko');
   log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
 }
 function applyHit(att, def, d, dirX, crit) {
   if (def.state === 'iceblock') {   // sealed in ice: a blade rings off it and comes away cold
     att.hitDone = true;
     const hx = def.b.x - dirX * 0.4, hy = def.b.y - 0.9;
-    sparks(hx, hy, -dirX, 8, 'chill'); popText(hx, hy - 0.4, 'clink', 'chill', 0.4);
+    sparks(hx, hy, -dirX, 8, 'chill'); popText(hx, hy - 0.4, 'clink', 'chill', 0.4); sfx.play('ice', 0);
     if (d.melee && att.b && att.st) { applyStatus(def, att, 'chill', 1); if (!att.heavy) att.b.vx = -dirX * 3; }
     world.hs = Math.max(world.hs, 2);
     return;
@@ -3169,7 +3283,7 @@ function applyHit(att, def, d, dirX, crit) {
       x.state = 'stun'; x.stunT = 12; x.tumble = false; x.b.vx = -x.face * 7; x.ai.macro = null; x.ai.path.length = 0;
     }
     const mx = (att.b.x + def.b.x) / 2, my = Math.min(att.b.y, def.b.y) - 1.05;
-    sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark');
+    sparks(mx, my, 0, 22); ring(mx, my, 1.3, 'spark'); streak(mx, my, -1.2, 1.6, 'spark'); sfx.play('clang', 1);
     world.hs = Math.max(world.hs, 9); sfxShake(6);
     if (!world.stats[0].bounce++) log('Clash. Blades met and both fighters bounced off.', -1);
     return;
@@ -3183,7 +3297,7 @@ function applyHit(att, def, d, dirX, crit) {
       // a clean block: sparks off the blade, both fighters pushed apart, and the guard drops
       att.hitDone = true; def.guardT = 0;
       const bx = (att.b.x + def.b.x) / 2, by = def.b.y - 1.1;
-      sparks(bx, by, -dirX, 12); ring(bx, by, 0.7, 'spark');
+      sparks(bx, by, -dirX, 12); ring(bx, by, 0.7, 'spark'); sfx.play('clang', 0.5);
       def.b.vx = dirX * 4; att.b.vx = -dirX * 3; world.hs = Math.max(world.hs, 4); sfxShake(3);
       if (!world.stats[def.side].blocks++) log(def.side ? `${rivalName()} blocked.` : 'Your fighter blocked.', def.side);
       return;
@@ -3193,7 +3307,7 @@ function applyHit(att, def, d, dirX, crit) {
   const dSh = shiftOf(def), dEv = (def.gs ? def.gs.evasion : 0) + ((dSh && dSh.evasion) || 0);
   if (dEv > 0 && d.dmg && rng() < dEv) {
     att.hitDone = true; def.iT = Math.max(def.iT, 8);
-    popText(def.b.x, def.b.y - H - 0.35, 'dodge', 'steel', 0.4); streak(def.b.x, def.b.y - 0.9, dirX > 0 ? 0 : Math.PI, 0.8, 'steel');
+    popText(def.b.x, def.b.y - H - 0.35, 'dodge', 'steel', 0.4); streak(def.b.x, def.b.y - 0.9, dirX > 0 ? 0 : Math.PI, 0.8, 'steel'); sfx.play('swing', 0);
     if (def.gs.flags.dodgeRage) def.rage += def.gs.flags.dodgeRage;   // Dervish Slippers
     fire(def, 'onDodge', att);
     return;
@@ -3277,6 +3391,8 @@ function applyHit(att, def, d, dirX, crit) {
     if (!world.stats[att.side].crits++) log(att.side ? `${rivalName()} struck out of nowhere. Critical hit.` : 'Your fighter struck out of nowhere. Critical hit.', att.side);
   }
   const taken = dmg;
+  sfx.play('hit', big ? 1 : Math.min(1, dmg / 20));
+  if (crit) sfx.play('crit');
   hurt(def, taken, 'hit', att.side, null, zap ? [[kind, 1 - zap * armour / dmg], ['shock', zap * armour / dmg]] : [[kind, 1]]);
   if (att.mob === 'bud') world.stats[att.side].budDmg = (world.stats[att.side].budDmg || 0) + taken;   // for the balance tables
   if (ag && ag.ls > 0 && att.state !== 'dead') heal(att, taken * ag.ls);
@@ -5006,7 +5122,7 @@ function mobDie(u) {
     parts.push({ k: 'p', x: b.x + Math.cos(a) * 0.2, y: cy + Math.sin(a) * 0.2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, life: 0, max: 50 + Math.random() * 30, c: K.burst || 'ink' });
   }
   for (let i = 0; i < (K.scraps || 0); i++) scrap(b.x + (Math.random() - 0.5) * u.bw, cy + (Math.random() - 0.5) * u.bh, (Math.random() - 0.5) * 9, -2 - Math.random() * 6);
-  ring(b.x, cy, 1, 'spark'); sfxShake(4); world.hs = Math.max(world.hs, 5);
+  ring(b.x, cy, 1, 'spark'); sfxShake(4); world.hs = Math.max(world.hs, 5); sfx.play(K.burst === 'goo' || u.mob === 'slime' ? 'goo' : 'pop');
   if (K.die) K.die(u);
   if (u.side === 0 || K.summoned) { if (!K.summoned) log('Your puppet came apart.', 1); return; }   // yours falling is a loss, not a win   // yours falling is a loss, not a win
   if (world.hunt && !U.some((o) => o.side === 1 && o.state !== 'dead')) {
@@ -5046,6 +5162,7 @@ function spikeHit(u, i) {
       log(u.side ? `${rivalName()} stepped on your spikes. Now it knows they are there.` : 'You stepped on the rival\'s spikes. Your fighter will avoid them now.', owner);
     }
   }
+  sfx.play('spike');
   hurt(u, 10, 'trap', owner);
 }
 
@@ -5066,6 +5183,8 @@ function atkStep(u) {
   u.af++;
   if (u.af === d.w) {
     u.phase = 'a';
+    if (d.melee) sfx.play('swing', d.big || d.slam ? 1 : 0.3);
+    else if (d.cast && !d.shot) sfx.play('cast');
     if (d.lunge) b.vx = u.face * d.lunge * (world.demo ? 0.4 : 1);
     if (d.hop) { b.vy = d.hop; b.gr = false; }
     if (d.shot) fireShot(u);
@@ -5190,7 +5309,7 @@ function act(u) {
       if (u.ghostT > 0 && u.ghostGoal) {
         ctl = true;
         dir = Math.abs(u.ghostGoal.x - b.x) > 0.3 ? Math.sign(u.ghostGoal.x - b.x) : 0;
-        b.gy = Math.max(-6, Math.min(6, (u.ghostGoal.y - b.y) * 3));
+        b.gy = Math.max(-9, Math.min(9, (u.ghostGoal.y - b.y) * 4));
         u.face = dir || u.face;
       }
       break;
@@ -5219,6 +5338,16 @@ function act(u) {
   if (u.snareT > 0) { u.snareT--; if (b.gr) { dir = 0; press = false; b.vx *= 0.55; } }
   const ev = physStep(b, dir, press, hold, world.demo ? -2 : u.side, ctl, fr);   // pads stay still during demos
   if (ev & EV_JUMP) dust(b.x, b.y + 0.02, 3, 0.4);
+  if (ev & EV_WRAP) {
+    // out one edge of the page and in at the other: the goal comes with you, and both edges ripple
+    const ox = b.x - b.wrapX, oy = b.y - b.wrapY;
+    if (u.ghostGoal) { u.ghostGoal.x += b.wrapX; u.ghostGoal.y += b.wrapY; }
+    ring(ox, oy - H / 2, 0.9, TEAM[u.side]); ring(b.x, b.y - H / 2, 1.3, TEAM[u.side]);
+    smoke(b.x, b.y - H / 2, 5); sfx.play('whirr', 0.3);
+    // in over their head: let go and fall on them
+    if (b.wrapY && u.ghostGoal && u.ghostGoal.drop) u.ghostT = Math.min(u.ghostT, 7);
+    if (!world.demo) world.stats[u.side].wraps = (world.stats[u.side].wraps || 0) + 1;
+  }
   if (ev & EV_WJ) {
     // kick off the wall: puff at the wall, spin away from it
     const wx = b.x + b.wjSide * (W / 2 + 0.25);
@@ -5248,6 +5377,7 @@ function act(u) {
     if (u.state === 'free') u.padLaunched = true;
   } else if (ev & EV_LAND) {
     dust(b.x, b.y, vyBefore > 14 ? 5 : 2, 0.5);
+    if (vyBefore > 12 && !u.tumble) sfx.play('step');
     u.padStrike = false;
     if (vyBefore > 9) u.landT = 9;
     u.flipT = 0;
@@ -5256,6 +5386,7 @@ function act(u) {
     if (u.tumble) {
       if (b.landV > 12 && !u.bounced) { b.vy = -b.landV * 0.38; b.gr = false; u.bounced = true; sfxShake(3); dust(b.x, b.y, 6, 1); }
       else {
+        sfx.play('thud', Math.min(1, b.landV / 20));
         u.tumble = false; u.state = 'down'; u.downT = 28 + 14 - GETUP; u.iT = 28 + 14 + 16; b.vx *= 0.55; sfxShake(2);
         // the floor takes it: a burst of dust both ways and a skid mark along it
         dust(b.x, b.y, 7, 1.1); for (const d of [-1, 1]) streak(b.x + d * 0.3, b.y - 0.04, d > 0 ? 0 : Math.PI, 0.5 + Math.abs(b.vx) * 0.08, 'ink');
@@ -5437,7 +5568,7 @@ function castFear(u, fe) {
 // A shell that answers back: anything that hits you up close while it holds comes away with some of it.
 function castArmor(u, ar) {
   const b = u.b, cy = b.y - H / 2;
-  u.shield += ar.shield;
+  u.shield += ar.shield; u.shUpT = 16;
   u.retal = { st: ar.apply, stacks: ar.stacks || 1, t: Math.round(ar.secs * 60), steady: ar.steady || 0, col: ar.col };
   ring(b.x, cy, 1.4, ar.col); ring(b.x, cy, 0.9, 'steel');
   for (let i = 0; i < 10; i++) streak(b.x, cy, (i / 10) * 6.283, 0.5, ar.col);
@@ -5570,6 +5701,7 @@ function summonBud(u, sp) {
   k.dmgMul = pw; k.cdMul = 1; k.b.y = b.y; k.face = f;
   k.spawnT = k.spawnMax = 24; k.iT = 24; k.react = 24; k.cd = 20; k.life = Math.round(sp.life * 60);
   U.push(k);
+  sfx.play('goo');
   if (!world.stats[u.side].buds++) log(u.side ? `${rivalName()} poured a slime out of its book.` : 'Your tome poured out a slime.', u.side);
 }
 // Calling them home: each one runs back into the book as a gob of gel, and heals you when it gets there.
@@ -5649,7 +5781,7 @@ function startMelt(u, e) {
   if (b.vy < 0) b.vy = 0;
   const y = b.gr ? b.y : groundBelow(b.x, b.y);
   world.fires.push({ kind: 'slick', x: b.x, y, span: 0.9, t: 180, max: 180, side: u.side, by: u, sl: { every: 30, dmg: 1 } });
-  gooSplat(b.x, b.y, 14); popText(b.x, b.y - H - 0.5, 'MELT', 'goo', 0.5);
+  gooSplat(b.x, b.y, 14); popText(b.x, b.y - H - 0.5, 'MELT', 'goo', 0.5); sfx.play('goo');
   world.hs = Math.max(world.hs, 4); sfxShake(3);
   world.stats[u.side].melts++;
   if (world.stats[u.side].melts === 1) log(u.side ? `${rivalName()} melted out from under the blade.` : 'Your caster melted out from under the blade.', u.side);
@@ -5725,7 +5857,7 @@ function castRampart(u, rp) {
   reNav();
   const x = spot.c + 0.5, y = spot.rows[0] + 1;
   for (let i = 0; i < 10; i++) streak(x + (Math.random() - 0.5) * 0.9, y - Math.random() * 0.4, -Math.PI / 2 + (Math.random() - 0.5) * 0.6, 0.5 + Math.random() * 0.8, 'chill');
-  dust(x, y, 6, 0.9); sfxShake(4); world.hs = Math.max(world.hs, 3);
+  dust(x, y, 6, 0.9); sfxShake(4); world.hs = Math.max(world.hs, 3); sfx.play('ice', 1);
   if (!world.stats[u.side].walls++) log(u.side ? `${rivalName()} raised a wall of ice.` : 'Your tome raised a wall of ice.', u.side);
 }
 const iceAt = (c, r) => world.ice.find((w) => !w.ghost && w.c === c && w.rows.includes(r));
@@ -5733,7 +5865,7 @@ function hitIce(w, dmg, x, y, dir) {
   if (w.hp <= 0) return;
   w.hp -= dmg; w.hitT = 8;
   for (let i = 0; i < 5; i++) { const a = (dir > 0 ? Math.PI : 0) + (Math.random() - 0.5) * 1.8; parts.push({ k: 'q', x, y, vx: Math.cos(a) * (3 + Math.random() * 4), vy: Math.sin(a) * 4 - 2, s: 0.05 + Math.random() * 0.06, c: 'chill', life: 0, max: 16 }); }
-  ring(x, y, 0.5, 'chill'); world.hs = Math.max(world.hs, 2);
+  ring(x, y, 0.5, 'chill'); world.hs = Math.max(world.hs, 2); sfx.play('ice', 0.1);
   if (w.hp <= 0) iceGone(w, true);
 }
 function iceGone(w, broken) {
@@ -5747,7 +5879,7 @@ function iceGone(w, broken) {
   }
   if (broken) {
     // broken, it goes off in the face of whoever broke it
-    ring(x, yc, w.shard.r, 'chill'); ring(x, yc, w.shard.r * 0.55, 'steel'); sfxShake(5); world.hs = Math.max(world.hs, 5);
+    ring(x, yc, w.shard.r, 'chill'); ring(x, yc, w.shard.r * 0.55, 'steel'); sfxShake(5); world.hs = Math.max(world.hs, 5); sfx.play('shatter');
     const u = w.by;
     for (const e of U) {
       if (e.side === w.side || e.state === 'dead' || Math.abs(e.b.x - x) > w.shard.r || e.b.y < top - 0.5 || e.b.y - (e.bh || H) > top + w.rows.length) continue;
@@ -5810,7 +5942,7 @@ function startIceBlock(u, e) {
   b.vx *= 0.2; if (b.vy < 0) b.vy = 0;
   if (e) u.face = Math.sign(e.b.x - b.x) || u.face;
   for (let i = 0; i < 10; i++) streak(b.x + (Math.random() - 0.5) * 0.8, b.y - Math.random() * H, -Math.PI / 2, 0.4, 'chill');
-  callout(u, 'ICE BLOCK'); world.hs = Math.max(world.hs, 4); sfxShake(3);
+  callout(u, 'ICE BLOCK'); world.hs = Math.max(world.hs, 4); sfxShake(3); sfx.play('ice', 1);
   if (!world.stats[u.side].blocks2++) log(u.side ? `${rivalName()} sealed itself in ice.` : 'Your caster sealed itself in ice.', u.side);
 }
 function endIceBlock(u) {
@@ -5821,7 +5953,7 @@ function endIceBlock(u) {
     const a = Math.random() * 6.283, sp = 4 + Math.random() * 7;
     parts.push({ k: 'q', x: b.x + Math.cos(a) * 0.3, y: cy + Math.sin(a) * 0.6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, s: 0.07 + Math.random() * 0.1, c: 'chill', life: 0, max: 16 + Math.random() * 12 });
   }
-  world.hs = Math.max(world.hs, 5); sfxShake(5);
+  world.hs = Math.max(world.hs, 5); sfxShake(5); sfx.play('shatter');
   for (const e of U) {
     if (e.side === u.side || e.state === 'dead') continue;
     if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh || H) / 2) - cy) > ICEBLOCK.r + (e.bw || W) * 0.5) continue;
@@ -6488,7 +6620,7 @@ function newWorld(seed) {
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
     sigils: [], walls: [], fires: [], globs: [], ice: [], bolt: null,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0, melts: 0, buds: 0, pops: 0, walls: 0, broke: 0, blocks2: 0, slid: 0 })),
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0, melts: 0, buds: 0, pops: 0, walls: 0, broke: 0, blocks2: 0, slid: 0, wraps: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -7838,9 +7970,9 @@ Object.assign(Run.prototype, {
     this.bag = this.bag.filter((x) => x.uid !== uid);
     for (const s of Object.keys(this.equip)) if (this.equip[s] && this.equip[s].uid === uid) delete this.equip[s];
   },
-  // Merging, as in ZereshkStory: two of the same item at the same rarity make one a rarity up.
+  // Merging, as in ZereshkStory: two of the same item at the same rarity make one a rarity up, as far as Legendary.
   twinOf(inst) {
-    if (!inst || inst.rarity === 'epic') return null;
+    if (!inst || inst.rarity === 'legend') return null;
     return this.owned().find((x) => x.uid !== inst.uid && x.item === inst.item && x.rarity === inst.rarity) || null;
   },
   merge(uid) {
@@ -7848,6 +7980,7 @@ Object.assign(Run.prototype, {
     if (!b) return null;
     const r = runRng(this.seed, 'merge', a.uid, b.uid), rarity = upR(a.rarity);
     const fresh = rollInstance(a.item, rarity, Math.max(a.day, b.day), r);
+    fresh.rarity = rarity;   // two epics make the one way to a Legendary grade of an ordinary item
     fresh.affixes = [...new Set([...a.affixes, ...b.affixes, ...fresh.affixes])].slice(0, RARITY[rarity].affixes);
     fresh.perks = [...new Set([...(a.perks || []), ...(b.perks || []), ...fresh.perks])].slice(0, 2);
     if (!fresh.perks.length) fresh.perks = rollPerks(ITEM[a.item], 'epic', r).slice(0, 1);
@@ -7889,7 +8022,7 @@ function eventOptions(run) {
       { key: 'kick', label: 'Kick it', detail: 'Whatever it is, some coins fall out.' },
       leave];
     case 'shrine': return [
-      { key: 'echo', label: 'Echo an item · −8% max HP', detail: 'A copy at the same rarity. Two of a kind merge into one a rarity up.', pick: tradeable, disabled: run.bagFull() },
+      { key: 'echo', label: 'Echo an item · −8% max HP', detail: 'A copy at the same rarity, to merge into one a rarity up.', pick: (i) => tradeable(i) && i.rarity !== 'legend', disabled: run.bagFull() },
       { key: 'pray', label: 'Pray', detail: '+1 loot reroll.' },
       leave];
     case 'well': return [
@@ -7988,7 +8121,7 @@ function chooseEvent(run, key, uid) {
       b.hpMult = Math.round(b.hpMult * 0.92 * 100) / 100;
       gained = { ...rollInstance(inst.item, inst.rarity, inst.day, r), affixes: inst.affixes, perks: inst.perks, acroUp: inst.acroUp || 0 };
       run.bag.push(gained);
-      text = `The altar rings. Two ${ITEM[inst.item].name}s now, and you feel a little thinner. Merge them from your bag.`;
+      text = `The altar rings. Two ${ITEM[inst.item].name}s now, and you feel a little thinner. Tap the one marked ⇈ in your bag to merge them.`;
       break;
     case 'shrine:pray': run.rerolls += 1; text = 'A calm settles. (+1 loot reroll)'; break;
     case 'well:coin':
@@ -8030,7 +8163,7 @@ Object.assign(Run.prototype, {
     for (const i of owned) { const f = ITEM[i.item].family; if (f && !ITEM[i.item].keystone) n[f] = (n[f] || 0) + 1; }
     const fams = Object.keys(n).sort((a, b) => n[b] - n[a]);
     for (const id of r.shuffle(fams.flatMap((f) => FAMILY_ITEMS[f]).filter((id) => !have.has(id))).slice(0, 2)) add(id, 'Set');
-    const twinable = owned.filter((i) => i.rarity !== 'epic' && !ITEM[i.item].relic && ITEM[i.item].family);
+    const twinable = owned.filter((i) => i.rarity !== 'legend' && !ITEM[i.item].relic && ITEM[i.item].family);
     if (twinable.length) { const t = r.pick(twinable); add(t.item, 'Twin', t.rarity); }
     add(r.pick(Object.keys(ITEM).filter((id) => ITEM[id].keystone && !have.has(id))), 'Keystone');
     const pool = DAY_POOLS[Math.min(DAY_POOLS.length, this.day) - 1], ids = Object.values(pool).flat().map((h) => HUNT_FAMILY[h.split(':')[0]]).flatMap((f) => FAMILY_ITEMS[f]);
@@ -9267,6 +9400,13 @@ function drawParts(pal) {
       ctx.lineTo(p.x + cx * L, p.y + sy * L); ctx.lineTo(p.x + sy * 0.09 * k, p.y - cx * 0.09 * k); ctx.closePath(); ctx.fill();
       ctx.globalAlpha = 1;
     } else if (p.k === 'q') { ctx.fillStyle = col(pal, p.c); const q = p.s * (0.4 + 0.6 * k); ctx.fillRect(p.x - q / 2, p.y - q / 2, q, q); }
+    else if (p.k === 'x') {   // a shard of a broken shield: a sliver of glass in the team colour, with a lit edge
+      const q = p.s * (0.5 + 0.5 * k), ca = Math.cos(p.ang), sa = Math.sin(p.ang);
+      ctx.globalAlpha = Math.min(1, k * 1.8) * 0.8; ctx.fillStyle = col(pal, p.c);
+      ctx.beginPath(); ctx.moveTo(p.x + ca * q, p.y + sa * q); ctx.lineTo(p.x - sa * q * 0.45, p.y + ca * q * 0.45); ctx.lineTo(p.x - ca * q * 0.8, p.y - sa * q * 0.8); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.015; ctx.beginPath(); ctx.moveTo(p.x + ca * q, p.y + sa * q); ctx.lineTo(p.x - ca * q * 0.8, p.y - sa * q * 0.8); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     else if (p.k === 'o') { ctx.globalAlpha = 0.3 * k; ctx.fillStyle = pal.far; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
     else if (p.k === 'e') {   // a burn: a small flame lick that curls as it rises
       ctx.globalAlpha = Math.min(1, k * 1.6); ctx.strokeStyle = col(pal, p.c); ctx.lineWidth = 0.05 * k + 0.015; ctx.lineCap = 'round';
@@ -9393,13 +9533,76 @@ function drawShifted(u, pal) {
   void S;
   drawMarks(u, null, pal);
 }
+// A shield: a honeycomb barrier in the team colour. It grows in with a swell, a glint runs round it, the
+// cells light up where it is struck, it flickers when it is nearly spent, and it bursts into shards when it goes.
+const hexA = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+function drawShield(u, pal) {
+  const b = u.b, bh = u.bh || H, cx = b.x, cy = b.y - bh / 2, t = world.t;
+  const up = u.shUpT > 0 ? u.shUpT-- / 16 : 0, hit = u.shHitT > 0 ? u.shHitT-- / 12 : 0;
+  const swell = 1 + up * up * 0.35 - hit * 0.05;
+  const rx = ((u.bw || W) * 0.95 + 0.14) * swell, ry = bh * 0.64 * swell;
+  const c = pal[TEAM[u.side]], k = Math.min(1, 0.45 + u.shield / 40);
+  const weak = u.shield < 6 ? 0.55 + 0.45 * Math.abs(Math.sin(t * 0.35)) : 1;   // nearly spent: it gutters
+  const a0 = k * weak;
+  ctx.save();
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.283);
+  // the body of it: clear in the middle, tinted toward the edge
+  const g = ctx.createRadialGradient(cx, cy - ry * 0.2, 0, cx, cy, Math.max(rx, ry));
+  g.addColorStop(0, hexA(c, 0)); g.addColorStop(0.65, hexA(c, 0.05 * a0)); g.addColorStop(1, hexA(c, (0.22 + 0.2 * hit) * a0));
+  ctx.fillStyle = g; ctx.fill();
+  ctx.clip();
+  // honeycomb cells, brighter toward the rim and where it was struck
+  const hs = 0.15, hw = hs * 1.732, hx = cx + Math.sin(t * 0.02) * 0.04;
+  const hitX = cx + Math.cos(u.shHitA || 0) * rx, hitY = cy + Math.sin(u.shHitA || 0) * ry;
+  ctx.lineWidth = 0.014; ctx.strokeStyle = c;
+  for (let row = -Math.ceil(ry / (hs * 1.5)) - 1; row <= Math.ceil(ry / (hs * 1.5)) + 1; row++) {
+    const y = cy + row * hs * 1.5, off = row & 1 ? hw / 2 : 0;
+    for (let x = hx - Math.ceil(rx / hw + 1) * hw + off; x < cx + rx + hw; x += hw) {
+      const ex = (x - cx) / rx, ey = (y - cy) / ry, rim = ex * ex + ey * ey;
+      if (rim > 1.25) continue;
+      const near = hit ? Math.max(0, 1 - Math.hypot(x - hitX, y - hitY) / 0.7) * hit : 0;
+      ctx.globalAlpha = Math.min(1, (0.05 + 0.3 * rim * rim) * a0 + near * 0.9);
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) { const an = Math.PI / 6 + i * Math.PI / 3, px = x + Math.cos(an) * hs * 0.92, py = y + Math.sin(an) * hs * 0.92; if (!i) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+      ctx.closePath(); ctx.stroke();
+      if (near > 0.3) { ctx.globalAlpha = near * 0.35; ctx.fillStyle = pal.spark; ctx.fill(); }
+    }
+  }
+  // a glint sweeping across every couple of seconds
+  const ph = (t % 150) / 150;
+  if (ph < 0.35) {
+    const sx = cx - rx * 1.6 + (ph / 0.35) * rx * 3.2;
+    const sg = ctx.createLinearGradient(sx - 0.25, cy - ry, sx + 0.25, cy + ry);
+    sg.addColorStop(0, hexA(c, 0)); sg.addColorStop(0.5, 'rgba(255,255,255,' + (0.35 * a0) + ')'); sg.addColorStop(1, hexA(c, 0));
+    ctx.globalAlpha = 1; ctx.fillStyle = sg; ctx.fillRect(sx - 0.4, cy - ry, 0.8, ry * 2);
+  }
+  ctx.restore();
+  // the rim: a firm line, a bright catch-light up and to one side, and a ripple from the last blow
+  ctx.lineCap = 'round';
+  ctx.globalAlpha = Math.min(1, (0.55 + 0.4 * hit + 0.4 * up) * a0); ctx.strokeStyle = c; ctx.lineWidth = 0.035 + 0.03 * hit;
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.283); ctx.stroke();
+  ctx.globalAlpha = 0.8 * a0; ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.03;
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx * 0.9, ry * 0.93, 0, Math.PI * 1.12, Math.PI * 1.4); ctx.stroke();
+  if (hit) {
+    ctx.globalAlpha = hit; ctx.strokeStyle = pal.spark; ctx.lineWidth = 0.05 * hit;
+    const a = u.shHitA || 0;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx * (1 + (1 - hit) * 0.18), ry * (1 + (1 - hit) * 0.12), 0, a - 0.7, a + 0.7); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+function shieldBreak(u) {
+  const b = u.b, bh = u.bh || H, cy = b.y - bh / 2, rx = (u.bw || W) * 0.95 + 0.14, ry = bh * 0.64;
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * 6.283 + Math.random() * 0.4, sp = 3 + Math.random() * 4;
+    parts.push({ k: 'x', x: b.x + Math.cos(a) * rx, y: cy + Math.sin(a) * ry, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, ang: a, va: (Math.random() - 0.5) * 0.5, s: 0.07 + Math.random() * 0.07, c: TEAM[u.side], life: 0, max: 18 + Math.random() * 10 });
+  }
+  ring(b.x, cy, 1.2, TEAM[u.side]); ring(b.x, cy, 0.8, 'spark');
+  sfx.play('shatter', 0.35);
+}
 // One mark per status: a green vein for Poison, frost ticks for Chill, an ice box when frozen, a crackle for Shock.
 function drawMarks(u, S, pal) {
   const s = u.st, b = u.b;
-  if (u.shield > 0.5) {   // a shield: a thin bubble in the team colour
-    ctx.globalAlpha = Math.min(0.7, 0.25 + u.shield / 60); ctx.strokeStyle = pal[TEAM[u.side]]; ctx.lineWidth = 0.04;
-    ctx.beginPath(); ctx.ellipse(b.x, b.y - (u.bh || H) / 2, (u.bw || W) * 0.95 + 0.1, (u.bh || H) * 0.62, 0, 0, 6.283); ctx.stroke(); ctx.globalAlpha = 1;
-  }
+  if (u.shield > 0.5) drawShield(u, pal);
   if (s.poison > 0 && S) {   // a green vein down the middle of each near limb, stronger with each stack
     ctx.globalAlpha = 0.45 + 0.09 * s.poison; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     for (const pts of [[S.hip, S.neck], [S.hip, S.kf, S.ff], [S.sh, S.ef, S.hf]]) stroke(pts, pal.poison, 0.034);
@@ -9664,12 +9867,14 @@ function render() {
 }
 
 // ---------------------------------------------------------------- music
-// Each fight plays a random Wildfrost track (never the same one twice in a row). It carries on through a
-// rematch if it's still playing, fades out with a KO's slow motion, and fades out on the build and rival screens.
+// A random Wildfrost track (never the same one twice in a row) starts with the first fight and keeps going.
+// A KO sinks it under the slow motion; after that it sits quiet and muffled under the menus (the loot, the
+// next pick, the build screen) and swells back up when the next fight starts. Only the speaker button stops it.
 const MUSIC = {
   tracks: ['Spirit Call', "Winter's Wrath", 'Tundra Heart', 'March of the Pengoons', 'Luminice Dance']
     .map((t) => `Music/Wildfrost OST - ${t}.mp3`),
   volume: 0.55,
+  under: 0.2, underHz: 900,   // how loud and how muffled it sits under the menus
 };
 const MUSIC_KEY = 'homeTurf.music';
 let headless = false;   // headless test fights stay silent
@@ -9693,9 +9898,9 @@ const music = {
     } catch { this.ctx = null; this.filter = null; this.gain = null; }
   },
   ramp(param, to, secs) { const t = this.ctx.currentTime; param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); param.linearRampToValueAtTime(to, t + secs); },
-  level(to, secs) {
+  level(to, secs, hz = 20000) {
     if (this.gain) this.ramp(this.gain.gain, to, secs); else this.el.volume = to;
-    if (this.filter && to > 0) this.ramp(this.filter.frequency, 20000, 0.05);
+    if (this.filter && to > 0) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(hz, t + Math.max(0.05, secs)); }
     clearTimeout(this.stopT);
     if (to === 0) this.stopT = setTimeout(() => this.el.pause(), secs * 1000 + 80);
   },
@@ -9712,17 +9917,25 @@ const music = {
       this.el.src = encodeURI(MUSIC.tracks[i]);
       this.el.currentTime = 0;
     }
+    const fresh = this.el.paused;
     this.fading = false;
     const p = this.el.play();
     if (p) p.catch(() => {});
-    this.level(MUSIC.volume, 0.12);
+    this.level(MUSIC.volume, fresh ? 0.12 : 0.9);
   },
-  // KO: the music sinks under the slow motion and fades away.
+  // KO: the music sinks under the slow motion, then comes back up a little, muffled, and carries on.
   ko() {
-    if (!this.el || this.el.paused) return;
-    this.fading = true;
-    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(420, t + 2.2); }
-    this.level(0, 3.2);
+    if (!this.el || this.el.paused || this.fading) return;
+    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(420, t + 2.2); f.exponentialRampToValueAtTime(MUSIC.underHz, t + 4.5); }
+    if (this.gain) { const g = this.gain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(MUSIC.volume * MUSIC.under * 0.6, t + 2.6); g.linearRampToValueAtTime(MUSIC.volume * MUSIC.under, t + 4.5); }
+    else this.el.volume = MUSIC.volume * MUSIC.under;
+    clearTimeout(this.stopT);
+  },
+  // Menus: keep playing if it is playing, quiet and muffled. Nothing starts from a menu.
+  duck(secs = 0.8) {
+    if (!this.el || this.el.paused || this.fading || !this.on) return;
+    if (this.gain && this.gain.gain.value < MUSIC.volume * MUSIC.under * 1.05 && this.filter.frequency.value < MUSIC.underHz * 1.5) return;   // already under (or sinking from a KO)
+    this.level(MUSIC.volume * MUSIC.under, secs, MUSIC.underHz);
   },
   stop(secs = 0.7) { this.want = false; if (this.el) { this.fading = true; this.level(0, secs); } },
   toggle() {
@@ -10319,6 +10532,7 @@ function renderWhy(el, led) {
 }
 function showResult() {
   const w = world.winner, name = rivalName();
+  sfx.play(w === 0 ? 'win' : 'lose'); music.duck(1.6);
   ui.resT.textContent = world.hunt ? (w === 0 ? 'Hunt cleared' : `The ${name.toLowerCase()} won`) : w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
   ui.resK.textContent = world.hunt ? `${world.ko ? 'Cleared' : 'Out of time'} · ${clockStr(world.t - world.overT)}` : world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;
@@ -10454,7 +10668,7 @@ function showPanel(which) {
 }
 function enterRival() {
   mode = 'rival';
-  music.stop();
+  music.duck();
   const bd = builds[1], r = RIVALS[rivalIx], rec = loadRecord()[bd.name];
   A = makeArena([null, bd]);
   demoWorld();
@@ -10483,7 +10697,7 @@ function enterRival() {
 }
 function enterBuild() {
   mode = 'build';
-  music.stop();
+  music.duck();
   A = makeArena([builds[0], null]);
   demoWorld();
   U = [demoUnit(0, builds[0])];
@@ -10784,7 +10998,7 @@ function itemRow(inst, { tag = '', price = '', compare = false, act = '', attrs 
 }
 // The sheet: details and choices over the top, so no screen ever has to scroll.
 function openSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; }
-function closeSheet() { $('#sheet').hidden = true; sheetFor = null; if (trying) { tryOff(); if (runSel && runSel.loot !== undefined) { runSel = null; renderRun(); } } }
+function closeSheet() { $('#sheet').hidden = true; sheetFor = null; if (trying) { tryOff(); if (runSel && runSel.loot !== undefined) { runSel = null; if (run && run.loot) renderRun(); } } }
 let sheetFor = null;
 let sheetNote = '';
 function itemSheet(inst, actions, title = '', note = '') {
@@ -10980,6 +11194,7 @@ function renderRun() {
   } else if (runScreen === 'loot') {
     // Three to choose from, dealt face up: where each came from, what it is, and what it would do for you.
     const free = run.freeReroll(), legend = run.loot.items.some((x) => ITEM[x.item].legend);
+    if (!runSel) { sfx.play('deal'); if (run.loot.items.some((x) => x.rarity === 'epic' || x.rarity === 'legend')) sfx.play('rare'); }
     body = `<div class="row-h"><span class="lbl">${legend ? 'A legendary is among them' : 'Pick one'}</span><span class="lbl">From the ${HUNTS[run.loot.offer.hunt].name.toLowerCase()}</span></div>
       <div class="lootrow">${run.loot.items.map(lootCard).join('')}</div>
       <p class="hint">Tap one to try it on and read it.</p>`;
@@ -10998,7 +11213,7 @@ function renderRun() {
     const sets = Object.entries(b.sets || {}).map(([f, n]) => `<button class="set ${n >= 4 ? 'full' : n >= 2 ? 'on' : ''}" data-set="${f}" title="${FAMILY[f].name} ${Math.min(n, 4)}/4 — ${setText(f)}">${FAMILY[f].name} ${Math.min(n, 4)}/4</button>`).join('');
     const bag = Array.from({ length: RUNCFG.bag }, (_, i) => {
       const inst = run.bag[i];
-      return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}">${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
+      return inst ? `<button class="bslot ${runSel && runSel.uid === inst.uid ? 'on' : ''} ${run.twinOf(inst) ? 'twin' : ''}" data-bag="${inst.uid}" style="--rc:${RAR_COL[inst.rarity]}" ${run.twinOf(inst) ? 'title="Has a twin: tap to merge"' : ''}>${itemIcon(inst)}<small>${ITEM[inst.item].name}</small></button>` : '<span class="bslot empty"></span>';
     }).join('');
     body = `<div class="gstats runst">${cells.map(([k, v]) => `<div><b>${v}</b><span>${k}</span></div>`).join('')}</div>
       ${extra ? `<div class="xstats">${extra}</div>` : ''}
@@ -11079,7 +11294,7 @@ function showRun(screen) {
   runScreen = screen; runSel = null; huntKind = null; huntPower = 1;
   applyRunBuild();
   mode = 'build'; buildTab = 'gear';
-  music.stop();
+  music.duck();
   A = makeArena([builds[0], null]);
   demoWorld();
   U = [demoUnit(0, builds[0])];
@@ -11284,7 +11499,7 @@ function refreshRunBar() {
 // The front door: a run, and a way into everything else.
 function enterHome() {
   mode = 'rival';
-  music.stop();
+  music.duck();
   const bd = builds[1];
   A = makeArena([null, bd]);
   demoWorld();

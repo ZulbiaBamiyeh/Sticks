@@ -4,6 +4,19 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **Sound effects** (`sfx`, `SFX`): quiet Web Audio sounds for swings, hits, clangs, shots, spells,
+  landings, spikes, KOs and UI ticks. Master level `SFX_VOL` 0.2 through a limiter; they follow the speaker button.
+- **Music carries on** between fights: a KO sinks it, then `music.duck` keeps it quiet and muffled under
+  every menu until the next fight swells it back up.
+- **Ghost Walk wraps the page:** out one side wall and in at the other, or down through the floor and
+  in from the top to drop on them (`ghostRoute`, `EV_WRAP`). Sim: 2 uses a fight, 51% win rate.
+- **Shield** is a honeycomb barrier (`drawShield`): it swells in, a glint sweeps across it, cells light
+  where it's struck, it gutters when nearly spent, and it bursts into shards (`shieldBreak`, part `'x'`).
+- Fixes: equipping or bagging a loot pick now goes on to the next round (`closeSheet` re-rendered a
+  loot screen that no longer had loot and threw). Epic twins now merge (into a Legendary grade), the
+  Echo Shrine won't copy a Legendary, and bag items with a twin show ⇈.
+
+## Before that (animation)
 - **Battle animation.** Knockdowns use a ragdoll (`startKrag`, `stepKrag`, `spinRag`, `shownSkel`):
   it's tied loosely to the body box, starts with a backwards turn, lies with some tone (knees and head
   lifted), and gets up in three beats that blend out of the heap (`GETUP` frames, with a kip-up for
@@ -14,7 +27,7 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 - Test hooks: `__homeTurf.knock(u, atkName)` lands a hit on u, and `__homeTurf.duel()` starts an
   exchange. Both are for filming animations frame by frame.
 
-## Before that
+## Before that (run choices)
 - **The run's choices got stakes.** Hunt, loot and duel screens were rows of names, so picking was a
   shrug. Now:
   - **Odds:** `simFight` runs a fight unseen (`setupFight` is the fight without its screen) and puts
