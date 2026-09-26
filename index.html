@@ -10317,7 +10317,9 @@ const MUSIC = {
   tracks: ['Spirit Call', "Winter's Wrath", 'Tundra Heart', 'March of the Pengoons', 'Luminice Dance']
     .map((t) => `Music/Wildfrost OST - ${t}.mp3`),
   volume: 0.55,
-  under: 0.2, underHz: 900,   // how loud and how muffled it sits under the menus
+  // Under the menus it only steps back a little: a touch quieter, the top end softened. Every change is
+  // a slow glide, so it's felt more than heard.
+  under: 0.72, underHz: 4200, glide: 2.2,
 };
 const MUSIC_KEY = 'homeTurf.music';
 let headless = false;   // headless test fights stay silent
@@ -10341,8 +10343,14 @@ const music = {
     } catch { this.ctx = null; this.filter = null; this.gain = null; }
   },
   ramp(param, to, secs) { const t = this.ctx.currentTime; param.cancelScheduledValues(t); param.setValueAtTime(param.value, t); param.linearRampToValueAtTime(to, t + secs); },
+  // without Web Audio: glide the element's own volume instead of jumping it
+  tween(to, secs) {
+    clearInterval(this.tw);
+    const from = this.el.volume, t0 = performance.now();
+    this.tw = setInterval(() => { const k = Math.min(1, (performance.now() - t0) / (secs * 1000)); this.el.volume = from + (to - from) * k * k * (3 - 2 * k); if (k >= 1) clearInterval(this.tw); }, 50);
+  },
   level(to, secs, hz = 20000) {
-    if (this.gain) this.ramp(this.gain.gain, to, secs); else this.el.volume = to;
+    if (this.gain) this.ramp(this.gain.gain, to, secs); else if (secs < 0.2) this.el.volume = to; else this.tween(to, secs);
     if (this.filter && to > 0) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(hz, t + Math.max(0.05, secs)); }
     clearTimeout(this.stopT);
     if (to === 0) this.stopT = setTimeout(() => this.el.pause(), secs * 1000 + 80);
@@ -10364,20 +10372,21 @@ const music = {
     this.fading = false;
     const p = this.el.play();
     if (p) p.catch(() => {});
-    this.level(MUSIC.volume, fresh ? 0.12 : 0.9);
+    this.level(MUSIC.volume, fresh ? 0.3 : 1.6);
   },
-  // KO: the music sinks under the slow motion, then comes back up a little, muffled, and carries on.
+  // KO: the music leans back a little under the slow motion, then settles where it sits under the menus.
   ko() {
     if (!this.el || this.el.paused || this.fading) return;
-    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(420, t + 2.2); f.exponentialRampToValueAtTime(MUSIC.underHz, t + 4.5); }
-    if (this.gain) { const g = this.gain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(MUSIC.volume * MUSIC.under * 0.6, t + 2.6); g.linearRampToValueAtTime(MUSIC.volume * MUSIC.under, t + 4.5); }
-    else this.el.volume = MUSIC.volume * MUSIC.under;
+    const low = MUSIC.volume * MUSIC.under, g0 = MUSIC.glide;
+    if (this.filter) { const f = this.filter.frequency, t = this.ctx.currentTime; f.cancelScheduledValues(t); f.setValueAtTime(f.value, t); f.exponentialRampToValueAtTime(2600, t + g0); f.exponentialRampToValueAtTime(MUSIC.underHz, t + g0 * 2); }
+    if (this.gain) { const g = this.gain.gain, t = this.ctx.currentTime; g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(low * 0.85, t + g0); g.linearRampToValueAtTime(low, t + g0 * 2); }
+    else this.tween(low, g0);
     clearTimeout(this.stopT);
   },
   // Menus: keep playing if it is playing, quiet and muffled. Nothing starts from a menu.
-  duck(secs = 0.8) {
+  duck(secs = MUSIC.glide) {
     if (!this.el || this.el.paused || this.fading || !this.on) return;
-    if (this.gain && this.gain.gain.value < MUSIC.volume * MUSIC.under * 1.05 && this.filter.frequency.value < MUSIC.underHz * 1.5) return;   // already under (or sinking from a KO)
+    if (this.gain && this.gain.gain.value < MUSIC.volume * MUSIC.under * 1.02 && this.filter.frequency.value < MUSIC.underHz * 1.2) return;   // already under (or settling after a KO)
     this.level(MUSIC.volume * MUSIC.under, secs, MUSIC.underHz);
   },
   stop(secs = 0.7) { this.want = false; if (this.el) { this.fading = true; this.level(0, secs); } },
@@ -10975,7 +10984,7 @@ function renderWhy(el, led) {
 }
 function showResult() {
   const w = world.winner, name = rivalName();
-  sfx.play(w === 0 ? 'win' : 'lose'); music.duck(1.6);
+  sfx.play(w === 0 ? 'win' : 'lose'); music.duck();
   ui.resT.textContent = world.hunt ? (w === 0 ? 'Hunt cleared' : `The ${name.toLowerCase()} won`) : w === 0 ? 'You win' : w === 1 ? `${name} wins` : 'Draw';
   ui.resT.className = 'res-t ' + (w === 0 ? 'b' : w === 1 ? 'r' : '');
   ui.resK.textContent = world.hunt ? `${world.ko ? 'Cleared' : 'Out of time'} · ${clockStr(world.t - world.overT)}` : world.ko ? `KO · ${clockStr(world.t - world.overT)}` : `Time · ${Math.round(U[0].hp)} to ${Math.round(U[1].hp)} HP`;

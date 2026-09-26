@@ -425,11 +425,13 @@ Fights are deterministic from a seed, so **Replay** runs the same fight again.
 Each fight plays a random track from five picked from the Wildfrost soundtrack
 (Spirit Call, Winter's Wrath, Tundra Heart, March of the Pengoons and Luminice
 Dance), never the same one twice in a row. The tracks are in `Music/` and listed in `MUSIC.tracks` in
-`index.html`. The music never stops between fights. When your fighter is KO'd it sinks
-through the slow motion; after any fight it settles quiet and muffled
-(`MUSIC.under`, `MUSIC.underHz`) under the result, the loot, the next pick and
-the build screens (`music.duck`), then swells back up when the next fight
-starts. The speaker button in the header mutes it (and the sound effects), and
+`index.html`. The music never stops between fights, and it never changes suddenly. When your
+fighter is KO'd it leans back a little through the slow motion; after any fight
+it glides down to a slightly quieter, slightly softer level (`MUSIC.under` 72%,
+`MUSIC.underHz`, over `MUSIC.glide` seconds) under the result, the loot, the
+next pick and the build screens (`music.duck`), and glides back up when the
+next fight starts. Opened straight from disk, the same glides are done on the
+element's volume. The speaker button in the header mutes it (and the sound effects), and
 that choice is remembered.
 
 ### Sound effects
