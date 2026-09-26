@@ -780,7 +780,7 @@ const WEAP = {
   hammer: { name: 'Hammer', speed: 6.2, atk: 'hammer', stop: 1.15, stat: '17f · armor', desc: 'Slow, but hits can\'t stop the swing. Launches whatever it lands on.' },
   bow: { name: 'Bow', speed: 6.7, atk: 'shoot', range: 6.5, stat: '16f · lob', desc: 'Lobs arrows over walls from far away.' },
   stars: { name: 'Stars', speed: 7.0, atk: 'throw', range: 4.6, stat: '10f · volley', desc: 'Throws stars in pairs, flat and fast. Needs a clear line.' },
-  spellbook: { name: 'Tome', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: 'slime · summon', desc: 'The Slime Tome. Glides instead of running, and never rolls or flips. Pours out slimes that hop at the rival and get in its way, calls them home to heal, and melts out from under a blade that has it pinned.' },
+  spellbook: { name: 'Tome', speed: 4.5, atk: 'cast_bolt', range: 5.6, float: 0.3, noAcro: 1, stat: '2 tomes', desc: 'A caster never runs, rolls or flips, and fights the way its tome is written. The Slime Tome floats, grows an army of slimes and melts away from a blade. The Ice Tome skates, builds walls of ice, sends them sliding, and seals itself in ice when pinned.' },
   puppet: { name: 'Puppet', shelved: 1, speed: 4.4, atk: 'pswing', stop: 4.4, noAcro: 1, noDuel: 1, stat: '6 forms · reach', desc: 'You never touch anybody, and you barely move: no roll, no wall run, no double jump, and the slowest feet of any blade. Everything happens out on the strings, and which puppet hangs on them changes what your attack is — a blade arm that swings, a tail that pins them down, a kite thrown out and back, a slab dropped on their head, a bobbin trailing a wire across the floor, or a lantern that hangs over them and pours.' },
 };
 // shelved weapons keep their code (see versions/) but are never offered or rolled
@@ -842,14 +842,14 @@ const PAL = {
   blue: '#2358d6', red: '#d63f2b', spark: '#fff3c4', steel: '#f4f6f8', fog: 'rgba(193,199,191,0.93)',
   tintB: 'rgba(35,88,214,0.06)', tintR: 'rgba(214,63,43,0.06)', label: 'rgba(22,25,29,0.32)',
   burn: '#eb6834', poison: '#008300', bleed: '#c0304a', chill: '#3d9cc4', shock: '#eda100', ice: 'rgba(61,156,196,0.16)',
-  goo: '#2fa58a', gooDk: '#17614f', gooHi: '#9fe6d2',
+  goo: '#2fa58a', gooDk: '#17614f', gooHi: '#9fe6d2', frost: '#dff3fb', frostCov: '#25465f',
 };
 const PAL_INV = {
   out: '#16191d', bg: '#16191d', tile: '#eef0ec', tileHi: '#ffffff', blockB: '#eef0ec', blockR: '#eef0ec',
   ink: '#ffffff', far: '#d9ddd6', hatch: 'rgba(0,0,0,0)', grid: 'rgba(0,0,0,0)',
   blue: '#7fa3ff', red: '#ff7c66', spark: '#ffffff', steel: '#16191d', fog: 'rgba(22,25,29,0.9)',
   tintB: 'rgba(0,0,0,0)', tintR: 'rgba(0,0,0,0)', label: 'rgba(0,0,0,0)',
-  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)', goo: '#6fe0c2', gooDk: '#1f8a70', gooHi: '#d4fff2',
+  burn: '#ffa15c', poison: '#8fdc6d', bleed: '#ff8a95', chill: '#8fd6f2', shock: '#ffe066', ice: 'rgba(143,214,242,0.2)', goo: '#6fe0c2', gooDk: '#1f8a70', gooHi: '#d4fff2', frost: '#eefaff', frostCov: '#bfe3f4',
 };
 const TEAM = ['blue', 'red'];
 
@@ -883,7 +883,7 @@ function makeArena(builds) {
   const n = COLS * ROWS;
   const a = {
     solid: new Uint8Array(n), owner: new Int8Array(n).fill(-1),
-    spikes: new Int8Array(n).fill(-1), pads: new Int8Array(n).fill(-1), padAnim: new Float32Array(n),
+    spikes: new Int8Array(n).fill(-1), pads: new Int8Array(n).fill(-1), padAnim: new Float32Array(n), ice: new Uint8Array(n),
   };
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     if (r === 0 || r === ROWS - 1 || c === 0 || c === COLS - 1) a.solid[r * COLS + c] = 1;
@@ -929,8 +929,9 @@ function physStep(b, dir, press, hold, side, ctl, fr) {
   // after a wall jump, pushing back toward the wall is ignored for a moment so the fighter actually leaves it
   if (b.wjT > 0) { b.wjT--; if (dir === b.wjSide) dir = 0; }
   if (b.gr) {
-    if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accG * DT);
-    else b.vx = approach(b.vx, 0, P.fric * fr * DT);
+    const gp = b.grip === undefined ? 1 : b.grip;   // ice underfoot: less to push off, less to stop on
+    if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accG * Math.max(0.28, gp) * DT);
+    else b.vx = approach(b.vx, 0, P.fric * fr * gp * DT);
   } else if (ctl && dir) b.vx = approach(b.vx, dir * b.speed, P.accA * DT);
   if (ctl && press) {
     if (b.gr) { b.vy = -P.jumpV; b.gr = false; b.jumping = true; ev |= EV_JUMP; }
@@ -1211,6 +1212,10 @@ const ATK = {
   cast_slick: { w: 26, a: 2, r: 15, cd: 8, cast: 1, slick: { secs: 5, span: 1.4, every: 30, dmg: 2 } },
   // regrowth: nothing now, and a little every third of a second for the next six
   cast_regrow: { w: 24, a: 2, r: 14, cd: 10, cast: 1, regrow: { per: 2, every: 20, secs: 6 } },
+  // the ice tome: it builds the fight it wants — a wall across the floor, a floor nobody can stand on —
+  // and then breaks whatever the cold has got into
+  cast_rampart: { w: 22, a: 2, r: 14, cd: 6, cast: 1, rampart: { hp: 44, secs: 6.5, rows: 3, at: 1.7, shard: { r: 1.9, dmg: 7, stacks: 1 } } },
+  cast_glaze: { w: 24, a: 2, r: 14, cd: 6, cast: 1, glaze: { secs: 6, span: 1.9, every: 60 } },
   // the slime tome: the book opens and something crawls out of it
   cast_bud: { w: 30, a: 2, r: 14, cd: 6, cast: 1, bud: { hp: 22, life: 16 } },
   // and calls them home: every slime still out there comes back in, and what is left of it is yours
@@ -1422,7 +1427,7 @@ function makeUnit(side, weapon, skill, acro = 0, trinket = null, stats = null) {
     side, w: weapon, skill: skill || null, trinket: trinket || null, acro: WEAP[weapon].noAcro ? 0 : acro, macros: MACROS_BY_ACRO[WEAP[weapon].noAcro ? 0 : acro], hp: hpMax, hpMax, hpShow: hpMax, gs,
     look: gs.look || null, dmgMul: 1, critCh: gs.crit, skMul: Math.max(0.4, 1 - gs.skillHaste), shield: 0, frenzyT: 0, stasis: 0, rage: 0, hits: 0, hasteAcc: 0,
     onHit: trinket ? [TRINKET[trinket]] : [],
-    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed) * (gs.flags.tome ? 0.86 : 1), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: gs.flags.tome ? 0.16 : WEAP[weapon].float || 1 },
+    b: { x: sc + 0.5, y: SPAWN_R + 1, vx: 0, vy: 0, gr: true, jumping: false, speed: WEAP[weapon].speed * (1 + gs.speed) * (gs.flags.tome ? 0.86 : gs.flags.skate ? 1.15 : 1), acro: WEAP[weapon].noAcro ? 0 : acro, onWall: 0, wjT: 0, wr: 0, wrUsed: false, dj: false, float: gs.flags.tome ? 0.16 : WEAP[weapon].float || 1 },
     rollT: 0, rollCd: 0, rollDir: 1, flipT: 0, flipDir: 1, landT: 0,
     face: side ? -1 : 1, state: 'free', atkName: null, atkDef: null, af: 0, phase: null, atkId: 0,
     hitDone: false, hitLanded: false, stunT: 0, juggle: 0, guardT: 0, recover: false, poseVar: 0, spinT: 0, twirlT: 0, tumble: false, bounced: false, spin: 0,
@@ -1460,7 +1465,7 @@ const SPELL_CD = {
   cast_icewall: 260, cast_encase: 210, cast_shatter: 160, cast_spike: 190, cast_icearmor: 270,
   cast_firewall: 250, cast_pillar: 170, cast_immolate: 175, cast_cinder: 260, cast_cauterize: 300,
   cast_rod: 260, cast_tether: 210, cast_discharge: 160, cast_thunder: 190, cast_static: 260,
-  cast_membrane: 250, cast_snare: 200, cast_splash: 210, cast_slick: 220, cast_regrow: 380, cast_bud: 170, cast_reabsorb: 300,
+  cast_membrane: 250, cast_snare: 200, cast_splash: 210, cast_slick: 220, cast_regrow: 380, cast_bud: 170, cast_reabsorb: 300, cast_rampart: 330, cast_glaze: 250,
   cast_drain: 130, cast_rupture: 330, cast_fear: 230,
 };
 // A caster needs the same six answers every fight — something to throw, something to hide behind,
@@ -1473,12 +1478,17 @@ const SCHOOL = {
   storm: { name: 'Storm', col: 'shock', bolt: 'cast_arc', air: 'acast_arc', guard: 'cast_rod', stop: 'cast_tether', burst: 'cast_discharge', trap: 'cast_thunder', ward: 'cast_static' },
   // the slime tome does not answer the six questions: it grows something to answer them for it, calls it
   // back in to heal, and when a blade has it pinned it is not there to be hit (see startMelt)
+  // the ice tome builds a fortress: a wall of real ice across the floor, a glaze that sends them sliding,
+  // lances to chill them, a shatter to break what froze — and when a blade has it pinned it does not
+  // run, it seals itself in a block of ice (see startIceBlock)
+  ice: { name: 'Ice', col: 'chill', bolt: 'cast_lance', air: 'acast_lance', wall: 'cast_rampart', floor: 'cast_glaze', burst: 'cast_shatter' },
   slime: { name: 'Slime', col: 'goo', bolt: 'cast_goo', air: 'acast_goo', burst: 'cast_splash', summon: 'cast_bud', mend: 'cast_reabsorb', ward: 'cast_regrow' },
   // a warlock does not throw anything: the curse is its bolt, and fear is how it keeps people off it
   tome: { name: 'Warlock', col: null, bolt: 'cast_curse', air: 'cast_curse', aim: 'lance' },
 };
 const schoolOf = (u) => (u && u.gs && u.gs.flags.tome ? SCHOOL.tome : SCHOOL[(u && u.gs && u.gs.flags.school) || 'slime'] || SCHOOL.slime);
 const slimeTome = (u) => u && u.w === 'spellbook' && schoolOf(u) === SCHOOL.slime && !(u.gs && u.gs.flags.staff);
+const iceTome = (u) => u && u.w === 'spellbook' && schoolOf(u) === SCHOOL.ice;
 // whether a ward is worth saying now: a shell wants something coming, a regrowth wants a wound, and
 // cauterising wants something in you to burn out
 function wardWanted(u, name) {
@@ -1507,6 +1517,14 @@ function pickSpell(u, fallback) {
     return 'cast_curse';
   }
   const ready = (role) => { const n = S[role]; return n && !(cd[n] > 0) ? n : null; };
+  if (S === SCHOOL.ice) {
+    const cold = e ? e.st.chill + (e.st.frozen > 0 ? 3 : 0) : 0;
+    if (near && !rushed && (cold >= 2 || dist < 2)) { const n = ready('burst'); if (n) return n; }   // break what froze
+    // whenever there is floor between them: a wall across it
+    if (e && dist > 1.8 && dist < 11 && !rushed && Math.abs(e.b.y - u.b.y) < 2) { const n = ready('wall'); if (n && rampartSpot(u, e, ATK[n].rampart.at)) return n; }
+    if (e && e.b.gr && !near && !rushed && dist < 9) { const n = ready('floor'); if (n) return n; }       // and ice the floor under them
+    return S.bolt;
+  }
   if (S === SCHOOL.slime) {
     const buds = budsOf(u).length, low = u.hp < u.hpMax * 0.6;
     if (near && !rushed) { const n = ready('burst'); if (n) return n; }                  // off me
@@ -1640,6 +1658,7 @@ function think(u) {
   if (e.atkName === 'slam' && jumpShock(u, e)) return;
   if (tryDodge(u, e)) return;
   if (tryEvade(u, e)) return;
+  if (tryBreakIce(u, e)) return;
   if (tryAttack(u, e)) return;
   if (tryDeflect(u, e)) return;
   if (u.recover) { u.recover = false; if (recoverChoice(u, e)) return; }
@@ -1797,7 +1816,7 @@ function tryAttack(u, e) {
     if (!e.ghost && Math.abs(dx) < 1.25 && Math.abs(dy) < 1 && !lying(e)) { u.face = f; startAtk(u, 'kick'); return true; }
     if (dist < 1.8) return false;
     if (e.ghost && u.blind <= 0) return false;  // one hopeful shot at where the rival vanished, then hold fire
-    const sol = aimAt(u, e);
+    const sol = ownIceOpen(u, () => aimAt(u, e));
     if (sol) { u.face = f; u.aimSol = sol; if (e.ghost) u.blind--; startAtk(u, wp.atk); return true; }
     return false;
   }
@@ -2937,6 +2956,14 @@ function kill(u) {
   log(u.side ? `${rivalName()} is down.` : 'Your fighter is down.', 1 - u.side);
 }
 function applyHit(att, def, d, dirX, crit) {
+  if (def.state === 'iceblock') {   // sealed in ice: a blade rings off it and comes away cold
+    att.hitDone = true;
+    const hx = def.b.x - dirX * 0.4, hy = def.b.y - 0.9;
+    sparks(hx, hy, -dirX, 8, 'chill'); popText(hx, hy - 0.4, 'clink', 'chill', 0.4);
+    if (d.melee && att.b && att.st) { applyStatus(def, att, 'chill', 1); if (!att.heavy) att.b.vx = -dirX * 3; }
+    world.hs = Math.max(world.hs, 2);
+    return;
+  }
   if (def.iT > 0 || def.state === 'dead' || def.state === 'down' || def.state === 'getup') return;
   const hx = def.b.x - dirX * 0.2, hy = def.b.y - 0.95;
   if (d.box && parrying(def) && facingPoint(def, att.b.x)) { att.hitDone = true; parrySuccess(def, att); return; }
@@ -4866,6 +4893,8 @@ function atkStep(u) {
     if (d.slick) castSlick(u, d.slick);
     if (d.regrow) castRegrow(u, d.regrow);
     if (d.bud) summonBud(u, d.bud);
+    if (d.rampart) castRampart(u, d.rampart);
+    if (d.glaze) castGlaze(u, d.glaze);
     if (d.reabsorb) castReabsorb(u, d.reabsorb);
     if (d.sigil) castSigil(u, d.sigil);
     if (d.wall) castWall(u, d.wall);
@@ -4988,10 +5017,17 @@ function act(u) {
       if (u.stunT <= 0 && !u.tumble) { u.state = 'free'; u.react = 6; u.recover = true; }
       break;
     case 'melt': fr = 0; meltStep(u); break;
+    case 'iceblock': fr = 4; b.vx *= 0.6; if (++u.iceb.t >= u.iceb.max) endIceBlock(u); break;
     case 'down': fr = 1.5; if (--u.downT <= 0) { u.state = 'getup'; u.downT = 14; } break;
     case 'getup': if (--u.downT <= 0) { u.state = 'free'; u.react = 4; u.spikeCd = Math.max(u.spikeCd, 20); u.ai.replan = 0; } break;
   }
   const vyBefore = b.vy;
+  // ice underfoot: a glaze takes the grip away, and an ice caster skates on everything
+  b.grip = u.slipT > 0 ? 0.1 : u.gs && u.gs.flags.skate && u.state === 'free' ? 0.4 : 1;
+  if (u.slipT > 0) {
+    u.slipT--;
+    if (b.gr && Math.abs(b.vx) > 1.5 && world.t % 3 === 0) parts.push({ k: 'd', x: b.x - Math.sign(b.vx) * 0.15, y: b.y - 0.05, vx: -b.vx * 0.2, vy: -0.5, r: 0.05, life: 0, max: 16 });
+  }
   if (u.snareT > 0) { u.snareT--; if (b.gr) { dir = 0; press = false; b.vx *= 0.55; } }
   const ev = physStep(b, dir, press, hold, world.demo ? -2 : u.side, ctl, fr);   // pads stay still during demos
   if (ev & EV_JUMP) dust(b.x, b.y + 0.02, 3, 0.4);
@@ -5052,6 +5088,10 @@ function act(u) {
   }
   if (u.backflip && !b.gr && u.rot > -2 * Math.PI) u.rot -= 0.2;
   if (b.gr && Math.abs(b.vx) > 5 && u.state === 'free' && world.t % 7 === 0) dust(b.x - Math.sign(b.vx) * 0.2, b.y, 1, 0.2);
+  if (b.gr && u.gs && u.gs.flags.skate && Math.abs(b.vx) > 1.2 && world.t % 3 === 0 && !world.demo) {   // a skater scores the floor
+    parts.push({ k: 'f', x: b.x - Math.sign(b.vx) * 0.25, y: b.y - 0.02, ang: b.vx > 0 ? Math.PI : 0, len: 0.4 + Math.abs(b.vx) * 0.05, life: 0, max: 22, c: 'frost' });
+    if (world.t % 6 === 0) parts.push({ k: 'd', x: b.x - Math.sign(b.vx) * 0.2, y: b.y - 0.04, vx: -b.vx * 0.15, vy: -0.4, r: 0.04, life: 0, max: 14 });
+  }
 }
 
 // A plunge hits the floor: a crouched landing, and for the hammer a shockwave along the ground.
@@ -5384,10 +5424,10 @@ function stepGlobs() {
 // slides out from under the blade (away if there is floor behind it, straight through the attacker if
 // not), leaves a slick where it was standing, and pulls itself back together a few tiles off.
 const MELT = { cd: 420, slide: 9.5, frames: 30, reform: 16, trail: 3, pop: 1.5 };
-const canMelt = (u) => u.w === 'spellbook' && schoolOf(u) === SCHOOL.slime && !world.demo && !(u.meltCd > world.t);
+const canMelt = (u) => u.w === 'spellbook' && (schoolOf(u) === SCHOOL.slime || schoolOf(u) === SCHOOL.ice) && !world.demo && !(u.meltCd > world.t);
 const recentHits = (u, win) => { const h = u.hitT; if (!h) return 0; while (h.length && h[0] < world.t - 150) h.shift(); return h.filter((t) => t >= world.t - win).length; };
 function meltCheck(u) {
-  if (!canMelt(u) || u.st.frozen > 0 || u.state === 'melt' || u.state === 'down' || u.state === 'getup' || u.state === 'duel') return;
+  if (!canMelt(u) || u.st.frozen > 0 || u.state === 'melt' || u.state === 'iceblock' || u.state === 'down' || u.state === 'getup' || u.state === 'duel') return;
   const e = foe(u);
   if (!e || e.state === 'dead' || world.over || world.intro > 0) return;
   // pinned: the second hit of a combo has just landed
@@ -5395,7 +5435,7 @@ function meltCheck(u) {
   // or a blade is coming down on a caster that is already hurting
   const t = u.state === 'free' || (u.state === 'atk' && u.phase === 'w') ? meleeThreat(u, e) : -1;
   const coming = t >= 0 && t <= 7 && (recentHits(u, 150) >= 1 || u.hp < u.hpMax * 0.5);
-  if (pinned || coming) startMelt(u, e);
+  if (pinned || coming) { if (iceTome(u)) startIceBlock(u, e); else startMelt(u, e); }
 }
 function meltRoom(u, dir) {
   const b = u.b, r = Math.floor(b.y - 1e-3);
@@ -5447,6 +5487,159 @@ function endMelt(u) {
     if (!e.heavy) e.b.vx = (Math.sign(e.b.x - b.x) || 1) * 5;
   }
 }
+// ---- the ice tome
+// A rampart: a column of real ice, three tiles tall, raised across the floor between the caster and
+// whatever is coming. It is solid — nobody walks through it and nothing thrown gets past it — until it
+// melts or somebody hacks it down, and a wall that is broken goes off in shards at whoever broke it.
+function rampartSpot(u, e, at) {
+  const b = u.b, dir = Math.sign(e.b.x - b.x) || u.face, r = Math.floor(b.y - 1e-3);
+  for (const k of [at, at + 0.6, at - 0.5, at + 1.2]) {
+    const c = Math.floor(b.x + dir * k), mid = c + 0.5;
+    if (c < 2 || c > COLS - 3 || inZone(mid)) continue;
+    if ((mid - b.x) * dir < 0.8 || (e.b.x - mid) * dir < 0.7) continue;   // between the two, and clear of both
+    if (!solidAt(c, r + 1)) continue;
+    const rows = [];
+    for (let k2 = 0; k2 < 3 && !solidAt(c, r - k2) && A.pads[(r - k2) * COLS + c] < 0 && A.spikes[(r - k2) * COLS + c] < 0; k2++) rows.push(r - k2);
+    if (rows.length < 2) continue;
+    const box = [c - 0.02, rows[rows.length - 1], c + 1.02, r + 1];
+    if (U.some((o) => o.state !== 'dead' && overlap(hurtbox(o), box))) continue;
+    return { c, rows };
+  }
+  return null;
+}
+// Everybody's map of the arena is redrawn when a wall goes up or comes down.
+function reNav() {
+  for (const u of U) {
+    if (u.mob || !u.nav || u.state === 'dead') continue;
+    u.nav = buildNav(u.side, u.b.speed, COLS, u.acro);
+    const mid = u.nav.idx[10 * COLS + (u.side ? 10 : 9)];
+    u.navOk = mid >= 0 ? reach(u.nav, mid, true) : new Uint8Array(u.nav.nodes.length).fill(1);
+    u.ai.path.length = 0; u.ai.replan = 0; u.ai.blocked.clear();
+  }
+}
+function castRampart(u, rp) {
+  u.hitDone = true;
+  const e = foe(u), b = u.b;
+  if (world.demo) {   // on the dress-up screen it is only a picture of a wall: the arena there is yours to edit
+    const c = Math.floor(b.x + u.face * rp.at), r = Math.floor(b.y - 1e-3);
+    world.ice.push({ c, rows: [r, r - 1, r - 2], cells: [], hp: 1, max: 1, t: 150, T: 150, side: u.side, by: u, age: 0, ghost: true });
+    return;
+  }
+  const spot = e && rampartSpot(u, e, rp.at);
+  if (!spot) { smoke(b.x + u.face * 1.5, b.y - 0.4, 4); return; }
+  const cells = spot.rows.map((r) => r * COLS + spot.c);
+  for (const i of cells) { A.solid[i] = 1; A.ice[i] = 1; }
+  const T = Math.round(rp.secs * 60), hp = Math.round(rp.hp * powerOf(u));
+  world.ice.push({ c: spot.c, rows: spot.rows, cells, hp, max: hp, t: T, T, side: u.side, by: u, age: 0, shard: rp.shard, hitT: 0 });
+  reNav();
+  const x = spot.c + 0.5, y = spot.rows[0] + 1;
+  for (let i = 0; i < 10; i++) streak(x + (Math.random() - 0.5) * 0.9, y - Math.random() * 0.4, -Math.PI / 2 + (Math.random() - 0.5) * 0.6, 0.5 + Math.random() * 0.8, 'chill');
+  dust(x, y, 6, 0.9); sfxShake(4); world.hs = Math.max(world.hs, 3);
+  if (!world.stats[u.side].walls++) log(u.side ? `${rivalName()} raised a wall of ice.` : 'Your tome raised a wall of ice.', u.side);
+}
+const iceAt = (c, r) => world.ice.find((w) => !w.ghost && w.c === c && w.rows.includes(r));
+function hitIce(w, dmg, x, y, dir) {
+  if (w.hp <= 0) return;
+  w.hp -= dmg; w.hitT = 8;
+  for (let i = 0; i < 5; i++) { const a = (dir > 0 ? Math.PI : 0) + (Math.random() - 0.5) * 1.8; parts.push({ k: 'q', x, y, vx: Math.cos(a) * (3 + Math.random() * 4), vy: Math.sin(a) * 4 - 2, s: 0.05 + Math.random() * 0.06, c: 'chill', life: 0, max: 16 }); }
+  ring(x, y, 0.5, 'chill'); world.hs = Math.max(world.hs, 2);
+  if (w.hp <= 0) iceGone(w, true);
+}
+function iceGone(w, broken) {
+  w.t = 0;
+  if (w.ghost) return;
+  for (const i of w.cells) { A.solid[i] = 0; A.ice[i] = 0; }
+  const x = w.c + 0.5, top = Math.min(...w.rows), yc = (top + Math.max(...w.rows) + 1) / 2;
+  for (let i = 0; i < (broken ? 22 : 10); i++) {
+    const a = Math.random() * 6.283, sp = broken ? 3 + Math.random() * 8 : 1 + Math.random() * 2;
+    parts.push({ k: 'q', x: x + (Math.random() - 0.5) * 0.8, y: top + Math.random() * w.rows.length, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - (broken ? 3 : 0), s: 0.06 + Math.random() * 0.1, c: 'chill', life: 0, max: 18 + Math.random() * 14 });
+  }
+  if (broken) {
+    // broken, it goes off in the face of whoever broke it
+    ring(x, yc, w.shard.r, 'chill'); ring(x, yc, w.shard.r * 0.55, 'steel'); sfxShake(5); world.hs = Math.max(world.hs, 5);
+    const u = w.by;
+    for (const e of U) {
+      if (e.side === w.side || e.state === 'dead' || Math.abs(e.b.x - x) > w.shard.r || e.b.y < top - 0.5 || e.b.y - (e.bh || H) > top + w.rows.length) continue;
+      if (u) { hurt(e, w.shard.dmg * powerOf(u), 'hit', w.side, null, [['hits', 1]]); applyStatus(u, e, 'chill', w.shard.stacks); }
+    }
+    if (!world.stats[1 - w.side].broke++) log(w.side ? 'You hacked the ice wall down, and it went off in shards.' : `${rivalName()} hacked your ice wall down.`, 1 - w.side);
+  } else dust(x, top + w.rows.length, 5, 0.6);
+  reNav();
+}
+function stepIce() {
+  for (const w of world.ice) { w.age++; if (w.hitT > 0) w.hitT--; if (--w.t <= 0 && w.hp > 0) iceGone(w, false); }
+  world.ice = world.ice.filter((w) => w.t > 0 && w.hp > 0);
+}
+// A caster aims past its own ice: for a moment the wall it raised is not there to its own lances.
+function ownIceOpen(u, fn) {
+  const mine = world.ice.filter((w) => w.side === u.side && !w.ghost);
+  if (!mine.length) return fn();
+  for (const w of mine) for (const i of w.cells) A.solid[i] = 0;
+  try { return fn(); } finally { for (const w of mine) for (const i of w.cells) A.solid[i] = 1; }
+}
+// A blade with a wall in its way hacks at it.
+function tryBreakIce(u, e) {
+  if (!world.ice.length || u.mob || isRanged(u) || u.react > 0) return false;
+  const b = u.b, toE = Math.sign(e.b.x - b.x);
+  for (const w of world.ice) {
+    if (w.side === u.side || w.ghost) continue;
+    const x = w.c + 0.5, dx = x - b.x, top = Math.min(...w.rows), bot = Math.max(...w.rows) + 1;
+    if (Math.sign(dx) !== toE || Math.abs(dx) > 4 || b.y - 0.4 < top || b.y - 0.4 > bot) continue;
+    if (Math.abs(e.b.x - b.x) < Math.abs(dx)) continue;   // the wall is behind them, not between
+    u.face = Math.sign(dx);
+    const def = ATK[WEAP[u.w].atk], reach = (def.box ? def.box[2] : 1) + W / 2 + 0.35;
+    if (Math.abs(dx) - 0.5 <= reach) { if (u.cd <= 0) startAtk(u, WEAP[u.w].atk); else u.in.dir = 0; }
+    else u.in.dir = u.face;
+    return true;
+  }
+  return false;
+}
+// A glaze: a sheet of ice laid on the floor under them. Anything of theirs that stands on it cannot
+// get a grip — it slides wherever it was going, cannot stop, cannot turn — and gets colder the longer it
+// stays on it. (The ice tome's own caster skates on everything.)
+function castGlaze(u, gl) {
+  const e = foe(u);
+  u.hitDone = true;
+  if (!e || e.state === 'dead') return;
+  const x = Math.max(1.8, Math.min(COLS - 1.8, e.b.x + e.b.vx * 0.3)), y = e.b.gr ? e.b.y : groundBelow(e.b.x, e.b.y);
+  world.fires.push({ kind: 'glaze', x, y, span: gl.span, t: Math.round(gl.secs * 60), max: Math.round(gl.secs * 60), side: u.side, by: u, gl });
+  for (let i = 0; i < 12; i++) streak(x + (Math.random() - 0.5) * gl.span * 2, y - 0.05, -Math.PI / 2 + (Math.random() - 0.5), 0.3 + Math.random() * 0.4, 'chill');
+  ring(x, y - 0.1, gl.span, 'chill');
+}
+// The ice block: pinned, the ice caster does not run — it seals itself in a block of ice. Nothing gets
+// through (a blade that hits it comes away cold, a shot shatters on it), and when it breaks open it
+// throws everything standing next to it back.
+const ICEBLOCK = { cd: 560, frames: 58, r: 2.1, burst: { dmg: 8, kb: [9, -6], stun: 22, hs: 6, big: 1 } };
+function startIceBlock(u, e) {
+  const b = u.b;
+  u.state = 'iceblock'; u.atkName = null; u.atkDef = null; u.stunT = 0; u.tumble = false; u.backflip = false;
+  u.iceb = { t: 0, max: ICEBLOCK.frames };
+  u.iT = ICEBLOCK.frames; u.juggle = 0; u.hitT = []; u.meltCd = world.t + ICEBLOCK.cd; u.snareT = 0;
+  u.ai.macro = null; u.ai.path.length = 0; u.rot = 0; u.rotDriven = false;
+  b.vx *= 0.2; if (b.vy < 0) b.vy = 0;
+  if (e) u.face = Math.sign(e.b.x - b.x) || u.face;
+  for (let i = 0; i < 10; i++) streak(b.x + (Math.random() - 0.5) * 0.8, b.y - Math.random() * H, -Math.PI / 2, 0.4, 'chill');
+  callout(u, 'ICE BLOCK'); world.hs = Math.max(world.hs, 4); sfxShake(3);
+  if (!world.stats[u.side].blocks2++) log(u.side ? `${rivalName()} sealed itself in ice.` : 'Your caster sealed itself in ice.', u.side);
+}
+function endIceBlock(u) {
+  const b = u.b, cy = b.y - H / 2;
+  u.state = 'free'; u.iceb = null; u.react = 2; u.iT = Math.max(u.iT, 6); u.cd = 0;
+  ring(b.x, cy, ICEBLOCK.r, 'chill'); ring(b.x, cy, ICEBLOCK.r * 0.55, 'steel');
+  for (let i = 0; i < 18; i++) {
+    const a = Math.random() * 6.283, sp = 4 + Math.random() * 7;
+    parts.push({ k: 'q', x: b.x + Math.cos(a) * 0.3, y: cy + Math.sin(a) * 0.6, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, s: 0.07 + Math.random() * 0.1, c: 'chill', life: 0, max: 16 + Math.random() * 12 });
+  }
+  world.hs = Math.max(world.hs, 5); sfxShake(5);
+  for (const e of U) {
+    if (e.side === u.side || e.state === 'dead') continue;
+    if (Math.hypot(e.b.x - b.x, (e.b.y - (e.bh || H) / 2) - cy) > ICEBLOCK.r + (e.bw || W) * 0.5) continue;
+    const save = u.hitDone; u.hitDone = false;
+    applyHit(u, e, ICEBLOCK.burst, Math.sign(e.b.x - b.x) || u.face);
+    u.hitDone = save;
+    if (e.state !== 'dead') applyStatus(u, e, 'chill', 2);
+  }
+}
 // A line of fire on the floor. It stops nothing, but nobody crosses it for free.
 function castFireWall(u, fw) {
   const b = u.b, x = Math.max(1.2, Math.min(COLS - 1.2, b.x + u.face * fw.at));
@@ -5460,6 +5653,17 @@ function stepFires() {
     if (--f.t <= 0) continue;
     out.push(f);
     const u = f.by;
+    if (f.kind === 'glaze') {
+      for (const e of U) {
+        if (e.side === f.side || e.state === 'dead' || !e.b.gr) continue;
+        if (Math.abs(e.b.x - f.x) > f.span || Math.abs(e.b.y - f.y) > 0.6) continue;
+        if (!(e.slipT > 0) && !e.mob) { popText(e.b.x, e.b.y - (e.bh || H) - 0.45, 'SLIP', 'chill', 0.42); if (!world.stats[f.side].slid++) log(f.side ? 'You slid on the ice.' : `${rivalName()} slid on the ice.`, f.side); }
+        e.slipT = 3;
+        if (e.mob) e.b.vx *= 1.04;   // a creature has no grip to lose, but it still slides
+        if (world.t % f.gl.every === 0) applyStatus(u, e, 'chill', 1);
+      }
+      continue;
+    }
     if (f.kind === 'slick') {
       for (const e of U) {
         if (e.side === f.side || e.state === 'dead' || !e.b.gr) continue;
@@ -5559,6 +5763,15 @@ function resolveHits() {
     if (!d.box) continue;
     const at = d.atPup && u.pup ? u.pup : u.b;
     const hb = worldBox(at.x, at.y, u.face, d.box);
+    if (world.ice.length && u.iceHit !== u.atkId) {
+      for (const w of world.ice) {
+        if (w.side === u.side || w.ghost || !overlap(hb, [w.c, Math.min(...w.rows), w.c + 1, Math.max(...w.rows) + 1])) continue;
+        u.iceHit = u.atkId;
+        const g = u.gs;
+        hitIce(w, d.dmg * (u.dmgMul || 1) * (d.slam ? 1.6 : 1) + (g ? g.atk : 0), w.c + 0.5, u.b.y - 0.9, u.face);
+        break;
+      }
+    }
     if (d.melee) {
       for (const a of shots) {
         if (a.owner === u.side || a.stuck || a.dead) continue;
@@ -5596,6 +5809,13 @@ function blockedByGuard(a) {
       return true;
     }
   }
+  // a block of ice: anything thrown at it shatters on it
+  for (const u of U) {
+    if (u.state !== 'iceblock' || u.side === a.owner) continue;
+    if (Math.abs(a.x - u.b.x) > 0.55 || a.y < u.b.y - H - 0.25 || a.y > u.b.y) continue;
+    a.dead = true; sparks(a.x, a.y, -Math.sign(a.vx), 8, 'chill'); ring(a.x, a.y, 0.4, 'chill');
+    return true;
+  }
   // a skin of gel swallows what is thrown at whoever is inside it
   for (const u of U) {
     const bb = u.bubble;
@@ -5606,7 +5826,7 @@ function blockedByGuard(a) {
     return true;
   }
   for (const f of world.fires) {
-    if (f.side === a.owner || f.kind === 'slick') continue;
+    if (f.side === a.owner || f.kind === 'slick' || f.kind === 'glaze') continue;
     // a lightning rod takes anything that comes near its head
     if (f.kind === 'rod') {
       if (Math.hypot(a.x - f.x, a.y - (f.y - 1.8)) > f.rd.r) continue;
@@ -5656,6 +5876,12 @@ function stepShots() {
     for (let k = 0; k < 2 && !a.dead && !a.stuck; k++) {
       a.x += a.vx * DT / 2; a.y += a.vy * DT / 2; a.vy += K.g * DT / 2;
       if (solidAt(Math.floor(a.x), Math.floor(a.y))) {
+        const iw = A.ice[Math.floor(a.y) * COLS + Math.floor(a.x)] && iceAt(Math.floor(a.x), Math.floor(a.y));
+        if (iw) {
+          if (iw.side === a.owner) { continue; }   // your own lances go straight through your own ice
+          hitIce(iw, K.hit.dmg * 0.8, a.x, a.y, Math.sign(a.vx)); if (K.burst) shotBurst(a, K.burst);
+          a.dead = true; break;
+        }
         a.stuck = 1; a.ttl = 0; a.x -= a.vx * DT * 0.2; a.y -= a.vy * DT * 0.2;
         sparks(a.x, a.y, -Math.sign(a.vx), 3, 'ink');
         if (K.burst) shotBurst(a, K.burst);
@@ -5736,7 +5962,7 @@ function poseTarget(u) {
   if (w === 'spellbook') {
     T.draw = st === 'atk' ? 1 : 0;
     if (st === 'atk' && !(u.gs && u.gs.flags.staff) && !slimeTome(u)) { T.fx += 0.14; T.fy += 0.07; }
-    if (slimeTome(u) && st !== 'atk') { T.fx = 0.4; T.fy = 0.06; T.bx = -0.04; T.by = 0.3; }   // one hand held over the floating tome
+    if ((slimeTome(u) || iceTome(u)) && st !== 'atk') { T.fx = 0.4; T.fy = 0.06; if (!iceTome(u) || spd < 0.9) { T.bx = -0.04; T.by = 0.3; } }   // one hand held over the floating tome
     if (u.gs && u.gs.flags.staff && st !== 'atk') { T.fx = 0.36; T.fy = 0.12; T.bx = 0.3; T.by = -0.22; }
   }
   // A warlock carries the book shut and low, hunched over it, and barely picks its feet up to move.
@@ -5752,6 +5978,8 @@ function poseTarget(u) {
     else { T.fx += 0.08 * lift; T.fy -= 0.1 * lift; }
     T.ka = 0.5;
   }
+  // Slipping on a glaze: arms thrown out, and leaning back against the slide.
+  if (u.slipT > 0 && st === 'free' && b.gr) { T.fx = 0.34; T.fy = -0.36; T.bx = -0.3; T.by = -0.3; T.lean -= 0.25; T.head -= 0.2; T.ka = 0.5; }
   // On guard: blade up across the body, weight back.
   if (st === 'free' && u.guardT > 0 && b.gr) Object.assign(T, DUEL_BLOCK.high, { hipH: 0.6, lean: -0.05 });
   // Sneaking in Dark Sight: lower and leaning in.
@@ -5760,7 +5988,7 @@ function poseTarget(u) {
   if (b.gr) {
     if (st === 'free' && spd > 0.9) {
       // a caster walks rather than runs: the same cycle, half the stride and a slower count
-      const wk = w === 'spellbook' ? 0.62 : 1;
+      const wk = w === 'spellbook' ? (u.gs && u.gs.flags.skate ? 0.4 : 0.62) : 1;
       u.gait += spd * DT * 2.3 * wk * (fwd < 0 ? -1 : 1);
       const s = Math.min(1, spd / 6) * 0.38 * (w === 'spellbook' ? 0.62 : 1), g = u.gait;
       T.ffx = Math.sin(g) * s + 0.04; T.bfx = -Math.sin(g) * s + 0.04;
@@ -5774,7 +6002,19 @@ function poseTarget(u) {
   // A caster does not walk: it floats a hand's width off the floor, feet together under the robe, and
   // leans into wherever it is gliding.
   if (w === 'spellbook' && !b.gr && st === 'free') { T.ffx = 0.05; T.bfx = -0.07; T.ffy = T.hipH * 0.96; T.bfy = T.hipH * 0.92; T.lean = -0.04; }
-  if (w === 'spellbook' && b.gr && (st === 'free' || st === 'atk')) {
+  if (w === 'spellbook' && iceTome(u) && b.gr && (st === 'free' || st === 'atk')) {
+    // An ice caster skates: a long push off one foot and a glide on the other, low and leaning, the free
+    // arm out behind for balance. Standing, it rests its weight on one bent knee.
+    const moving = st === 'free' && spd > 0.9, g = u.gait, ph = Math.sin(g), push = Math.abs(ph);
+    T.hipH -= 0.06; T.lean += moving ? 0.2 : 0.04; T.head -= moving ? 0.1 : 0;
+    if (moving) {
+      const lead = ph > 0, back = -0.28 - 0.18 * push, lift = 0.04 + 0.1 * push;
+      T.ffx = lead ? 0.16 : back; T.ffy = lead ? T.hipH : T.hipH - lift;
+      T.bfx = lead ? back : 0.16; T.bfy = lead ? T.hipH - lift : T.hipH;
+      if (st === 'free') { T.bx = -0.36; T.by = 0.02; }
+      T.kl = 0.35; T.d = 0.45;
+    } else { T.ffx = 0.14; T.bfx = -0.2; T.ffy = T.hipH; T.bfy = T.hipH; }
+  } else if (w === 'spellbook' && b.gr && (st === 'free' || st === 'atk')) {
     const lean = Math.max(-0.12, Math.min(0.14, fwd * 0.03));
     T.hipH += 0.12 + Math.sin(t * 0.05) * 0.025; T.lean += lean;
     T.ffx = 0.05 - lean * 0.8; T.bfx = -0.08 - lean * 0.8; T.ffy = T.hipH - 0.14; T.bfy = T.hipH - 0.12;
@@ -5997,8 +6237,8 @@ function newWorld(seed) {
     t: 0, rng: mulberry(seed), vrng: mulberry(seed * 7 + 13), intro: 55, over: false, winner: -1, overT: 0, ko: false, slowT: 0,
     hs: 0, impact: 0, shake: 0, punch: 0, zone: 1, atkSeq: 0, log: [], trace: [], duel: null, duelCd: 0,
     dmg: [0, 1].map(() => ({ dealt: {}, taken: {} })),
-    sigils: [], walls: [], fires: [], globs: [], bolt: null,
-    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0, melts: 0, buds: 0, pops: 0 })),
+    sigils: [], walls: [], fires: [], globs: [], ice: [], bolt: null,
+    stats: [0, 1].map(() => ({ rolls: 0, acro: 0, bounce: 0, padHits: 0, blocks: 0, dealt: 0, trap: 0, zone: 0, found: 0, pads: 0, deflect: 0, clash: 0, skill: 0, parry: 0, hooks: 0, hid: 0, crit: 0, crits: 0, status: 0, procs: 0, frozen: 0, split: 0, clank: 0, tongue: 0, fizzled: 0, melts: 0, buds: 0, pops: 0, walls: 0, broke: 0, blocks2: 0, slid: 0 })),
   };
 }
 // Short-lived visuals that belong to a fighter: blink afterimages.
@@ -6021,6 +6261,7 @@ function simStep() {
   stepSigils();
   stepFires();
   stepGlobs();
+  stepIce();
   if (world.bolt && --world.bolt.t <= 0) world.bolt = null;
   world.walls = world.walls.filter((w) => { if (--w.t > 0) return true; wallGone(w); return false; });
   stepShots();
@@ -6072,6 +6313,7 @@ const RIVALS = [
   { name: 'Pinwheel', trinket: 'ember', weapon: 'stars', skill: 'blink', acro: 4, t: 6, tag: 'Never stands still.', tip: 'Throws stars in pairs along a flat line. Walls break the line, and a sword knocks the stars down.' },
   { name: 'Tack', trinket: 'barb', weapon: 'sword', skill: 'parry', acro: 1, t: 0, tag: 'Guards the porch.', tip: 'Parries the first swing it sees coming, and shots too. The parry takes a while to come back, so hit hard right after it whiffs.' },
   { name: 'Folio', trinket: 'viper', weapon: 'spellbook', skill: 'blink', acro: 0, t: 5, tag: 'Grows its own army.', tip: 'A slime caster: its slimes hop at you and get between you and it. Pop them or walk past them, but get to the book — and when it melts out from under your blade, be ready to chase the puddle.' },
+  { name: 'Hoar', trinket: 'frost', weapon: 'spellbook', book: 'ice_tome', skill: 'parry', acro: 0, t: 2, tag: 'Builds walls and waits.', tip: 'An ice caster: it walls you off, ices the floor under you and breaks whatever freezes. Hack the wall down and eat the shards, or go round — and when it seals itself in ice, back off before it breaks open.' },
 ];
 const spent = (pieces) => pieces.reduce((s, p) => s + COST[p.t], 0);
 const builds = [{ weapon: 'sword', skill: 'blink', trinket: 'ember', acro: 2, pieces: TEMPLATES[0].slice() }, null];
@@ -6080,7 +6322,7 @@ const rivalName = () => (world && world.hunt ? world.hunt.name : (builds[1] && b
 function setRival(ix) {
   rivalIx = (ix + RIVALS.length) % RIVALS.length;
   const r = RIVALS[rivalIx];
-  builds[1] = { name: r.name, weapon: r.weapon, skill: r.skill, trinket: r.trinket || null, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
+  builds[1] = { name: r.name, weapon: r.weapon, book: r.book || null, skill: r.skill, trinket: r.trinket || null, acro: r.acro, pieces: TEMPLATES[r.t].slice() };
 }
 
 // ---------------------------------------------------------------- the run (roguelike)
@@ -6204,7 +6446,7 @@ const ITEM = {
   linen_shirt: iA('Linen Shirt', null, 'core', { hp: 10 }),
   // gel: the slime's. Staying power.
   gel_blade: iW('Gel Blade', 'gel', 'sword', { stats: { hp: 10 } }),
-  slime_tome: iW('Slime Tome', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { school: 'slime' },
+  slime_tome: iW('Slime Tome', 'gel', 'spellbook', { stats: { regen: 0.8 }, flags: { school: 'slime' }, kind: 'Slimes · melt',
     desc: 'Pours slimes out of its pages — up to three, hopping at the rival, gluing it where they bite and standing in the way of its blade — and calls them home again to heal you. Gobs that stick, a splash for anything that gets too close, and when you are pinned you melt into a puddle, slide out from under the swing and pull yourself back together somewhere else.', flavor: 'Something in it is always growing.' }),
   glob_maul: iW('Glob Maul', 'gel', 'hammer', { stats: { hp: 12 } }),
   jelly_stars: iW('Jelly Stars', 'gel', 'stars', { stats: { regen: 0.5 } }),
@@ -6290,6 +6532,8 @@ const ITEM = {
     desc: 'The frost school: an ice lance, a slab of ice that bursts into shards when it goes, legs locked in ice, spikes up through the floor, a shatter that hits harder for every Chill already on them, and ice armour that will not be knocked about and chills whatever hits it.', flavor: 'The pages stick together.' }),
   ember_codex: iW('Ember Codex', 'ember', 'spellbook', { ...oh('burn', 0.2), flags: { spellSt: 'burn', school: 'flame' },
     desc: 'The flame school: a fireball that bursts where it lands, a pillar of flame out of the floor that catches anyone jumping it, a line of fire that burns whatever is thrown through it, embers to leave behind, an immolation that costs you a little, and a cauterise that burns everything out of you and heals you for each thing it burned.', flavor: 'Warm to hold. Warmer to read.' }),
+  ice_tome: iW('Ice Tome', 'frost', 'spellbook', { stats: { resist: 0.1 }, flags: { school: 'ice', skate: 1 }, kind: 'Ice walls · ice block',
+    desc: 'Skates where the Slime Tome floats, and holds ground where it runs. Raises a wall of real ice across the floor that nothing walks or shoots through until it is hacked down — and a wall that is broken goes off in shards. Glazes the floor under them so they slide and cannot stop, chills them with lances, and shatters what froze. Pinned by a blade, it seals itself in a block of ice that throws everything back when it breaks open.', flavor: 'Colder to open than to hold.' }),
   frost_cowl: iA('Frost Cowl', 'frost', 'head', { hp: 10, crit: 0.05 }),
   rime_wings: iA('Rime Wings', 'frost', 'core', { hp: 16, def: 1, evasion: 0.04 }),
   glide_boots: iA('Glide Boots', 'frost', 'feet', { speed: 0.04 }, { acro: 4 }),
@@ -7551,7 +7795,7 @@ function drawArena(pal) {
   }
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
     const i = r * COLS + c;
-    if (!A.solid[i]) continue;
+    if (!A.solid[i] || A.ice[i]) continue;   // a wall of ice is drawn by drawIce
     const o = A.owner[i];
     ctx.fillStyle = o === 0 ? pal.blockB : o === 1 ? pal.blockR : pal.tile;
     ctx.fillRect(c - 0.001, r - 0.001, 1.002, 1.002);
@@ -7721,11 +7965,74 @@ function drawGearHead(S, pal, ink, mono) {
   }
   ctx.restore();
 }
+// A wall of ice: a column of it with a jagged crystal top, facets catching the light, a mist at its foot,
+// and cracks spreading through it as it is hacked at. It shoots up out of the floor when it is raised,
+// and drips and slumps in its last second.
+function drawIce(pal) {
+  for (const [n, w] of world.ice.entries()) {
+    const top = Math.min(...w.rows), bot = Math.max(...w.rows) + 1, full = bot - top;
+    const grow = Math.min(1, w.age / 9), melt = Math.min(1, w.t / 50), h = full * grow * (0.82 + 0.18 * melt);
+    const x0 = w.c + 0.08, x1 = w.c + 0.92, y1 = bot, y0 = bot - h, t = world.t;
+    ctx.save();
+    ctx.globalAlpha = 0.25; ctx.fillStyle = pal.frost;
+    ctx.beginPath(); ctx.ellipse(w.c + 0.5, y1 - 0.02, 0.75, 0.1, 0, 0, 6.283); ctx.fill();
+    ctx.globalAlpha = w.ghost ? 0.7 : 0.92;
+    // body: slightly leaning sides and three spires on top
+    const pts = [[x0 + 0.02, y1], [x0 - 0.03, y0 + 0.45], [x0 + 0.04, y0 + 0.12], [x0 + 0.18, y0 + 0.2], [x0 + 0.3, y0 - 0.12], [x0 + 0.46, y0 + 0.16], [x0 + 0.6, y0 - 0.02], [x1 - 0.03, y0 + 0.22], [x1 + 0.03, y0 + 0.5], [x1 - 0.02, y1]];
+    ctx.fillStyle = w.hitT > 0 ? '#ffffff' : pal.frost;
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const [px, py] of pts.slice(1)) ctx.lineTo(px, Math.min(py, y1)); ctx.closePath(); ctx.fill();
+    ctx.save(); ctx.clip();
+    // facets: darker planes in the ice, and a bright streak down it
+    ctx.globalAlpha = 0.28; ctx.fillStyle = pal.chill;
+    ctx.beginPath(); ctx.moveTo(x0, y0 + 0.5); ctx.lineTo(x0 + 0.42, y0 + 0.9); ctx.lineTo(x0 + 0.3, y1); ctx.lineTo(x0, y1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x1, y0 + 0.3); ctx.lineTo(x0 + 0.55, y0 + 1.4); ctx.lineTo(x1, y0 + 2.1); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 0.75; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.05;
+    ctx.beginPath(); ctx.moveTo(x0 + 0.2, y0 + 0.35); ctx.lineTo(x0 + 0.14, y1 - 0.3); ctx.stroke();
+    ctx.lineWidth = 0.025; ctx.beginPath(); ctx.moveTo(x0 + 0.3, y0 + 0.5); ctx.lineTo(x0 + 0.27, y0 + 1.1); ctx.stroke();
+    // cracks, spreading as it is hacked at
+    const dmg = 1 - Math.max(0, w.hp) / w.max, nC = Math.floor(dmg * 6);
+    ctx.globalAlpha = 0.9; ctx.strokeStyle = pal.frostCov; ctx.lineWidth = 0.022;
+    for (let i = 0; i < nC; i++) {
+      const sx = x0 + 0.1 + ((i * 37 + n * 11) % 7) / 7 * 0.65, sy = y0 + 0.3 + ((i * 53 + n * 5) % 9) / 9 * (h - 0.5);
+      ctx.beginPath(); ctx.moveTo(sx, sy);
+      for (let j = 1; j <= 3; j++) ctx.lineTo(sx + Math.sin(i * 3 + j * 2.1) * 0.14 * j, sy + Math.cos(i * 5 + j) * 0.12 * j);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.04; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (const [px, py] of pts.slice(1)) ctx.lineTo(px, Math.min(py, y1)); ctx.closePath(); ctx.stroke();
+    // whose it is: a band of your colour frozen into the foot of it
+    ctx.globalAlpha = 0.85; ctx.fillStyle = pal[TEAM[w.side]]; ctx.fillRect(x0 + 0.05, y1 - 0.14, x1 - x0 - 0.1, 0.05);
+    if (w.t < 60 && t % 8 === 0 && !w.ghost) parts.push({ k: 'p', x: x0 + Math.random() * (x1 - x0), y: y0 + 0.3, vx: 0, vy: 1, life: 0, max: 30, c: 'chill' });
+    ctx.restore();
+  }
+}
+// Sealed in ice: a six-sided crystal around the figure, facets and a shine, cracking as it comes due.
+function drawIceBlock(u, pal) {
+  const b = u.b, k = u.iceb ? u.iceb.t / u.iceb.max : 1, grow = Math.min(1, (u.iceb ? u.iceb.t : 99) / 6);
+  const cx = b.x, top = b.y - H - 0.28, bot = b.y + 0.02, w2 = 0.52 * (0.7 + 0.3 * grow), mid = (top + bot) / 2;
+  const hex = [[cx - w2 * 0.6, top], [cx + w2 * 0.6, top], [cx + w2, mid - 0.35], [cx + w2, mid + 0.35], [cx + w2 * 0.6, bot], [cx - w2 * 0.6, bot], [cx - w2, mid + 0.35], [cx - w2, mid - 0.35]];
+  const path = () => { ctx.beginPath(); ctx.moveTo(hex[0][0], hex[0][1]); for (const [x, y] of hex.slice(1)) ctx.lineTo(x, y); ctx.closePath(); };
+  ctx.save();
+  ctx.globalAlpha = 0.5 + (k > 0.8 && world.t % 6 < 3 ? 0.3 : 0); ctx.fillStyle = pal.frost; path(); ctx.fill();
+  ctx.globalAlpha = 0.9; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.045; path(); ctx.stroke();
+  ctx.globalAlpha = 0.35; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.02;
+  ctx.beginPath(); ctx.moveTo(cx - w2 * 0.6, top); ctx.lineTo(cx - w2 * 0.2, mid); ctx.lineTo(cx - w2 * 0.6, bot); ctx.moveTo(cx + w2 * 0.6, top); ctx.lineTo(cx + w2 * 0.25, mid - 0.1); ctx.lineTo(cx + w2, mid + 0.35); ctx.stroke();
+  ctx.globalAlpha = 0.8; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.04;
+  ctx.beginPath(); ctx.moveTo(cx - w2 * 0.7, mid - 0.3); ctx.lineTo(cx - w2 * 0.45, top + 0.12); ctx.stroke();
+  // cracks, more and more of them as it comes due
+  ctx.globalAlpha = 0.9; ctx.strokeStyle = pal.frostCov; ctx.lineWidth = 0.02;
+  for (let i = 0; i < Math.floor(k * 7); i++) {
+    const sx = cx + Math.sin(i * 2.3) * w2 * 0.8, sy = mid + Math.cos(i * 1.7) * 0.7;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.sin(i * 4.1) * 0.18, sy + Math.cos(i * 3.3) * 0.18); ctx.lineTo(sx + Math.sin(i * 5.2) * 0.3, sy + Math.cos(i * 2.2) * 0.3); ctx.stroke();
+  }
+  ctx.restore(); ctx.globalAlpha = 1;
+}
 // ---- the slime caster, drawn
 // A robe: one ink shape from the collar to just above the feet, flaring at the hem, cut from the spine's own
 // angle so it tips and tumbles with the body, trailing behind whatever way it is gliding. Your colour runs
 // round the hem and holds the collar shut — no headband, no scarf.
-function drawRobe(S, ink, team, far) {
+function drawRobe(S, ink, team, far, icePal) {
   const hip = S.hip, neck = S.neck;
   let ux = neck.x - hip.x, uy = neck.y - hip.y;
   const L = Math.hypot(ux, uy) || 1; ux /= L; uy /= L;
@@ -7754,6 +8061,33 @@ function drawRobe(S, ink, team, far) {
   ctx.lineCap = 'round'; stroke(trim, team, 0.045);
   const cl = P(0, L - 0.1);
   ctx.fillStyle = team; ctx.beginPath(); ctx.arc(cl.x, cl.y, 0.042, 0, 6.283); ctx.fill();
+  if (icePal) {   // rime grown up the hem in little points
+    ctx.fillStyle = icePal.frost; ctx.strokeStyle = icePal.chill; ctx.lineWidth = 0.012;
+    for (let i = 0; i < 8; i++) {
+      const k = (i + 0.5) / 8, a = a0 + (a1 - a0) * k, h2 = 0.05 + ((i * 7) % 3) * 0.025;
+      const q0 = P(a - 0.03, hemD + 0.005), q1 = P(a, hemD + h2), q2 = P(a + 0.03, hemD + 0.005);
+      ctx.beginPath(); ctx.moveTo(q0.x, q0.y); ctx.lineTo(q1.x, q1.y); ctx.lineTo(q2.x, q2.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+}
+// A hood, for the ice caster: pulled up over the head and falling to a point behind the neck, its rim
+// white with frost.
+function drawHood(S, up, side, ink, pal) {
+  const h = S.head, f = S.face || 1;
+  const at = (u2, s2) => ({ x: h.x + up.x * u2 + side.x * s2, y: h.y + up.y * u2 + side.y * s2 });
+  const brow = at(0.12, f * 0.13), crown = at(0.26, -f * 0.02), tail = at(-0.02, -f * 0.36), nape = at(-0.2, -f * 0.12), chin = at(-0.16, f * 0.1);
+  ctx.fillStyle = ink; ctx.beginPath();
+  ctx.moveTo(chin.x, chin.y);
+  ctx.quadraticCurveTo(at(0.02, f * 0.2).x, at(0.02, f * 0.2).y, brow.x, brow.y);
+  ctx.quadraticCurveTo(at(0.3, f * 0.08).x, at(0.3, f * 0.08).y, crown.x, crown.y);
+  ctx.quadraticCurveTo(at(0.22, -f * 0.26).x, at(0.22, -f * 0.26).y, tail.x, tail.y);
+  ctx.quadraticCurveTo(at(-0.08, -f * 0.2).x, at(-0.08, -f * 0.2).y, nape.x, nape.y);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = pal.frost; ctx.lineWidth = 0.035; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(chin.x, chin.y); ctx.quadraticCurveTo(at(0.02, f * 0.2).x, at(0.02, f * 0.2).y, brow.x, brow.y); ctx.stroke();
+  // two pale eyes glinting in the shadow of it
+  const e1 = at(0.02, f * 0.1);
+  ctx.fillStyle = pal.frost; ctx.beginPath(); ctx.arc(e1.x, e1.y, 0.022, 0, 6.283); ctx.fill();
 }
 // A wide sleeve: the arm inside a bell of cloth that opens toward the wrist.
 function drawSleeve(sh, el, hand, color, lw) {
@@ -7777,15 +8111,16 @@ function drawTome(S, pal, ink, team) {
   const pr = (X, Y, Z) => { const x = X * f, y = -Y * 0.95 + Z * 0.42; return { x: c.x + x * tc - y * ts, y: c.y + x * ts + y * tc }; };
   const lid = (xr, yr, Z) => pr(-W2 + xr * ca - yr * sa, PG + xr * sa + yr * ca, Z);
   const quad = (q, fill, line) => { ctx.beginPath(); ctx.moveTo(q[0].x, q[0].y); for (let i = 1; i < q.length; i++) ctx.lineTo(q[i].x, q[i].y); ctx.closePath(); if (fill) { ctx.fillStyle = fill; ctx.fill(); } if (line) { ctx.strokeStyle = line; ctx.lineWidth = 0.018; ctx.stroke(); } };
-  const glow = S.castC || pal.goo;
+  const ice = !!S.ice, cover = ice ? pal.frostCov : ink;
+  const glow = ice ? pal.chill : S.castC || pal.goo;
   const pageGlow = (q) => { if (open <= 0.02) return; ctx.globalAlpha = 0.18 + 0.55 * open; quad(q, glow); ctx.globalAlpha = 1; };
   const lines = (P, x0, x1) => { ctx.globalAlpha = 0.55 * open; for (let i = 0; i < 4; i++) { const z = -DZ + 0.07 + i * 0.085; stroke([P(x0, z), P(x1 - (i === 3) * 0.08, z)], ink, 0.011); } ctx.globalAlpha = 1; };
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const W = 2 * W2;
   const bottom = () => {
     // the back cover and the lower half of the pages; the end of the page block striped
-    quad([pr(-W2, -CV, DZ + 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(W2 + 0.012, 0, DZ + 0.012), pr(-W2, 0, DZ + 0.012)], ink);
-    quad([pr(-W2, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(-W2, -CV, DZ + 0.012)], ink);
+    quad([pr(-W2, -CV, DZ + 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(W2 + 0.012, 0, DZ + 0.012), pr(-W2, 0, DZ + 0.012)], cover);
+    quad([pr(-W2, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, -DZ - 0.012), pr(W2 + 0.012, -CV, DZ + 0.012), pr(-W2, -CV, DZ + 0.012)], cover);
     quad([pr(-W2 + IN, 0, DZ), pr(W2 - IN, 0, DZ), pr(W2 - IN, PG, DZ), pr(-W2 + IN, PG, DZ)], pal.steel, ink);
     ctx.globalAlpha = 0.7;
     for (const y of [0.016, 0.032, 0.047]) stroke([pr(-W2 + IN + 0.015, y, DZ), pr(W2 - IN - 0.015, y, DZ)], pal.far, 0.008);
@@ -7793,6 +8128,18 @@ function drawTome(S, pal, ink, team) {
     const top = [pr(-W2 + IN, PG, -DZ), pr(W2 - IN, PG, -DZ), pr(W2 - IN, PG, DZ), pr(-W2 + IN, PG, DZ)];
     quad(top, pal.steel, ink); pageGlow(top);
     if (open > 0.3) lines((x, z) => pr(x, PG, z), -W2 + 0.05, W2 - 0.04);
+    if (ice) {   // icicles off the bottom of the cover, and cold breathing off the page ends
+      ctx.fillStyle = pal.frost; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.012;
+      for (let i = 0; i < 5; i++) {
+        const X = -W2 + 0.04 + i * (2 * W2 - 0.08) / 4, len = 0.07 + ((i * 5) % 3) * 0.04 + open * 0.03;
+        const a = pr(X - 0.022, -CV, DZ + 0.012), b2 = pr(X + 0.022, -CV, DZ + 0.012), tip = pr(X, -CV - len, DZ + 0.012);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(b2.x, b2.y); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.globalAlpha = 0.25 + 0.1 * Math.sin(t * 0.07); ctx.fillStyle = pal.frost;
+      const m = pr(0, PG * 0.5, DZ + 0.05);
+      ctx.beginPath(); ctx.ellipse(m.x + Math.sin(t * 0.03) * 0.04, m.y - 0.02, W2 * 1.1, 0.05, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+      return;
+    }
     // gel oozing out over the end of the pages and hanging off it in drops
     ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.014;
     for (let i = 0; i < 3; i++) {
@@ -7809,9 +8156,9 @@ function drawTome(S, pal, ink, team) {
     const coverEnd = [lid(0, PG, DZ + 0.012), lid(W + 0.012, PG, DZ + 0.012), lid(W + 0.012, PG + CV, DZ + 0.012), lid(0, PG + CV, DZ + 0.012)];
     if (th < Math.PI / 2) {
       if (th < 0.4) { ctx.globalAlpha = 0.45 + 0.35 * Math.sin(t * 0.1); stroke([pr(-W2 + 0.05, PG + 0.006, DZ), pr(W2 - 0.02, PG + 0.012, DZ)], glow, 0.028); ctx.globalAlpha = 1; }
-      quad(end, pal.steel, ink); quad(coverEnd, ink);
+      quad(end, pal.steel, ink); quad(coverEnd, cover);
       const cov = [lid(0, PG + CV, -DZ - 0.012), lid(W + 0.012, PG + CV, -DZ - 0.012), lid(W + 0.012, PG + CV, DZ + 0.012), lid(0, PG + CV, DZ + 0.012)];
-      quad(cov, ink);
+      quad(cov, cover); if (ice) { ctx.strokeStyle = pal.frost; ctx.lineWidth = 0.014; ctx.globalAlpha = 0.8; ctx.beginPath(); ctx.moveTo(cov[0].x, cov[0].y); for (const q of cov.slice(1)) ctx.lineTo(q.x, q.y); ctx.closePath(); ctx.stroke(); ctx.globalAlpha = 1; }
       // pale metal on the corners, and a drop of gel set into the cover, watching
       ctx.fillStyle = pal.steel;
       for (const [x0, z0, sx, sz] of [[0.02, -DZ, 1, 1], [W, -DZ, -1, 1], [W, DZ, -1, -1], [0.02, DZ, 1, -1]]) {
@@ -7820,16 +8167,25 @@ function drawTome(S, pal, ink, team) {
       }
       stroke([lid(0.03, PG + CV, -DZ), lid(0.03, PG + CV, DZ)], pal.far, 0.014);   // the ridge of the spine
       const e = lid(W2 + 0.02, PG + CV, 0), r = 0.06;
+      if (ice) {   // a snowflake cut into the cover
+        ctx.strokeStyle = pal.frost; ctx.lineWidth = 0.014;
+        for (let i = 0; i < 3; i++) {
+          const a = i * Math.PI / 3 + t * 0.01, dx = Math.cos(a) * r * 1.1, dy = Math.sin(a) * r * 0.75;
+          ctx.beginPath(); ctx.moveTo(e.x - dx, e.y - dy); ctx.lineTo(e.x + dx, e.y + dy); ctx.stroke();
+        }
+        ctx.fillStyle = pal.chill; ctx.beginPath(); ctx.arc(e.x, e.y, 0.018, 0, 6.283); ctx.fill();
+      } else {
       ctx.fillStyle = pal.goo; ctx.strokeStyle = pal.gooDk; ctx.lineWidth = 0.016;
       ctx.beginPath(); ctx.moveTo(e.x, e.y - r * 1.4); ctx.quadraticCurveTo(e.x + r * 1.05, e.y - r * 0.1, e.x, e.y + r * 0.7);
       ctx.quadraticCurveTo(e.x - r * 1.05, e.y - r * 0.1, e.x, e.y - r * 1.4); ctx.fill(); ctx.stroke();
       const blink = (t + (S.side || 0) * 50) % 150 < 6;
       ctx.fillStyle = ink; ctx.beginPath(); ctx.ellipse(e.x + f * 0.01, e.y - 0.004, 0.016, blink ? 0.004 : 0.022, 0, 0, 6.283); ctx.fill();
+      }
       // your strap, round the end of the book and buckled
       if (th < 0.4) stroke([lid(W - 0.07, PG + CV, DZ - 0.07), lid(W - 0.07, PG + CV, DZ + 0.014), pr(W2 - 0.07, -CV, DZ + 0.014)], team, 0.032);
       else stroke([lid(W - 0.07, PG + CV, DZ + 0.014), { x: lid(W - 0.07, PG + CV, DZ).x, y: lid(W - 0.07, PG + CV, DZ).y + 0.12 }], team, 0.03);
     } else {
-      quad(coverEnd, ink);
+      quad(coverEnd, cover);
       quad(end, pal.steel, ink);
       const page = [lid(IN, 0, -DZ), lid(W - IN, 0, -DZ), lid(W - IN, 0, DZ), lid(IN, 0, DZ)];
       quad(page, pal.steel, ink); pageGlow(page);
@@ -7969,13 +8325,14 @@ function drawFig(S, side, pal, flash, mono) {
   stroke([S.hip, S.neck], ink, lw * 1.08);
   stroke([S.hip, S.kf, S.ff], ink, lw);
   drawGearFeet(S, pal, ink, far, mono);
-  if (S.w === 'spellbook') drawRobe(S, ink, team, far);
+  if (S.w === 'spellbook') drawRobe(S, ink, team, far, S.ice ? pal : null);
   drawGearTorso(S, pal, ink, mono);
   ctx.fillStyle = ink; ctx.beginPath(); ctx.arc(S.head.x, S.head.y, 0.155, 0, Math.PI * 2); ctx.fill();
   drawGearHead(S, pal, ink, mono);
   const hx = S.head.x - S.neck.x, hy = S.head.y - S.neck.y, hd = Math.hypot(hx, hy) || 1;
   const px = -hy / hd, py = hx / hd, bx = S.head.x + hx / hd * 0.02, by = S.head.y + hy / hd * 0.02;
-  if (S.w === 'spellbook') drawWizardHat(S, { x: hx / hd, y: hy / hd }, { x: px, y: py }, ink, team);
+  if (S.w === 'spellbook' && S.ice) drawHood(S, { x: hx / hd, y: hy / hd }, { x: px, y: py }, ink, pal);
+  else if (S.w === 'spellbook') drawWizardHat(S, { x: hx / hd, y: hy / hd }, { x: px, y: py }, ink, team);
   else stroke([{ x: bx - px * 0.16, y: by - py * 0.16 }, { x: bx + px * 0.16, y: by + py * 0.16 }], team, 0.075);
   drawWeapon(S, side, pal, ink);
   if (S.w === 'spellbook') drawSleeve(S.sh, S.ef, S.hf, ink, lw); else stroke([S.sh, S.ef, S.hf], ink, lw);
@@ -8242,6 +8599,28 @@ function drawCast(u, S, pal) {
       const dx = (i - 1) * 0.07, len = 0.1 + 0.22 * k * (0.6 + 0.4 * Math.sin(world.t * 0.3 + i));
       ctx.beginPath(); ctx.moveTo(hand.x + dx, hand.y + 0.04); ctx.lineTo(hand.x + dx, hand.y + 0.04 + len); ctx.stroke();
     }
+  } else if (iceTome(u) && S.tomeC) {
+    // cold comes up off the open pages: flakes turning as they rise, and a mist rolling off the edge
+    const tc = S.tomeC, f = u.face;
+    ctx.strokeStyle = pal.frost; ctx.lineWidth = 0.018;
+    for (let i = 0; i < 8; i++) {
+      const ph = (world.t * 0.022 + i / 8) % 1, gx = tc.x + ((i % 4) - 1.5) * 0.12 + Math.sin(world.t * 0.05 + i * 2) * 0.06, gy = tc.y - 0.12 - ph * (0.35 + 0.45 * k);
+      const r = 0.025 + 0.03 * k, a0 = world.t * 0.05 + i;
+      ctx.globalAlpha = (1 - ph) * (0.35 + 0.6 * k);
+      ctx.beginPath();
+      for (let j = 0; j < 3; j++) { const a = a0 + j * Math.PI / 3; ctx.moveTo(gx - Math.cos(a) * r, gy - Math.sin(a) * r); ctx.lineTo(gx + Math.cos(a) * r, gy + Math.sin(a) * r); }
+      ctx.stroke();
+    }
+    if (u.atkName === 'cast_rampart' || u.atkName === 'cast_glaze') {
+      // a line of frost running along the floor to where it is going
+      const reach = u.atkName === 'cast_rampart' ? 1.7 : Math.min(8, Math.abs((foe(u) || u).b.x - u.b.x));
+      ctx.globalAlpha = 0.35 + 0.6 * k; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.04;
+      ctx.beginPath(); ctx.moveTo(u.b.x + f * 0.3, u.b.y - 0.02); ctx.lineTo(u.b.x + f * (0.3 + (reach - 0.3) * k), u.b.y - 0.02); ctx.stroke();
+      ctx.strokeStyle = pal.frost; ctx.lineWidth = 0.02; ctx.stroke();
+    }
+    ctx.globalAlpha = 0.4 + 0.5 * k; ctx.fillStyle = pal.frost;
+    ctx.beginPath(); ctx.arc(hand.x, hand.y, 0.04 + 0.06 * k, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.02; ctx.stroke();
   } else if (slimeTome(u) && S.tomeC) {
     // the open pages boil: bubbles come up off them and burst above the book
     const tc = S.tomeC, f = u.face;
@@ -8395,6 +8774,24 @@ function drawFires(pal) {
   const t = world.t * 0.3;
   for (const f of world.fires) {
     const k = Math.min(1, f.t / 30);
+    if (f.kind === 'glaze') {
+      // a sheet of ice on the floor: pale and glassy, with the light sliding across it and rime at its edges
+      const x0 = f.x - f.span, x1 = f.x + f.span, y = f.y;
+      ctx.globalAlpha = 0.85 * k; ctx.fillStyle = pal.frost;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + 0.12, y - 0.1); ctx.lineTo(x1 - 0.12, y - 0.1); ctx.lineTo(x1, y); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.03; ctx.stroke();
+      ctx.save(); ctx.beginPath(); ctx.rect(x0, y - 0.12, x1 - x0, 0.12); ctx.clip();
+      ctx.globalAlpha = 0.9 * k; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.03;
+      for (let i = 0; i < 2; i++) { const sx = x0 + ((t * 0.08 + i * 0.5) % 1) * (x1 - x0 + 0.6) - 0.3; ctx.beginPath(); ctx.moveTo(sx, y - 0.02); ctx.lineTo(sx + 0.22, y - 0.1); ctx.stroke(); }
+      ctx.restore();
+      ctx.fillStyle = pal.frost; ctx.strokeStyle = pal.chill; ctx.lineWidth = 0.012;
+      for (let i = 0; i < 6; i++) {
+        const sx = i < 3 ? x0 + 0.05 + i * 0.1 : x1 - 0.05 - (i - 3) * 0.1, hh = 0.08 + (i % 3) * 0.04;
+        ctx.beginPath(); ctx.moveTo(sx - 0.035, y - 0.04); ctx.lineTo(sx, y - 0.04 - hh); ctx.lineTo(sx + 0.035, y - 0.04); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      continue;
+    }
     if (f.kind === 'slick') {
       // a patch of gel: a flat glossy puddle with bubbles coming up through it
       ctx.globalAlpha = 0.55 * k; ctx.fillStyle = pal.goo;
@@ -8615,15 +9012,16 @@ function drawUnit(u, pal) {
   if (u.mob) { if (u.state !== 'dead') drawMob(u, pal); return; }
   if (u.state === 'dead') {
     const R = ragSkel(u.rag); R.look = u.look; R.face = u.face;
-    if (slimeTome(u)) { R.slime = true; R.open = 0; R.side = u.side; R.tomeC = { x: R.hf.x, y: R.hf.y + 0.1 }; }
+    if (slimeTome(u) || iceTome(u)) { R.slime = true; R.ice = iceTome(u); R.open = 0; R.side = u.side; R.tomeC = { x: R.hf.x, y: R.hf.y + 0.1 }; }
     drawFig(R, u.side, pal, false); return;
   }
   if (u.shift) { drawShifted(u, pal); return; }
   const S = skel(u); S.scarf = u.scarf; S.look = u.look; S.face = u.face; S.tome = !!(u.gs && u.gs.flags.tome); S.staff = !!(u.gs && u.gs.flags.staff);
   if (u.state === 'melt') { drawMelt(u, pal); drawMarks(u, null, pal); return; }
   if (u.w === 'spellbook') {
-    drawHoverShadow(u, pal);
-    if (slimeTome(u)) {
+    if (!iceTome(u)) drawHoverShadow(u, pal);
+    if (slimeTome(u) || iceTome(u)) {
+      S.ice = iceTome(u);
       const p = S.hip, bob = Math.sin(world.t * 0.06 + u.side * 2) * 0.035, o = u.tomeOpen || 0;
       S.slime = true; S.open = o; S.side = u.side; S.sway = -clampV(u.b.vx * 0.03, 0.14);
       S.tomeC = { x: p.x + u.face * 0.46, y: p.y - 0.2 - o * 0.16 + bob };
@@ -8645,6 +9043,7 @@ function drawUnit(u, pal) {
   if (f > 0.01) { ctx.globalAlpha = f * 0.95; drawFig(S, u.side, pal, false, checkerPattern()); }
   ctx.globalAlpha = 1;
   if (u.state === 'atk' && u.atkDef && u.atkDef.cast) drawCast(u, S, pal);
+  if (u.state === 'iceblock') drawIceBlock(u, pal);
   if (u.state === 'skill' && u.skName === 'parry') drawParry(u, pal);
   if (f < 0.5) drawMarks(u, S, pal);
 }
@@ -8871,6 +9270,7 @@ function render() {
   }
   drawSigils(pal);
   drawFires(pal);
+  drawIce(pal);
   drawWalls(pal);
   for (const u of U) drawTrail(u, pal);
   const order = U.slice().sort((a, b) => (a.state === 'dead') - (b.state === 'dead')).reverse();
@@ -9323,11 +9723,13 @@ const loadout = (bd) => `${WEAP[bd.weapon].name} · ${bd.skill ? SKILL[bd.skill]
 $('#weapons').innerHTML = WEAPONS.map((w) => `<button class="opt" data-w="${w}" aria-pressed="false"><b>${WEAP[w].name}</b><small>${WEAP[w].stat}</small></button>`).join('');
 // Which book: the plain one, or any of the ones a run can drop. Free build only — in a run the book is the
 // weapon you are wearing.
-const VARIANTS = (w) => ['', ...Object.keys(ITEM).filter((id) => ITEM[id].weapon === w)];
+const VARIANTS = (w) => [...(w === 'spellbook' ? [] : ['']), ...Object.keys(ITEM).filter((id) => ITEM[id].weapon === w)];
+const bookOf = (bd) => bd.book || (bd.weapon === 'spellbook' ? 'slime_tome' : null);   // a book with no name is the Slime Tome
 const plainName = (w) => (w === 'puppet' ? 'A plain marionette' : 'A plain book');
-const bookName = (id) => (id ? ITEM[id].name : plainName(builds[0].weapon));
+const bookName = (id) => { const k = id || bookOf(builds[0]); return k ? ITEM[k].name : plainName(builds[0].weapon); };
 const bookKind = (id) => {
   if (!id) return builds[0].weapon === 'puppet' ? 'a blade arm, six tiles out' : 'frost, and no weather of its own';
+  if (ITEM[id].kind) return ITEM[id].kind;
   const f = ITEM[id].flags || {};
   if (f.pupForm) { const F = PUPFORM[f.pupForm]; return `${F.name}: ${F.short}`; }
   return f.tome ? 'Warlock tome' : `${SCHOOL[f.school || 'frost'].name} school`;
@@ -9335,8 +9737,8 @@ const bookKind = (id) => {
 // The picker opens over the top, because the weapon row is already three deep.
 function bookSheet() {
   const list = VARIANTS(builds[0].weapon), pup = builds[0].weapon === 'puppet';
-  openSheet(`<div class="sh-head"><span class="sh-t"><b>${pup ? 'Which puppet' : 'Which book'}</b></span><span class="lbl">${list.length} of them</span></div>
-    <div class="evopts bookpick">${list.map((id) => `<button class="evopt ${(builds[0].book || null) === (id || null) ? '' : 'leave'}" data-book="${id}">
+  openSheet(`<div class="sh-head"><span class="sh-t"><b>${pup ? 'Which puppet' : 'Which tome'}</b></span><span class="lbl">${list.length} of them</span></div>
+    <div class="evopts bookpick">${list.map((id) => `<button class="evopt ${(bookOf(builds[0]) || null) === (id || null) ? '' : 'leave'}" data-book="${id}">
       <b>${id ? ITEM[id].name : plainName(builds[0].weapon)}</b><small>${bookKind(id)}</small></button>`).join('')}</div>
     <div class="actions"><button class="ghost wide" data-sheet="close">Close</button></div>`);
 }
@@ -9411,7 +9813,7 @@ function renderGearStats() {
   const bd = builds[0], wp = WEAP[bd.weapon];
   // a puppeteer's numbers are the puppet's: how far out it hangs, and how long it takes to get there
   const pf = bd.weapon === 'puppet' ? PUPFORM[(bd.book && ITEM[bd.book].flags.pupForm) || 'marionette'] : null;
-  const book = bd.weapon === 'spellbook' ? SCHOOL[(bd.book && ITEM[bd.book].flags.tome) ? 'tome' : (bd.book && ITEM[bd.book].flags.school) || 'frost'] : null;
+  const book = bd.weapon === 'spellbook' ? SCHOOL[ITEM[bookOf(bd)].flags.tome ? 'tome' : ITEM[bookOf(bd)].flags.school || 'slime'] : null;
   const a = ATK[pf ? pf.light : book ? book.bolt : wp.atk], reach = pf ? pf.reach : wp.range || a.box[2];
   const cells = [
     ['Speed', wp.speed.toFixed(1), false], ['Hit in', `${a.w}f`, false], ['Reach', reach.toFixed(1), false],
@@ -9445,9 +9847,9 @@ function refreshBuildUI() {
   for (const b of document.querySelectorAll('#weapons .opt')) b.setAttribute('aria-pressed', String(b.dataset.w === builds[0].weapon));
   // which book you are holding, only while you are holding one
   const bb = $('#bookBtn');
-  const vary = VARIANTS(builds[0].weapon).length > 2;   // only while there is more than one to choose from
+  const vary = VARIANTS(builds[0].weapon).length > 1;   // only while there is more than one to choose from
   bb.hidden = !(vary && gearSlot === 'weapon');
-  bb.textContent = `${builds[0].weapon === 'puppet' ? 'Puppet' : 'Book'} · ${bookName(builds[0].book)}`;
+  bb.textContent = `${builds[0].weapon === 'puppet' ? 'Puppet' : 'Tome'} · ${bookName(builds[0].book)}`;
   ui.hint.hidden = !bb.hidden;   // one line under the weapons, not two
   for (const b of document.querySelectorAll('#skills .opt')) b.setAttribute('aria-pressed', String(b.dataset.s === builds[0].skill));
   for (const b of document.querySelectorAll('#trinkets .opt')) b.setAttribute('aria-pressed', String((b.dataset.tr || null) === (builds[0].trinket || null)));
@@ -9612,7 +10014,7 @@ function demoUnit(side, bd) {
 const WEAPON_DEMO = { sword: ['slash1', 'slash2', 'slash3'], daggers: ['stab1', 'stab2', 'stab3'], spear: ['thrust', 40, 'rise'], hammer: ['hammer'], bow: ['shoot'], stars: ['throw'],
   spellbook: ['cast_goo', 30, 'cast_bud', 50, 'cast_splash'], frost: ['cast_lance', 30, 'cast_icewall', 34, 'cast_shatter'],
   flame: ['cast_fireball', 34, 'cast_pillar', 34, 'cast_immolate'], storm: ['cast_arc', 24, 'cast_rod', 34, 'cast_discharge'],
-  slime: ['cast_goo', 30, 'cast_bud', 50, 'cast_splash'], tome: ['cast_curse', 30, 'cast_fear', 34, 'cast_drain'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
+  slime: ['cast_goo', 30, 'cast_bud', 50, 'cast_splash'], ice: ['cast_lance', 30, 'cast_rampart', 60, 'cast_glaze', 40, 'cast_shatter'], tome: ['cast_curse', 30, 'cast_fear', 34, 'cast_drain'], puppet: ['pswing', 'pswing2', 40, 'pspin'] };
 function demoSteps(u, what) {
   // a caster demonstrates the school it is actually holding, not the plain book's pages
   if (what === 'weapon') {
@@ -9696,6 +10098,7 @@ function demoStep() {
     scarfStep(u, S); trailStep(u, S);
   }
   stepShots();
+  stepIce();
   for (const u of U) stepHook(u);
   for (let i = 0; i < A.padAnim.length; i++) if (A.padAnim[i] > 0.01) A.padAnim[i] *= 0.86;
   stepParts();
@@ -10423,7 +10826,7 @@ window.__inkfall = window.__homeTurf = {
   ATK, SHOT, SCHOOL, SPELL_CD,
   cam(o) { camOverride = o; cam.init = false; },
   shiftNow(u, kind, secs) { startShift(u, kind, secs); },
-  melt(u) { const e = foe(u); if (e) startMelt(u, e); },
+  melt(u) { const e = foe(u); if (e) { if (iceTome(u)) startIceBlock(u, e); else startMelt(u, e); } },
   forceAtk(u, name) { u.state = 'free'; u.react = 0; u.cd = 0; startAtk(u, name); },
   get runState() { return run; }, showRun,
   run: { SHOP_PRICE, itemArt, Run, runBuild, instStats, instRange, ITEM, FAMILY, FAMILY_ITEMS, PERKS, WTYPE, KEYSTONE_OF, RELIC_OF, LEGENDS, SYNERGY, rarityOdds, dayPower, mobPower, makeGhost, EVENTS, eventOptions, chooseEvent, TEMPLATES, PATHS }, validate, get world() { return world; }, get units() { return U; },

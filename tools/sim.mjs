@@ -16,9 +16,11 @@ p.on('pageerror', (e) => errors.push(e.message));
 await p.goto(page.href);
 
 const out = await p.evaluate(([FIGHTS, SEED]) => {
-  const H = window.__homeTurf, W = H.weapons, K = [...H.skills, null], TR = [...H.trinkets, null], T = H.templates;
+  const H = window.__homeTurf, W = [...H.weapons.filter((w) => w !== 'spellbook'), ...Object.values(H.run.ITEM).filter((it) => it.weapon === 'spellbook').map((it) => it.id)], K = [...H.skills, null], TR = [...H.trinkets, null], T = H.templates;
   const invalid = [];
-  T.forEach((t, i) => W.forEach((w) => { const v = H.validate({ weapon: w, pieces: t }); if (!v.ok) invalid.push(`T${i} ${w}: ${v.msg}`); }));
+  // a tome is its own entry in the tables: the weapon is the book, and the book is how it fights
+  const gear = (w) => (H.run.ITEM[w] ? { weapon: 'spellbook', book: w } : { weapon: w });
+  T.forEach((t, i) => W.forEach((w) => { const v = H.validate({ ...gear(w), pieces: t }); if (!v.ok) invalid.push(`T${i} ${w}: ${v.msg}`); }));
   const pct = (w, n) => (n ? `${Math.round(100 * w / n)}%` : '-');
 
   // 1. the ladder
@@ -26,11 +28,11 @@ const out = await p.evaluate(([FIGHTS, SEED]) => {
   const ladder = H.rivals.map((rv, i) => {
     let w = 0, l = 0, secs = 0;
     for (let s = 0; s < N; s++) {
-      const r = H.fight(100 * i + s + 1, me, { name: rv.name, weapon: rv.weapon, skill: rv.skill, trinket: rv.trinket, acro: rv.acro, pieces: T[rv.t] });
+      const r = H.fight(100 * i + s + 1, me, { name: rv.name, weapon: rv.weapon, book: rv.book, skill: rv.skill, trinket: rv.trinket, acro: rv.acro, pieces: T[rv.t] });
       if (r.winner === 0) w++; else if (r.winner === 1) l++;
       secs += r.t / 60;
     }
-    return { rival: `${rv.name} (${rv.weapon} · ${rv.skill} · ${rv.trinket || '-'} · acro ${rv.acro})`, 'you win': pct(w, N), 'rival wins': pct(l, N), 'avg secs': (secs / N).toFixed(1) };
+    return { rival: `${rv.name} (${rv.book || rv.weapon} · ${rv.skill} · ${rv.trinket || '-'} · acro ${rv.acro})`, 'you win': pct(w, N), 'rival wins': pct(l, N), 'avg secs': (secs / N).toFixed(1) };
   });
 
   // 2. random loadouts, both fighters on the same layout
@@ -43,7 +45,9 @@ const out = await p.evaluate(([FIGHTS, SEED]) => {
   for (let i = 0; i < FIGHTS; i++) {
     const t = T[Math.floor(rnd() * T.length)];
     const lv = () => Math.floor(rnd() * 5);
-    const a = { weapon: pick(W), skill: pick(K), acro: lv(), pieces: t }, b = { weapon: pick(W), skill: pick(K), acro: lv(), pieces: t };
+    const wa = pick(W), wb = pick(W);
+    const a = { ...gear(wa), skill: pick(K), acro: lv(), pieces: t }, b = { ...gear(wb), skill: pick(K), acro: lv(), pieces: t };
+    a.key = wa; b.key = wb;
     a.trinket = pick(TR); b.trinket = pick(TR);
     const r = H.fight(SEED + i, a, b);
     secs += r.t / 60;
@@ -51,7 +55,7 @@ const out = await p.evaluate(([FIGHTS, SEED]) => {
     if (r.winner < 0) { draws++; continue; }
     [a, b].forEach((x, side) => {
       const won = r.winner === side ? 1 : 0, y = side ? a : b;
-      if (x.weapon !== y.weapon) { add(ws, x.weapon, won); add(m, `${x.weapon}>${y.weapon}`, won); }
+      if (x.key !== y.key) { add(ws, x.key, won); add(m, `${x.key}>${y.key}`, won); }
       if (x.skill !== y.skill) add(ks, x.skill || 'none', won);
       if (x.trinket !== y.trinket) add(ts, x.trinket || 'no trinket', won);
       if (x.acro !== y.acro) add(as, `acrobatics ${x.acro}`, won);

@@ -110,16 +110,15 @@ fights run themselves. **Start a run** is the front door, and everything else
   - **Bow:** lobs arrows over walls, and fires from the top of a jump.
   - **Stars:** throws stars in flat, fast pairs, on the ground or mid-air, but
     needs a clear line.
-  - **Tome (the Slime Tome):** the only caster for now. The other books, both
-    staves and all six puppets are shelved while each tome is rebuilt to
-    fight its own way; their code is still in the file, and
+  - **Tome:** two tomes for now, the **Slime Tome** and the **Ice Tome**. The
+    other books, both staves and all six puppets are shelved while each tome
+    is rebuilt to fight its own way; their code is still in the file, and
     `versions/inkfall-v4-schools-puppets.html` is the game with all of them in
     it. A caster **looks like a caster**: a long robe with your colour round
-    the hem and at the collar, wide sleeves, a pointed hat, and no headband or
-    scarf. It **does not walk or run**. It floats a hand's width off the floor
-    with its feet together under the robe, leans into wherever it is gliding,
-    and never rolls, wall-runs, double jumps or flips away. When a blade comes
-    it glides back.
+    the hem and at the collar, wide sleeves, and no headband or scarf. It never
+    runs, rolls, wall-runs, double jumps or flips away. When a blade comes it
+    backs off. In dev mode the weapon page has a **Tome** button that picks
+    between the two.
   - **The tome looks like a tome.** A thick book floats in front of the caster,
     bound in ink with pale metal corners, a drop of gel set into the cover that
     blinks, your strap buckled round it, and gel dripping off the page ends. At
@@ -147,10 +146,43 @@ fights run themselves. **Start a run** is the front door, and everything else
     the front. It leaves a slick where it was standing, then pulls itself back
     together a few tiles off, pushing off and snaring whatever is standing on
     it. It comes back every 7 seconds.
-  - **Matchups:** the melt eats combos, so the sword, daggers, spear and stars
-    struggle against it. A hammer's single heavy hit gives it nothing to melt
-    from, and a bow kites the slimes, so those two are its counters. In the
-    sim it wins 53% overall, with every weapon between 46% and 57%.
+  - **Slime Tome matchups:** the melt eats combos, so the sword, daggers,
+    spear and stars struggle against it. A hammer's single heavy hit gives it
+    nothing to melt from, and a bow kites the slimes, so those two are its
+    counters.
+- **The Ice Tome** builds a fortress where the Slime Tome grows an army. The
+  slime caster floats in a pointed hat; the ice caster **skates**, low and
+  leaning, pushing off one foot and gliding on the other with an arm out for
+  balance, scoring a line of frost on the floor behind it. It wears a **hood**
+  with a frosted rim and two pale eyes in it, and rime grows up its hem. Its
+  tome is bound in frozen blue with a snowflake cut into the cover, icicles
+  hanging off it, and cold breathing off the page ends. When it reads, flakes
+  rise off the pages instead of bubbles.
+  - **Ice wall:** a column of real ice, three tiles tall, raised across the
+    floor between the caster and the rival. Nothing walks through it and
+    nothing thrown gets past it (the caster's own lances go straight through
+    its own ice). A blade in the way has to hack it down, and a wall that is
+    broken goes off in shards at whoever broke it. Unbroken, it melts after six
+    and a half seconds. Everybody's pathing is rebuilt when a wall goes up or
+    comes down.
+  - **Glaze:** a sheet of ice laid on the floor under the rival. Anything
+    standing on it loses its grip: it slides wherever it was going, can't stop
+    or turn, throws its arms out, and gets colder the longer it stays on it.
+  - **Frost lance:** a flat, fast lance that chills. Three Chill freezes.
+  - **Shatter:** when something cold gets close, the caster breaks the ice.
+    It hits harder for every Chill on the target, and harder again on
+    anything frozen.
+  - **Ice block: the ice answer to stunlock.** The slime caster runs; the ice
+    caster refuses to move. Pinned by a blade, it seals itself in a six-sided
+    crystal for a second. Blades ring off it and come away chilled, shots
+    shatter on it, and when it breaks open it throws everything next to it
+    back and chills it. It comes back every nine seconds.
+  - **Matchups:** roughly even against everything, where the Slime Tome
+    swings wildly. It does best against blades and slime, and worst against
+    shooters.
+- **Balance** (`tools/sim.mjs --fights 2000`, each tome counted as its own
+  entry): every entry wins between 44% and 57%. The Slime Tome wins 52% and
+  the Ice Tome 54%.
   - **In the air**, Sword, Daggers and Spear plunge onto anyone below, and the
     Hammer slams down with a shockwave.
 - **Skills** (the AI decides when to use them):

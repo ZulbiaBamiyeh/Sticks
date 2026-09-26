@@ -4,6 +4,19 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 `index.html`; the playable copy is published as a claude.ai artifact.
 
 ## Last done
+- **The Ice Tome** (`ice_tome`, `SCHOOL.ice`), built to feel unlike the Slime Tome: a fortress, not an
+  army. Pages: `cast_rampart` (a real, solid, breakable ice wall: `world.ice`, `A.ice`, `rampartSpot`,
+  `reNav`, `hitIce`, `iceGone`), `cast_glaze` (a slippery floor: `world.fires` kind `glaze`, `u.slipT`,
+  `b.grip` in `physStep`), `cast_lance` and `cast_shatter`. Its answer to stunlock is the **ice block**
+  (`startIceBlock`, state `'iceblock'`); the slime caster's is the melt. The two share `meltCheck`.
+- The ice caster skates (`flags.skate`: lower grip, 15% faster, a skating pose and a frost trail) and
+  wears a hood (`drawHood`). The tome is drawn by the same `drawTome` with an ice cover (`S.ice`).
+- Blades hack at an ice wall in their way (`tryBreakIce`). Shots break against ice, apart from the
+  caster's own lances, which pass through its own walls (`ownIceOpen` for aiming).
+- The weapon is "Tome", with a picker for Slime or Ice (`bookOf`; a free build with no book is the
+  Slime Tome). The rival Hoar holds the Ice Tome. `tools/sim.mjs` counts each tome as its own entry.
+
+## Before that
 - **Casters rebuilt from one book.** Every other book, both staves and all puppets are shelved
   (`SHELVED` removes their items; `WEAP.puppet.shelved` drops the puppet from `WEAPONS`; the Marrow
   rival is gone). Their engine code stays. `versions/inkfall-v4-schools-puppets.html` is the full game
@@ -20,15 +33,15 @@ Everything is committed on `claude/slime-tome-caster-gig9kp` (branched from `cla
 - Save keys are now v3 (`homeTurf.run.v3`, `homeTurf.ghosts.v3`), because older saves may hold
   shelved items.
 
-## Measured win rates (`tools/sim.mjs --fights 1500`)
-Every weapon is between 46% and 57%, and the Tome is 53%. The Tome beats sword 73%, spear 69%,
-stars 72% and daggers 59%, and loses to hammer 36% and bow 20%. On the ladder, Folio (the slime
-caster) beats the default sword build every time.
+## Measured win rates (`tools/sim.mjs --fights 2000`)
+Every entry is between 44% and 57%: Slime Tome 52%, Ice Tome 54%. The Slime Tome swings hard by
+matchup (sword 77%, daggers 70%, bow 13%). The Ice Tome is flatter (daggers 65%, sword 56%, bow 37%,
+stars 42%).
 
 ## Next up
-1. **Next tome.** Pick a school and give it its own verbs and its own answer to melee, the way the
-   melt is slime's. The shelved schools are in the backup for reference.
-2. The Slime Tome is lopsided against the bow (20%). Slimes chasing archers helped; something that
+1. **Next tome** (flame or storm). Give it its own verbs, its own way of moving, and its own answer to
+   melee: slime melts away, ice seals itself in. The shelved schools are in the backup for reference.
+2. The Slime Tome is lopsided against the bow (13%). Slimes chasing archers helped; something that
    eats or blocks arrows might be the fix.
 3. **Edit your half of the map between fights in a run** (asked for, never started). Plan: `Run` keeps its
    own `pieces`; add a "Your half" entry on the run gear screen that reuses the turf editor (`#turfTab`,
